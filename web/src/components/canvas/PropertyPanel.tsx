@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Node } from '@xyflow/react'
 import LoopConfigPanel from './LoopConfigPanel'
+import ParallelConfigPanel from './ParallelConfigPanel'
 import SlackConfigPanel from './SlackConfigPanel'
 
 interface PropertyPanelProps {
@@ -233,6 +234,22 @@ export default function PropertyPanel({ node, onUpdate, onClose, onSave, isSavin
             onChange={(loopConfig) => {
               // Update all loop fields at once
               Object.entries(loopConfig).forEach(([key, value]) => {
+                handleChange(key, value)
+              })
+            }}
+          />
+        )}
+
+        {/* Parallel Control Fields */}
+        {nodeType === 'parallel' && (
+          <ParallelConfigPanel
+            config={{
+              errorStrategy: formData.errorStrategy || 'fail_fast',
+              maxConcurrency: formData.maxConcurrency ?? 0,
+            }}
+            onChange={(parallelConfig) => {
+              // Update all parallel fields at once
+              Object.entries(parallelConfig).forEach(([key, value]) => {
                 handleChange(key, value)
               })
             }}

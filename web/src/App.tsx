@@ -6,6 +6,7 @@ import WorkflowEditor from './pages/WorkflowEditor'
 import Executions from './pages/Executions'
 import ExecutionDetail from './pages/ExecutionDetail'
 import Schedules from './pages/Schedules'
+import CreateSchedule from './pages/CreateSchedule'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="executions" element={<Executions />} />
         <Route path="executions/:id" element={<ExecutionDetail />} />
         <Route path="schedules" element={<Schedules />} />
+        <Route path="schedules/new" element={<CreateSchedule />} />
       </Route>
     </Routes>
   )

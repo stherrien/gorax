@@ -5,22 +5,31 @@ import { useBulkSelection } from '../hooks/useBulkSelection'
 import { SelectableTable } from '../components/common/SelectableTable'
 import { BulkActionBar } from '../components/common/BulkActionBar'
 import { BulkExecutionActions } from '../components/execution/BulkExecutionActions'
-import type { Execution, ExecutionStatus } from '../api/executions'
+import AdvancedFilters from '../components/execution/AdvancedFilters'
+import type { Execution, ExecutionStatus, ExecutionListParams } from '../api/executions'
 
 export default function Executions() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<ExecutionStatus | ''>('')
   const [workflowId, setWorkflowId] = useState('')
   const [search, setSearch] = useState('')
+  const [advancedFilters, setAdvancedFilters] = useState<ExecutionListParams>({})
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   const params = useMemo(() => {
-    const p: any = { page, limit: 20 }
-    if (status) p.status = status
+    const p: ExecutionListParams = {
+      page,
+      limit: 20,
+      ...advancedFilters
+    }
+    // Basic status filter overrides advanced status filter if set
+    if (status) {
+      p.status = status
+    }
     if (workflowId) p.workflowId = workflowId
     if (search) p.search = search
     return p
-  }, [page, status, workflowId, search])
+  }, [page, status, workflowId, search, advancedFilters])
 
   const { executions, total, loading, error, refetch } = useExecutions(params)
   const bulkSelection = useBulkSelection<Execution>()
@@ -37,6 +46,11 @@ export default function Executions() {
   const handleBulkError = (message: string) => {
     setToast({ type: 'error', message })
     setTimeout(() => setToast(null), 5000)
+  }
+
+  const handleAdvancedFiltersChange = (filters: ExecutionListParams) => {
+    setAdvancedFilters(filters)
+    setPage(1)
   }
 
   // Loading state
@@ -150,6 +164,14 @@ export default function Executions() {
           </div>
         </div>
       </div>
+
+      {/* Advanced Filters */}
+      <AdvancedFilters
+        filters={advancedFilters}
+        onChange={handleAdvancedFiltersChange}
+        autoApply={true}
+        className="mb-6"
+      />
 
       {/* Executions List */}
       <div className="bg-gray-800 rounded-lg overflow-hidden">

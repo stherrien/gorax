@@ -16,6 +16,7 @@ import (
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/eventtypes"
 	"github.com/gorax/gorax/internal/executor"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
@@ -38,6 +39,7 @@ type App struct {
 	workflowService   *workflow.Service
 	webhookService    *webhook.Service
 	scheduleService   *schedule.Service
+	eventTypeService  *eventtypes.Service
 	credentialService credential.Service
 
 	// WebSocket
@@ -56,6 +58,7 @@ type App struct {
 	usageHandler             *handlers.UsageHandler
 	credentialHandler        *handlers.CredentialHandler
 	metricsHandler           *handlers.MetricsHandler
+	eventTypesHandler        *handlers.EventTypesHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -92,12 +95,14 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	workflowRepo := workflow.NewRepository(db)
 	webhookRepo := webhook.NewRepository(db)
 	scheduleRepo := schedule.NewRepository(db)
+	eventTypeRepo := eventtypes.NewRepository(db)
 
 	// Initialize services
 	app.tenantService = tenant.NewService(tenantRepo, logger)
 	app.workflowService = workflow.NewService(workflowRepo, logger)
 	app.webhookService = webhook.NewService(webhookRepo, logger)
 	app.scheduleService = schedule.NewService(scheduleRepo, logger)
+	app.eventTypeService = eventtypes.NewService(eventTypeRepo, logger)
 
 	// Initialize WebSocket hub
 	app.wsHub = websocket.NewHub(logger)
@@ -131,6 +136,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.scheduleHandler = handlers.NewScheduleHandler(app.scheduleService, logger)
 	app.executionHandler = handlers.NewExecutionHandler(app.workflowService, logger)
 	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
+	app.eventTypesHandler = handlers.NewEventTypesHandler(app.eventTypeService, logger)
 
 	// TODO: Initialize credential service and handler once service implementation is complete
 	// credentialRepo := credential.NewRepository(db)
@@ -295,6 +301,11 @@ func (a *App) setupRouter() {
 			// Webhook event replay routes
 			r.Route("/events", func(r chi.Router) {
 				r.Post("/{eventID}/replay", a.webhookReplayHandler.ReplayEvent)
+			})
+
+			// Event types registry routes
+			r.Route("/event-types", func(r chi.Router) {
+				r.Get("/", a.eventTypesHandler.List)
 			})
 
 			// WebSocket routes
