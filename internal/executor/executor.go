@@ -194,9 +194,11 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 		var output interface{}
 		var err error
 
-		// Handle loop nodes specially
+		// Handle control nodes specially (they need workflow definition)
 		if node.Type == string(workflow.NodeTypeControlLoop) {
 			output, err = e.executeLoopAction(ctx, node, execCtx, &definition)
+		} else if node.Type == string(workflow.NodeTypeControlParallel) {
+			output, err = e.executeParallelAction(ctx, node, execCtx, &definition)
 		} else {
 			output, err = e.executeNodeWithTracking(ctx, node, execCtx)
 		}
@@ -404,10 +406,16 @@ func (e *Executor) executeNode(ctx context.Context, node workflow.Node, execCtx 
 		output, err = e.executeSlackUpdateMessageAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeActionSlackAddReaction):
 		output, err = e.executeSlackAddReactionAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeControlDelay):
+		output, err = e.executeDelayAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlLoop):
 		// Loop nodes need access to workflow definition
 		// For now, return error - will be handled separately in execution flow
 		err = fmt.Errorf("loop nodes must be handled in execution flow, not as individual nodes")
+	case string(workflow.NodeTypeControlParallel):
+		// Parallel nodes need access to workflow definition
+		// For now, return error - will be handled separately in execution flow
+		err = fmt.Errorf("parallel nodes must be handled in execution flow, not as individual nodes")
 	default:
 		err = fmt.Errorf("unknown node type: %s", nodeToExecute.Type)
 	}

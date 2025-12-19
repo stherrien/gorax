@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useExecutionTraceStore } from '../../stores/executionTraceStore'
 import type { StepInfo } from '../../lib/websocket'
+import { AnsiText } from './AnsiText'
+import { LogExportButton } from './LogExportButton'
 import '../../styles/executionTrace.css'
 
 interface StepLogViewerProps {
   selectedNodeId: string | null
+  executionId?: string
 }
 
 /**
@@ -73,6 +76,9 @@ function CopyButton({ data }: { data: any }) {
  * Render a single step log entry
  */
 function StepLogEntry({ step, index }: { step: StepInfo; index: number }) {
+  const [showLineNumbers, setShowLineNumbers] = useState(false)
+  const [wordWrap, setWordWrap] = useState(true)
+
   return (
     <div className="step-log-entry" data-testid={`step-log-${index}`}>
       <div className="step-header">
@@ -109,7 +115,7 @@ function StepLogEntry({ step, index }: { step: StepInfo; index: number }) {
         </div>
       )}
 
-      {/* Error section */}
+      {/* Error section with ANSI color support */}
       {step.error && (
         <div className="error-section" data-testid="error-section">
           <div className="error-header">
@@ -123,20 +129,36 @@ function StepLogEntry({ step, index }: { step: StepInfo; index: number }) {
             </svg>
             <span>Error</span>
           </div>
-          <pre className="error-message">{step.error}</pre>
+          <AnsiText text={step.error} />
         </div>
       )}
 
-      {/* Output data */}
+      {/* Output data with ANSI color support */}
       {step.output_data && (
         <div className="output-section">
           <div className="output-header">
             <span className="output-label">Output Data</span>
-            <CopyButton data={step.output_data} />
+            <div className="output-controls">
+              <button
+                onClick={() => setShowLineNumbers(!showLineNumbers)}
+                className="control-button"
+                title="Toggle line numbers"
+              >
+                {showLineNumbers ? 'Hide' : 'Show'} Line Numbers
+              </button>
+              <button
+                onClick={() => setWordWrap(!wordWrap)}
+                className="control-button"
+                title="Toggle word wrap"
+              >
+                Word Wrap: {wordWrap ? 'On' : 'Off'}
+              </button>
+              <CopyButton data={step.output_data} />
+            </div>
           </div>
-          <pre className="output-data" role="code">
-            <code>{JSON.stringify(step.output_data, null, 2)}</code>
-          </pre>
+          <div className={`output-data ${wordWrap ? 'wrap' : 'nowrap'}`} role="code">
+            <AnsiText text={JSON.stringify(step.output_data, null, 2)} />
+          </div>
         </div>
       )}
     </div>
@@ -147,13 +169,15 @@ function StepLogEntry({ step, index }: { step: StepInfo; index: number }) {
  * StepLogViewer displays detailed logs for a selected node
  *
  * Features:
- * - Shows input/output data with JSON syntax highlighting
- * - Displays error messages
+ * - Shows input/output data with ANSI color support
+ * - Displays error messages with color codes
  * - Shows timestamps and duration
  * - Copy to clipboard functionality
+ * - Export logs in TXT, JSON, or CSV format
+ * - Toggle line numbers and word wrap
  * - Supports multiple steps per node
  */
-export function StepLogViewer({ selectedNodeId }: StepLogViewerProps) {
+export function StepLogViewer({ selectedNodeId, executionId }: StepLogViewerProps) {
   const { stepLogs } = useExecutionTraceStore()
 
   // Empty state: no node selected
@@ -200,7 +224,10 @@ export function StepLogViewer({ selectedNodeId }: StepLogViewerProps) {
 
   return (
     <div className="log-viewer-container">
-      <h3 className="log-viewer-title">Step Logs - {selectedNodeId}</h3>
+      <div className="log-viewer-header">
+        <h3 className="log-viewer-title">Step Logs - {selectedNodeId}</h3>
+        {executionId && <LogExportButton executionId={executionId} />}
+      </div>
       <div className="log-viewer-content">
         {logs.map((step, index) => (
           <StepLogEntry key={`${step.step_id}-${index}`} step={step} index={index} />

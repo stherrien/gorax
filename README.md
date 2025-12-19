@@ -56,17 +56,17 @@ Execution history, performance metrics, and audit trails.
 git clone https://github.com/stherrien/gorax.git
 cd gorax
 
-# Start dependencies
-docker-compose up -d
+# Start dependencies (PostgreSQL + Redis)
+make dev-simple
 
 # Configure environment
 cp .env.example .env
 
 # Run migrations
-make migrate-up
+make db-migrate
 
-# Start the server
-make run-api
+# Start the API server
+make run-api-dev
 
 # In another terminal, start the frontend
 cd web && npm install && npm run dev
@@ -203,8 +203,9 @@ Create a deployment notification in minutes:
 ### Commands
 
 ```bash
-make help          # Show all commands
-make test          # Run tests
+make               # Show all available commands
+make all           # Install deps and build
+make test          # Run all tests
 make lint          # Run linters
 make build         # Build binaries
 ```
@@ -215,11 +216,11 @@ make build         # Build binaries
 # Backend tests
 make test
 
+# Backend tests with coverage
+make test-coverage
+
 # Frontend tests
 cd web && npm test
-
-# Integration tests
-make test-integration
 ```
 
 **Development guide**: [Local Development](docs/local-development.md)

@@ -44,15 +44,18 @@ type App struct {
 	wsHub *websocket.Hub
 
 	// Handlers
-	healthHandler       *handlers.HealthHandler
-	workflowHandler     *handlers.WorkflowHandler
-	webhookHandler      *handlers.WebhookHandler
-	websocketHandler    *handlers.WebSocketHandler
-	tenantAdminHandler  *handlers.TenantAdminHandler
-	scheduleHandler     *handlers.ScheduleHandler
-	executionHandler    *handlers.ExecutionHandler
-	usageHandler        *handlers.UsageHandler
-	credentialHandler   *handlers.CredentialHandler
+	healthHandler            *handlers.HealthHandler
+	workflowHandler          *handlers.WorkflowHandler
+	webhookHandler           *handlers.WebhookHandler
+	webhookManagementHandler *handlers.WebhookManagementHandler
+	webhookReplayHandler     *handlers.WebhookReplayHandler
+	websocketHandler         *handlers.WebSocketHandler
+	tenantAdminHandler       *handlers.TenantAdminHandler
+	scheduleHandler          *handlers.ScheduleHandler
+	executionHandler         *handlers.ExecutionHandler
+	usageHandler             *handlers.UsageHandler
+	credentialHandler        *handlers.CredentialHandler
+	metricsHandler           *handlers.MetricsHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -116,10 +119,18 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.healthHandler = handlers.NewHealthHandler(db, app.redis)
 	app.workflowHandler = handlers.NewWorkflowHandler(app.workflowService, logger)
 	app.webhookHandler = handlers.NewWebhookHandler(app.workflowService, app.webhookService, logger)
+	app.webhookManagementHandler = handlers.NewWebhookManagementHandler(app.webhookService, logger)
+
+	// Initialize replay service and handler
+	workflowExecutorForReplay := &workflowExecutorAdapter{workflowService: app.workflowService}
+	replayService := webhook.NewReplayService(webhookRepo, workflowExecutorForReplay, logger)
+	app.webhookReplayHandler = handlers.NewWebhookReplayHandler(replayService, logger)
+
 	app.websocketHandler = handlers.NewWebSocketHandler(app.wsHub, logger)
 	app.tenantAdminHandler = handlers.NewTenantAdminHandler(app.tenantService, logger)
 	app.scheduleHandler = handlers.NewScheduleHandler(app.scheduleService, logger)
 	app.executionHandler = handlers.NewExecutionHandler(app.workflowService, logger)
+	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
 
 	// TODO: Initialize credential service and handler once service implementation is complete
 	// credentialRepo := credential.NewRepository(db)
@@ -220,6 +231,14 @@ func (a *App) setupRouter() {
 				r.Put("/{workflowID}", a.workflowHandler.Update)
 				r.Delete("/{workflowID}", a.workflowHandler.Delete)
 				r.Post("/{workflowID}/execute", a.workflowHandler.Execute)
+				r.Post("/{workflowID}/dry-run", a.workflowHandler.DryRun)
+
+				// Version routes for a specific workflow
+				r.Route("/{workflowID}/versions", func(r chi.Router) {
+					r.Get("/", a.workflowHandler.ListVersions)
+					r.Get("/{version}", a.workflowHandler.GetVersion)
+					r.Post("/{version}/restore", a.workflowHandler.RestoreVersion)
+				})
 
 				// Schedule routes for a specific workflow
 				r.Route("/{workflowID}/schedules", func(r chi.Router) {
@@ -236,6 +255,14 @@ func (a *App) setupRouter() {
 				r.Get("/{executionID}/steps", a.executionHandler.GetExecutionWithSteps)
 			})
 
+			// Metrics routes
+			r.Route("/metrics", func(r chi.Router) {
+				r.Get("/trends", a.metricsHandler.GetExecutionTrends)
+				r.Get("/duration", a.metricsHandler.GetDurationStats)
+				r.Get("/failures", a.metricsHandler.GetTopFailures)
+				r.Get("/trigger-breakdown", a.metricsHandler.GetTriggerBreakdown)
+			})
+
 			// Usage routes
 			r.Route("/tenants/{id}/usage", func(r chi.Router) {
 				r.Get("/", a.usageHandler.GetCurrentUsage)
@@ -249,6 +276,25 @@ func (a *App) setupRouter() {
 				r.Put("/{scheduleID}", a.scheduleHandler.Update)
 				r.Delete("/{scheduleID}", a.scheduleHandler.Delete)
 				r.Post("/parse-cron", a.scheduleHandler.ParseCron)
+				r.Post("/preview", a.scheduleHandler.PreviewSchedule)
+			})
+
+			// Webhook management routes
+			r.Route("/webhooks", func(r chi.Router) {
+				r.Get("/", a.webhookManagementHandler.List)
+				r.Post("/", a.webhookManagementHandler.Create)
+				r.Get("/{id}", a.webhookManagementHandler.Get)
+				r.Put("/{id}", a.webhookManagementHandler.Update)
+				r.Delete("/{id}", a.webhookManagementHandler.Delete)
+				r.Post("/{id}/regenerate-secret", a.webhookManagementHandler.RegenerateSecret)
+				r.Post("/{id}/test", a.webhookManagementHandler.TestWebhook)
+				r.Get("/{id}/events", a.webhookManagementHandler.GetEventHistory)
+				r.Post("/{webhookID}/events/replay", a.webhookReplayHandler.BatchReplayEvents)
+			})
+
+			// Webhook event replay routes
+			r.Route("/events", func(r chi.Router) {
+				r.Post("/{eventID}/replay", a.webhookReplayHandler.ReplayEvent)
 			})
 
 			// WebSocket routes
@@ -289,4 +335,17 @@ type workflowServiceAdapter struct {
 
 func (w *workflowServiceAdapter) GetByID(ctx context.Context, tenantID, id string) (interface{}, error) {
 	return w.workflowService.GetByID(ctx, tenantID, id)
+}
+
+// workflowExecutorAdapter adapts workflow.Service to webhook.WorkflowExecutor interface
+type workflowExecutorAdapter struct {
+	workflowService *workflow.Service
+}
+
+func (w *workflowExecutorAdapter) Execute(ctx context.Context, tenantID, workflowID, triggerType string, triggerData []byte) (string, error) {
+	execution, err := w.workflowService.Execute(ctx, tenantID, workflowID, triggerType, triggerData)
+	if err != nil {
+		return "", err
+	}
+	return execution.ID, nil
 }

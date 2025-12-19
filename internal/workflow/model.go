@@ -77,6 +77,7 @@ const (
 	NodeTypeControlIf             NodeType = "control:if"
 	NodeTypeControlLoop           NodeType = "control:loop"
 	NodeTypeControlParallel       NodeType = "control:parallel"
+	NodeTypeControlDelay          NodeType = "control:delay"
 )
 
 // HTTPActionConfig represents HTTP action configuration
@@ -139,6 +140,17 @@ type LoopActionConfig struct {
 	IndexVariable string `json:"index_variable,omitempty"`  // Variable name for current index (e.g., "index")
 	MaxIterations int    `json:"max_iterations,omitempty"`  // Safety limit (default 1000)
 	OnError       string `json:"on_error,omitempty"`        // "continue" or "stop" (default "stop")
+}
+
+// ParallelConfig represents parallel execution configuration
+type ParallelConfig struct {
+	ErrorStrategy  string `json:"error_strategy"`            // "fail_fast" or "wait_all" (default "fail_fast")
+	MaxConcurrency int    `json:"max_concurrency,omitempty"` // 0 = unlimited, >0 = max concurrent branches
+}
+
+// DelayConfig represents delay action configuration
+type DelayConfig struct {
+	Duration string `json:"duration"` // Duration string (e.g., "5s", "1m", "2h") or template variable (e.g., "{{steps.node1.delay}}")
 }
 
 // CreateWorkflowInput represents input for creating a workflow
@@ -211,11 +223,15 @@ const (
 
 // ExecutionFilter represents filters for listing executions
 type ExecutionFilter struct {
-	WorkflowID  string     `json:"workflow_id,omitempty"`
-	Status      string     `json:"status,omitempty"`
-	TriggerType string     `json:"trigger_type,omitempty"`
-	StartDate   *time.Time `json:"start_date,omitempty"`
-	EndDate     *time.Time `json:"end_date,omitempty"`
+	WorkflowID        string     `json:"workflow_id,omitempty"`
+	Status            string     `json:"status,omitempty"`
+	TriggerType       string     `json:"trigger_type,omitempty"`
+	StartDate         *time.Time `json:"start_date,omitempty"`
+	EndDate           *time.Time `json:"end_date,omitempty"`
+	ErrorSearch       string     `json:"error_search,omitempty"`
+	ExecutionIDPrefix string     `json:"execution_id_prefix,omitempty"`
+	MinDurationMs     *int64     `json:"min_duration_ms,omitempty"`
+	MaxDurationMs     *int64     `json:"max_duration_ms,omitempty"`
 }
 
 // Validate validates the execution filter
@@ -225,6 +241,21 @@ func (f ExecutionFilter) Validate() error {
 			return errors.New("end_date must be after start_date")
 		}
 	}
+
+	if f.MinDurationMs != nil && *f.MinDurationMs < 0 {
+		return errors.New("min_duration_ms must be non-negative")
+	}
+
+	if f.MaxDurationMs != nil && *f.MaxDurationMs < 0 {
+		return errors.New("max_duration_ms must be non-negative")
+	}
+
+	if f.MinDurationMs != nil && f.MaxDurationMs != nil {
+		if *f.MaxDurationMs < *f.MinDurationMs {
+			return errors.New("max_duration_ms must be greater than or equal to min_duration_ms")
+		}
+	}
+
 	return nil
 }
 
@@ -280,4 +311,41 @@ type ExecutionWithSteps struct {
 type ExecutionStats struct {
 	TotalCount   int            `json:"total_count"`
 	StatusCounts map[string]int `json:"status_counts"`
+}
+
+// DryRunResult represents the result of a workflow dry-run validation
+type DryRunResult struct {
+	Valid           bool                `json:"valid"`
+	ExecutionOrder  []string            `json:"execution_order"`   // Node IDs in execution order
+	VariableMapping map[string]string   `json:"variable_mapping"`  // Variable -> source mapping
+	Warnings        []DryRunWarning     `json:"warnings"`
+	Errors          []DryRunError       `json:"errors"`
+}
+
+// DryRunWarning represents a warning found during dry-run
+type DryRunWarning struct {
+	NodeID  string `json:"node_id"`
+	Message string `json:"message"`
+}
+
+// DryRunError represents an error found during dry-run
+type DryRunError struct {
+	NodeID  string `json:"node_id"`
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// DryRunInput represents input data for dry-run testing
+type DryRunInput struct {
+	TestData map[string]interface{} `json:"test_data"`
+}
+
+// WorkflowVersion represents a version of a workflow definition
+type WorkflowVersion struct {
+	ID         string          `db:"id" json:"id"`
+	WorkflowID string          `db:"workflow_id" json:"workflow_id"`
+	Version    int             `db:"version" json:"version"`
+	Definition json.RawMessage `db:"definition" json:"definition"`
+	CreatedBy  string          `db:"created_by" json:"created_by"`
+	CreatedAt  time.Time       `db:"created_at" json:"created_at"`
 }

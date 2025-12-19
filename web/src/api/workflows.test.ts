@@ -300,4 +300,111 @@ describe('Workflow API', () => {
       expect(result.status).toBe('inactive')
     })
   })
+
+  describe('Version Management', () => {
+    describe('listVersions', () => {
+      it('should list all versions for a workflow', async () => {
+        const workflowId = 'wf-123'
+        const mockVersions = [
+          {
+            id: 'version-3',
+            workflowId,
+            version: 3,
+            definition: { nodes: [], edges: [] },
+            createdBy: 'user-1',
+            createdAt: '2025-12-19T12:00:00Z',
+          },
+          {
+            id: 'version-2',
+            workflowId,
+            version: 2,
+            definition: { nodes: [], edges: [] },
+            createdBy: 'user-1',
+            createdAt: '2025-12-19T11:00:00Z',
+          },
+        ]
+
+        ;(apiClient.get as any).mockResolvedValueOnce({ data: mockVersions })
+
+        const result = await workflowAPI.listVersions(workflowId)
+
+        expect(apiClient.get).toHaveBeenCalledWith(`/api/v1/workflows/${workflowId}/versions`)
+        expect(result).toEqual(mockVersions)
+      })
+
+      it('should handle empty version list', async () => {
+        ;(apiClient.get as any).mockResolvedValueOnce({ data: [] })
+
+        const result = await workflowAPI.listVersions('wf-123')
+
+        expect(result).toEqual([])
+      })
+    })
+
+    describe('getVersion', () => {
+      it('should get a specific version', async () => {
+        const workflowId = 'wf-123'
+        const version = 2
+        const mockVersion = {
+          id: 'version-2',
+          workflowId,
+          version,
+          definition: { nodes: [{ id: 'node1', type: 'trigger:webhook', position: { x: 0, y: 0 }, data: {} }], edges: [] },
+          createdBy: 'user-1',
+          createdAt: '2025-12-19T11:00:00Z',
+        }
+
+        ;(apiClient.get as any).mockResolvedValueOnce({ data: mockVersion })
+
+        const result = await workflowAPI.getVersion(workflowId, version)
+
+        expect(apiClient.get).toHaveBeenCalledWith(`/api/v1/workflows/${workflowId}/versions/${version}`)
+        expect(result).toEqual(mockVersion)
+      })
+
+      it('should throw error when version not found', async () => {
+        const error = new Error('version not found')
+        error.name = 'NotFoundError'
+        ;(apiClient.get as any).mockRejectedValueOnce(error)
+
+        await expect(workflowAPI.getVersion('wf-123', 999)).rejects.toThrow('version not found')
+      })
+    })
+
+    describe('restoreVersion', () => {
+      it('should restore a workflow to a previous version', async () => {
+        const workflowId = 'wf-123'
+        const version = 1
+        const mockRestoredWorkflow = {
+          ...mockWorkflow,
+          version: 4, // New version after restore
+          updatedAt: '2025-12-19T13:00:00Z',
+        }
+
+        ;(apiClient.post as any).mockResolvedValueOnce({ data: mockRestoredWorkflow })
+
+        const result = await workflowAPI.restoreVersion(workflowId, version)
+
+        expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/workflows/${workflowId}/versions/${version}/restore`, {})
+        expect(result).toEqual(mockRestoredWorkflow)
+        expect(result.version).toBe(4) // Version incremented
+      })
+
+      it('should throw error when workflow not found', async () => {
+        const error = new Error('workflow not found')
+        error.name = 'NotFoundError'
+        ;(apiClient.post as any).mockRejectedValueOnce(error)
+
+        await expect(workflowAPI.restoreVersion('invalid-id', 1)).rejects.toThrow('workflow not found')
+      })
+
+      it('should throw error when version not found', async () => {
+        const error = new Error('version not found')
+        error.name = 'NotFoundError'
+        ;(apiClient.post as any).mockRejectedValueOnce(error)
+
+        await expect(workflowAPI.restoreVersion('wf-123', 999)).rejects.toThrow('version not found')
+      })
+    })
+  })
 })

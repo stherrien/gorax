@@ -1,11 +1,15 @@
-.PHONY: all build run test clean deps docker-up docker-down migrate help
+.PHONY: all build run test clean deps docker-up docker-down migrate help \
+	kill-api kill-web kill-worker kill-all \
+	dev-start dev-restart dev-attach status
 
 # Variables
-BINARY_API=rflow-api
-BINARY_WORKER=rflow-worker
+BINARY_API=gorax-api
+BINARY_WORKER=gorax-worker
 DOCKER_COMPOSE=docker compose -f deployments/docker/docker-compose.yml
 
-# Default target
+# Default target - show help
+.DEFAULT_GOAL := help
+
 all: deps build
 
 # Install dependencies
@@ -28,11 +32,11 @@ build-worker:
 
 # Run API locally
 run-api:
-	go run ./cmd/api
+	@set -a; . ./.env; set +a; go run ./cmd/api
 
 # Run Worker locally
 run-worker:
-	go run ./cmd/worker
+	@set -a; . ./.env; set +a; go run ./cmd/worker
 
 # Run tests
 test:
@@ -82,10 +86,10 @@ db-up:
 
 db-migrate:
 	@echo "Migrations are auto-applied via docker-compose init scripts"
-	@echo "To manually apply: psql -h localhost -U rflow -d rflow -f migrations/001_initial_schema.sql"
+	@echo "To manually apply: psql -h localhost -U postgres -d gorax -f migrations/001_initial_schema.sql"
 
 db-seed:
-	psql -h localhost -U rflow -d rflow -f migrations/002_seed_data.sql
+	psql -h localhost -U postgres -d gorax -f migrations/002_seed_data.sql
 
 db-reset:
 	$(DOCKER_COMPOSE) down -v
@@ -101,7 +105,7 @@ kratos-up:
 dev-simple:
 	docker compose -f docker-compose.dev.yml up -d
 	@echo "Simplified development environment started (postgres + redis only)"
-	@echo "Postgres: localhost:5433 (user: postgres, password: postgres, db: rflow)"
+	@echo "Postgres: localhost:5433 (user: postgres, password: postgres, db: gorax)"
 	@echo "Redis: localhost:6379"
 	@echo ""
 	@echo "Next steps:"
@@ -123,7 +127,7 @@ dev: docker-up
 run-api-dev:
 	@echo "Starting API in development mode..."
 	@echo "Dev auth enabled - X-Tenant-ID header will be used"
-	APP_ENV=development go run ./cmd/api
+	@set -a; . ./.env; set +a; go run ./cmd/api
 
 dev-api: db-up
 	go run ./cmd/api
@@ -140,6 +144,81 @@ web-dev:
 
 web-build:
 	cd web && npm run build
+
+# Kill processes
+kill-api:
+	@echo "Killing API server (port 8181)..."
+	@-tmux kill-window -t gorax:api 2>/dev/null || true
+	@-lsof -ti:8181 | xargs kill -9 2>/dev/null || true
+	@-lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+	@-pkill -9 -f "go run ./cmd/api" 2>/dev/null || true
+	@-pkill -9 -f "gorax-api" 2>/dev/null || true
+	@echo "API server killed"
+
+kill-web:
+	@echo "Killing web dev server (port 5173)..."
+	@-tmux kill-window -t gorax:web 2>/dev/null || true
+	@-lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+	@-pkill -9 -f "vite" 2>/dev/null || true
+	@-pkill -9 -f "npm run dev" 2>/dev/null || true
+	@echo "Web server killed"
+
+kill-worker:
+	@echo "Killing worker process..."
+	@-tmux kill-window -t gorax:worker 2>/dev/null || true
+	@-pkill -9 -f "go run ./cmd/worker" 2>/dev/null || true
+	@-pkill -9 -f "gorax-worker" 2>/dev/null || true
+	@echo "Worker killed"
+
+kill-all:
+	@echo "Killing all gorax processes..."
+	@-tmux kill-session -t gorax 2>/dev/null || true
+	@-lsof -ti:8181 | xargs kill -9 2>/dev/null || true
+	@-lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+	@-lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+	@-pkill -9 -f "go run ./cmd/api" 2>/dev/null || true
+	@-pkill -9 -f "go run ./cmd/worker" 2>/dev/null || true
+	@-pkill -9 -f "gorax-api" 2>/dev/null || true
+	@-pkill -9 -f "gorax-worker" 2>/dev/null || true
+	@-pkill -9 -f "vite" 2>/dev/null || true
+	@echo "All processes killed"
+
+# Start dev environment in tmux with split panes
+dev-start:
+	@if tmux has-session -t gorax 2>/dev/null; then \
+		echo "Gorax session already running. Attaching..."; \
+		tmux attach -t gorax; \
+	else \
+		echo "Starting gorax dev environment..."; \
+		tmux new-session -d -s gorax -n dev -c $(CURDIR); \
+		tmux send-keys -t gorax:dev 'set -a; . ./.env; set +a; go run ./cmd/api' Enter; \
+		tmux split-window -t gorax:dev -h -c $(CURDIR)/web; \
+		tmux send-keys -t gorax:dev.1 'npm run dev' Enter; \
+		tmux select-pane -t gorax:dev.0; \
+		tmux attach -t gorax; \
+	fi
+
+# Restart and attach
+dev-restart: kill-all
+	@sleep 1
+	@$(MAKE) dev-start
+
+# Attach to existing session
+dev-attach:
+	@if tmux has-session -t gorax 2>/dev/null; then \
+		tmux attach -t gorax; \
+	else \
+		echo "No gorax session running. Use 'make dev-start' to start."; \
+	fi
+
+# Show status of tmux sessions
+status:
+	@echo "Gorax tmux session:"
+	@tmux list-windows -t gorax 2>/dev/null || echo "  No gorax session running"
+	@echo ""
+	@echo "Port status:"
+	@echo "  Port 8181 (API):  $$(lsof -ti:8181 >/dev/null 2>&1 && echo 'IN USE' || echo 'free')"
+	@echo "  Port 5173 (Web):  $$(lsof -ti:5173 >/dev/null 2>&1 && echo 'IN USE' || echo 'free')"
 
 # Full stack development
 dev-full:
@@ -158,30 +237,54 @@ docs:
 
 # Help
 help:
-	@echo "rflow - Workflow Automation Platform"
+	@echo "🚀 Gorax - Modern Workflow Automation Platform"
 	@echo ""
-	@echo "Usage:"
+	@echo "📦 Build & Dependencies:"
+	@echo "  make all           - Install deps and build binaries"
 	@echo "  make deps          - Install Go dependencies"
 	@echo "  make build         - Build all binaries"
-	@echo "  make run-api       - Run API server locally"
-	@echo "  make run-worker    - Run worker locally"
-	@echo "  make test          - Run tests"
-	@echo "  make lint          - Run linter"
-	@echo "  make fmt           - Format code"
+	@echo "  make build-api     - Build API only"
+	@echo "  make build-worker  - Build worker only"
 	@echo "  make clean         - Clean build artifacts"
 	@echo ""
-	@echo "Docker:"
-	@echo "  make docker-up     - Start all Docker services"
-	@echo "  make docker-down   - Stop all Docker services"
-	@echo "  make docker-logs   - View Docker logs"
-	@echo "  make dev           - Start development environment"
+	@echo "🏃 Run Locally:"
+	@echo "  make run-api       - Run API server"
+	@echo "  make run-api-dev   - Run API in dev mode (no Kratos)"
+	@echo "  make run-worker    - Run worker"
 	@echo ""
-	@echo "Database:"
-	@echo "  make db-up         - Start database services"
-	@echo "  make db-seed       - Seed database with sample data"
+	@echo "🧪 Testing & Quality:"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make lint          - Run linter"
+	@echo "  make fmt           - Format code"
+	@echo ""
+	@echo "🐳 Docker:"
+	@echo "  make docker-up     - Start all services"
+	@echo "  make docker-down   - Stop all services"
+	@echo "  make docker-logs   - View logs"
+	@echo "  make docker-ps     - List containers"
+	@echo "  make dev-simple    - Start simple dev env (postgres + redis)"
+	@echo ""
+	@echo "💾 Database:"
+	@echo "  make db-up         - Start postgres + redis"
+	@echo "  make db-migrate    - Run migrations"
+	@echo "  make db-seed       - Seed database"
 	@echo "  make db-reset      - Reset database"
 	@echo ""
-	@echo "Frontend:"
-	@echo "  make web-install   - Install frontend dependencies"
-	@echo "  make web-dev       - Start frontend dev server"
-	@echo "  make web-build     - Build frontend for production"
+	@echo "🎨 Frontend:"
+	@echo "  make web-install   - Install dependencies"
+	@echo "  make web-dev       - Start dev server"
+	@echo "  make web-build     - Build for production"
+	@echo ""
+	@echo "🚦 Dev Environment (tmux split-screen):"
+	@echo "  make dev-start     - Start API + web side-by-side and attach"
+	@echo "  make dev-restart   - Kill all and restart"
+	@echo "  make dev-attach    - Attach to running session"
+	@echo "  make kill-all      - Kill all processes"
+	@echo "  make status        - Show running sessions & ports"
+	@echo ""
+	@echo "  Tmux shortcuts (once attached):"
+	@echo "    Ctrl+B then arrow - Switch between panes"
+	@echo "    Ctrl+B then D     - Detach (keep running)"
+	@echo "    Ctrl+B then Z     - Zoom current pane (toggle)"
+	@echo "    Ctrl+B then X     - Kill current pane"

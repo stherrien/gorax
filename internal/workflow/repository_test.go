@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -436,5 +437,561 @@ func TestCountExecutions_TenantIsolation(t *testing.T) {
 	count2, err := repo.CountExecutions(ctx, tenant2, ExecutionFilter{})
 	require.NoError(t, err)
 	assert.Equal(t, 5, count2)
+}
+
+// TestCreateWorkflowVersion tests creating a workflow version
+func TestCreateWorkflowVersion(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-version"
+	userID := "test-user-version"
+
+	// Create a workflow
+	workflow, err := repo.Create(ctx, tenantID, userID, CreateWorkflowInput{
+		Name:        "Version Test Workflow",
+		Description: "Test workflow for versioning",
+		Definition:  []byte(`{"nodes":[],"edges":[]}`),
+	})
+	require.NoError(t, err)
+
+	// Create first version
+	version1, err := repo.CreateWorkflowVersion(ctx, workflow.ID, 1, workflow.Definition, userID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, version1.ID)
+	assert.Equal(t, workflow.ID, version1.WorkflowID)
+	assert.Equal(t, 1, version1.Version)
+	assert.Equal(t, workflow.Definition, version1.Definition)
+	assert.Equal(t, userID, version1.CreatedBy)
+	assert.NotZero(t, version1.CreatedAt)
+
+	// Update workflow to create version 2
+	updatedDef := []byte(`{"nodes":[{"id":"node1","type":"trigger:webhook"}],"edges":[]}`)
+	_, err = repo.Update(ctx, tenantID, workflow.ID, UpdateWorkflowInput{
+		Definition: updatedDef,
+	})
+	require.NoError(t, err)
+
+	// Create second version
+	version2, err := repo.CreateWorkflowVersion(ctx, workflow.ID, 2, updatedDef, userID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, version2.ID)
+	assert.Equal(t, workflow.ID, version2.WorkflowID)
+	assert.Equal(t, 2, version2.Version)
+	assert.Equal(t, updatedDef, version2.Definition)
+}
+
+// TestListWorkflowVersions tests listing workflow versions
+func TestListWorkflowVersions(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-versions"
+	userID := "test-user-versions"
+
+	// Create a workflow
+	workflow, err := repo.Create(ctx, tenantID, userID, CreateWorkflowInput{
+		Name:        "Multi Version Workflow",
+		Description: "Test workflow with multiple versions",
+		Definition:  []byte(`{"nodes":[],"edges":[]}`),
+	})
+	require.NoError(t, err)
+
+	// Create multiple versions
+	for i := 1; i <= 5; i++ {
+		def := []byte(fmt.Sprintf(`{"nodes":[],"edges":[],"version":%d}`, i))
+		_, err := repo.CreateWorkflowVersion(ctx, workflow.ID, i, def, userID)
+		require.NoError(t, err)
+	}
+
+	// List all versions
+	versions, err := repo.ListWorkflowVersions(ctx, workflow.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 5, len(versions))
+
+	// Verify versions are ordered DESC (newest first)
+	for i := 0; i < len(versions)-1; i++ {
+		assert.True(t, versions[i].Version > versions[i+1].Version,
+			"Versions should be ordered DESC")
+	}
+
+	// Verify first version is the newest
+	assert.Equal(t, 5, versions[0].Version)
+	assert.Equal(t, 1, versions[4].Version)
+}
+
+// TestGetWorkflowVersion tests getting a specific workflow version
+func TestGetWorkflowVersion(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-get-version"
+	userID := "test-user-get-version"
+
+	// Create a workflow
+	workflow, err := repo.Create(ctx, tenantID, userID, CreateWorkflowInput{
+		Name:        "Get Version Workflow",
+		Description: "Test workflow for getting specific version",
+		Definition:  []byte(`{"nodes":[],"edges":[]}`),
+	})
+	require.NoError(t, err)
+
+	// Create versions
+	def1 := []byte(`{"nodes":[],"edges":[],"version":1}`)
+	def2 := []byte(`{"nodes":[{"id":"node1"}],"edges":[],"version":2}`)
+
+	_, err = repo.CreateWorkflowVersion(ctx, workflow.ID, 1, def1, userID)
+	require.NoError(t, err)
+	_, err = repo.CreateWorkflowVersion(ctx, workflow.ID, 2, def2, userID)
+	require.NoError(t, err)
+
+	// Get version 1
+	version1, err := repo.GetWorkflowVersion(ctx, workflow.ID, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, version1.Version)
+	assert.Equal(t, def1, version1.Definition)
+
+	// Get version 2
+	version2, err := repo.GetWorkflowVersion(ctx, workflow.ID, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 2, version2.Version)
+	assert.Equal(t, def2, version2.Definition)
+
+	// Get non-existent version
+	_, err = repo.GetWorkflowVersion(ctx, workflow.ID, 999)
+	assert.Error(t, err)
+	assert.Equal(t, ErrNotFound, err)
+}
+
+// TestRestoreWorkflowVersion tests restoring a workflow to a previous version
+func TestRestoreWorkflowVersion(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-restore"
+	userID := "test-user-restore"
+
+	// Create a workflow
+	workflow, err := repo.Create(ctx, tenantID, userID, CreateWorkflowInput{
+		Name:        "Restore Version Workflow",
+		Description: "Test workflow for version restoration",
+		Definition:  []byte(`{"nodes":[],"edges":[],"version":1}`),
+	})
+	require.NoError(t, err)
+
+	// Create version 1
+	_, err = repo.CreateWorkflowVersion(ctx, workflow.ID, 1, workflow.Definition, userID)
+	require.NoError(t, err)
+
+	// Update to version 2
+	def2 := []byte(`{"nodes":[{"id":"node1"}],"edges":[],"version":2}`)
+	workflow, err = repo.Update(ctx, tenantID, workflow.ID, UpdateWorkflowInput{
+		Definition: def2,
+	})
+	require.NoError(t, err)
+	_, err = repo.CreateWorkflowVersion(ctx, workflow.ID, 2, def2, userID)
+	require.NoError(t, err)
+
+	// Update to version 3
+	def3 := []byte(`{"nodes":[{"id":"node1"},{"id":"node2"}],"edges":[{"id":"e1","source":"node1","target":"node2"}],"version":3}`)
+	workflow, err = repo.Update(ctx, tenantID, workflow.ID, UpdateWorkflowInput{
+		Definition: def3,
+	})
+	require.NoError(t, err)
+	_, err = repo.CreateWorkflowVersion(ctx, workflow.ID, 3, def3, userID)
+	require.NoError(t, err)
+
+	// Verify current version is 3
+	assert.Equal(t, 3, workflow.Version)
+	assert.Equal(t, def3, workflow.Definition)
+
+	// Restore to version 1
+	restoredWorkflow, err := repo.RestoreWorkflowVersion(ctx, tenantID, workflow.ID, 1)
+	require.NoError(t, err)
+
+	// Verify workflow was restored
+	assert.Equal(t, 4, restoredWorkflow.Version) // Version incremented
+	assert.Equal(t, []byte(`{"nodes":[],"edges":[],"version":1}`), restoredWorkflow.Definition)
+
+	// Verify a new version 4 is created with version 1's definition
+	versions, err := repo.ListWorkflowVersions(ctx, workflow.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(versions))
+	assert.Equal(t, 4, versions[0].Version)
+}
+
+// TestListExecutionsAdvanced_ErrorSearch tests filtering executions by error message
+func TestListExecutionsAdvanced_ErrorSearch(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-error-search"
+	workflowID := "test-workflow-error-search"
+
+	// Create executions with various error messages
+	testCases := []struct {
+		errorMsg *string
+	}{
+		{errorMsg: stringPtr("connection timeout to database")},
+		{errorMsg: stringPtr("HTTP 500 internal server error")},
+		{errorMsg: stringPtr("invalid JSON payload received")},
+		{errorMsg: stringPtr("authentication failed for user")},
+		{errorMsg: nil}, // No error - successful execution
+		{errorMsg: nil}, // Another successful execution
+	}
+
+	for i, tc := range testCases {
+		exec, err := repo.CreateExecution(ctx, tenantID, workflowID, 1, "webhook", nil)
+		require.NoError(t, err)
+
+		// Set execution status
+		if tc.errorMsg != nil {
+			err = repo.UpdateExecutionStatus(ctx, exec.ID, ExecutionStatusFailed, nil, tc.errorMsg)
+		} else {
+			err = repo.UpdateExecutionStatus(ctx, exec.ID, ExecutionStatusCompleted, nil, nil)
+		}
+		require.NoError(t, err)
+
+		// Sleep to ensure different timestamps
+		if i < len(testCases)-1 {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	tests := []struct {
+		name          string
+		filter        ExecutionFilter
+		expectedCount int
+		validateFn    func(*testing.T, *ExecutionListResult)
+	}{
+		{
+			name: "search for 'database' in error message",
+			filter: ExecutionFilter{
+				ErrorSearch: "database",
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Equal(t, 1, len(result.Data))
+				assert.Contains(t, *result.Data[0].ErrorMessage, "database")
+			},
+		},
+		{
+			name: "search for 'error' in error message (case insensitive)",
+			filter: ExecutionFilter{
+				ErrorSearch: "error",
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Equal(t, 1, len(result.Data))
+				assert.Contains(t, *result.Data[0].ErrorMessage, "error")
+			},
+		},
+		{
+			name: "search for 'authentication' in error message",
+			filter: ExecutionFilter{
+				ErrorSearch: "authentication",
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Equal(t, 1, len(result.Data))
+				assert.Contains(t, *result.Data[0].ErrorMessage, "authentication")
+			},
+		},
+		{
+			name: "search with no matches",
+			filter: ExecutionFilter{
+				ErrorSearch: "nonexistent error message",
+			},
+			expectedCount: 0,
+		},
+		{
+			name: "error search combined with status filter",
+			filter: ExecutionFilter{
+				Status:      "failed",
+				ErrorSearch: "timeout",
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Equal(t, ExecutionStatusFailed, ExecutionStatus(result.Data[0].Status))
+				assert.Contains(t, *result.Data[0].ErrorMessage, "timeout")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := repo.ListExecutionsAdvanced(ctx, tenantID, tt.filter, "", 20)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCount, len(result.Data))
+
+			if tt.validateFn != nil {
+				tt.validateFn(t, result)
+			}
+		})
+	}
+}
+
+// TestListExecutionsAdvanced_ExecutionIDPrefix tests filtering executions by ID prefix
+func TestListExecutionsAdvanced_ExecutionIDPrefix(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-id-prefix"
+	workflowID := "test-workflow-id-prefix"
+
+	// Create several executions
+	var executionIDs []string
+	for i := 0; i < 5; i++ {
+		exec, err := repo.CreateExecution(ctx, tenantID, workflowID, 1, "webhook", nil)
+		require.NoError(t, err)
+		executionIDs = append(executionIDs, exec.ID)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	tests := []struct {
+		name          string
+		filter        ExecutionFilter
+		expectedCount int
+		validateFn    func(*testing.T, *ExecutionListResult)
+	}{
+		{
+			name: "search by exact execution ID",
+			filter: ExecutionFilter{
+				ExecutionIDPrefix: executionIDs[0],
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Equal(t, executionIDs[0], result.Data[0].ID)
+			},
+		},
+		{
+			name: "search by ID prefix (first 8 chars)",
+			filter: ExecutionFilter{
+				ExecutionIDPrefix: executionIDs[1][:8],
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.True(t, len(result.Data) >= 1)
+				assert.Contains(t, result.Data[0].ID, executionIDs[1][:8])
+			},
+		},
+		{
+			name: "search by short prefix (4 chars)",
+			filter: ExecutionFilter{
+				ExecutionIDPrefix: executionIDs[2][:4],
+			},
+			expectedCount: -1, // Variable count, just ensure it includes the target
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				found := false
+				for _, exec := range result.Data {
+					if exec.ID == executionIDs[2] {
+						found = true
+						break
+					}
+				}
+				assert.True(t, found, "Expected execution not found in results")
+			},
+		},
+		{
+			name: "search with non-matching prefix",
+			filter: ExecutionFilter{
+				ExecutionIDPrefix: "zzzzzzzz-1234-5678-9abc",
+			},
+			expectedCount: 0,
+		},
+		{
+			name: "ID prefix combined with workflow filter",
+			filter: ExecutionFilter{
+				WorkflowID:        workflowID,
+				ExecutionIDPrefix: executionIDs[3][:12],
+			},
+			expectedCount: 1,
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				assert.Contains(t, result.Data[0].ID, executionIDs[3][:12])
+				assert.Equal(t, workflowID, result.Data[0].WorkflowID)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := repo.ListExecutionsAdvanced(ctx, tenantID, tt.filter, "", 20)
+			require.NoError(t, err)
+
+			if tt.expectedCount >= 0 {
+				assert.Equal(t, tt.expectedCount, len(result.Data))
+			}
+
+			if tt.validateFn != nil {
+				tt.validateFn(t, result)
+			}
+		})
+	}
+}
+
+// TestListExecutionsAdvanced_DurationRange tests filtering executions by duration
+func TestListExecutionsAdvanced_DurationRange(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := "test-tenant-duration"
+	workflowID := "test-workflow-duration"
+
+	// Create executions with known durations by controlling start and end times
+	testDurations := []int64{100, 500, 1000, 2500, 5000} // milliseconds
+
+	for _, duration := range testDurations {
+		exec, err := repo.CreateExecution(ctx, tenantID, workflowID, 1, "webhook", nil)
+		require.NoError(t, err)
+
+		// Start execution
+		err = repo.UpdateExecutionStatus(ctx, exec.ID, ExecutionStatusRunning, nil, nil)
+		require.NoError(t, err)
+
+		// Simulate duration by updating completed_at with calculated time
+		// Note: In real implementation, you'd need to manually set the times
+		// For testing, we'll need a helper or mock time
+		time.Sleep(time.Duration(duration) * time.Millisecond)
+
+		// Complete execution
+		err = repo.UpdateExecutionStatus(ctx, exec.ID, ExecutionStatusCompleted, nil, nil)
+		require.NoError(t, err)
+	}
+
+	tests := []struct {
+		name          string
+		filter        ExecutionFilter
+		expectedCount int
+		validateFn    func(*testing.T, *ExecutionListResult)
+	}{
+		{
+			name: "filter by minimum duration (>= 1000ms)",
+			filter: ExecutionFilter{
+				MinDurationMs: int64Ptr(1000),
+			},
+			expectedCount: 3, // 1000, 2500, 5000
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				for _, exec := range result.Data {
+					if exec.StartedAt != nil && exec.CompletedAt != nil {
+						duration := exec.CompletedAt.Sub(*exec.StartedAt).Milliseconds()
+						assert.GreaterOrEqual(t, duration, int64(1000))
+					}
+				}
+			},
+		},
+		{
+			name: "filter by maximum duration (<= 1000ms)",
+			filter: ExecutionFilter{
+				MaxDurationMs: int64Ptr(1000),
+			},
+			expectedCount: 3, // 100, 500, 1000
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				for _, exec := range result.Data {
+					if exec.StartedAt != nil && exec.CompletedAt != nil {
+						duration := exec.CompletedAt.Sub(*exec.StartedAt).Milliseconds()
+						assert.LessOrEqual(t, duration, int64(1000))
+					}
+				}
+			},
+		},
+		{
+			name: "filter by duration range (500ms - 2500ms)",
+			filter: ExecutionFilter{
+				MinDurationMs: int64Ptr(500),
+				MaxDurationMs: int64Ptr(2500),
+			},
+			expectedCount: 3, // 500, 1000, 2500
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				for _, exec := range result.Data {
+					if exec.StartedAt != nil && exec.CompletedAt != nil {
+						duration := exec.CompletedAt.Sub(*exec.StartedAt).Milliseconds()
+						assert.GreaterOrEqual(t, duration, int64(500))
+						assert.LessOrEqual(t, duration, int64(2500))
+					}
+				}
+			},
+		},
+		{
+			name: "filter very short executions (<= 200ms)",
+			filter: ExecutionFilter{
+				MaxDurationMs: int64Ptr(200),
+			},
+			expectedCount: 1, // Only 100ms execution
+		},
+		{
+			name: "duration filter combined with status",
+			filter: ExecutionFilter{
+				Status:        "completed",
+				MinDurationMs: int64Ptr(2000),
+			},
+			expectedCount: 2, // 2500, 5000
+			validateFn: func(t *testing.T, result *ExecutionListResult) {
+				for _, exec := range result.Data {
+					assert.Equal(t, ExecutionStatusCompleted, ExecutionStatus(exec.Status))
+					if exec.StartedAt != nil && exec.CompletedAt != nil {
+						duration := exec.CompletedAt.Sub(*exec.StartedAt).Milliseconds()
+						assert.GreaterOrEqual(t, duration, int64(2000))
+					}
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := repo.ListExecutionsAdvanced(ctx, tenantID, tt.filter, "", 20)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCount, len(result.Data))
+
+			if tt.validateFn != nil {
+				tt.validateFn(t, result)
+			}
+		})
+	}
+}
+
+// Helper functions (timePtr is defined in model_test.go)
+
+func stringPtr(s string) *string {
+	return &s
+}
+
+func int64Ptr(i int64) *int64 {
+	return &i
 }
 

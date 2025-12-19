@@ -109,6 +109,38 @@ func (m *MockRepository) CountExecutions(ctx context.Context, tenantID string, f
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockRepository) CreateWorkflowVersion(ctx context.Context, workflowID string, version int, definition json.RawMessage, createdBy string) (*WorkflowVersion, error) {
+	args := m.Called(ctx, workflowID, version, definition, createdBy)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*WorkflowVersion), args.Error(1)
+}
+
+func (m *MockRepository) ListWorkflowVersions(ctx context.Context, workflowID string) ([]*WorkflowVersion, error) {
+	args := m.Called(ctx, workflowID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*WorkflowVersion), args.Error(1)
+}
+
+func (m *MockRepository) GetWorkflowVersion(ctx context.Context, workflowID string, version int) (*WorkflowVersion, error) {
+	args := m.Called(ctx, workflowID, version)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*WorkflowVersion), args.Error(1)
+}
+
+func (m *MockRepository) RestoreWorkflowVersion(ctx context.Context, tenantID, workflowID string, version int) (*Workflow, error) {
+	args := m.Called(ctx, tenantID, workflowID, version)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Workflow), args.Error(1)
+}
+
 func newTestService() (*Service, *MockRepository) {
 	mockRepo := new(MockRepository)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))

@@ -62,9 +62,14 @@ export interface ExecutionListParams {
   page?: number
   limit?: number
   workflowId?: string
-  status?: ExecutionStatus
+  status?: ExecutionStatus | ExecutionStatus[]
+  triggerType?: string | string[]
   startDate?: string
   endDate?: string
+  errorSearch?: string
+  executionIdPrefix?: string
+  minDurationMs?: number
+  maxDurationMs?: number
 }
 
 /**
@@ -161,4 +166,34 @@ export const executionAPI = {
   async getRecentExecutions(limit: number = 10): Promise<RecentExecutionsResponse> {
     return apiClient.get('/executions/recent', { params: { limit } })
   },
+
+  /**
+   * Bulk delete executions
+   */
+  async bulkDelete(ids: string[]): Promise<BulkOperationResult> {
+    return apiClient.delete('/api/v1/executions/bulk', { data: { ids } })
+  },
+
+  /**
+   * Bulk retry failed executions
+   */
+  async bulkRetry(ids: string[]): Promise<BulkOperationResult> {
+    return apiClient.post('/api/v1/executions/bulk/retry', { ids })
+  },
+}
+
+/**
+ * Bulk operation result
+ */
+export interface BulkOperationResult {
+  success: string[]
+  failed: BulkOperationError[]
+}
+
+/**
+ * Bulk operation error
+ */
+export interface BulkOperationError {
+  id: string
+  error: string
 }

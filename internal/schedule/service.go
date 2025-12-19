@@ -244,3 +244,34 @@ func (s *Service) calculateNextRun(expression, timezone string) (time.Time, erro
 func (s *Service) ParseNextRunTime(expression, timezone string) (time.Time, error) {
 	return s.calculateNextRun(expression, timezone)
 }
+
+// GetNextRunTimes returns the next N execution times for a cron expression
+func (s *Service) GetNextRunTimes(expression, timezone string, count int) ([]time.Time, error) {
+	if count <= 0 {
+		return []time.Time{}, nil
+	}
+
+	// Parse cron expression
+	sched, err := s.cronParser.Parse(expression)
+	if err != nil {
+		return nil, &ValidationError{Message: "invalid cron expression: " + err.Error()}
+	}
+
+	// Load timezone
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+
+	// Calculate next N run times
+	times := make([]time.Time, 0, count)
+	current := time.Now().In(loc)
+
+	for i := 0; i < count; i++ {
+		nextRun := sched.Next(current)
+		times = append(times, nextRun)
+		current = nextRun
+	}
+
+	return times, nil
+}

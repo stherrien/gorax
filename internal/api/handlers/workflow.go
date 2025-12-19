@@ -207,6 +207,36 @@ func (h *WorkflowHandler) GetExecution(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// DryRun performs a dry-run validation of a workflow
+func (h *WorkflowHandler) DryRun(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	workflowID := chi.URLParam(r, "workflowID")
+
+	var input workflow.DryRunInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	result, err := h.service.DryRun(r.Context(), tenantID, workflowID, input.TestData)
+	if err != nil {
+		if err == workflow.ErrNotFound {
+			h.respondError(w, http.StatusNotFound, "workflow not found")
+			return
+		}
+		if _, ok := err.(*workflow.ValidationError); ok {
+			h.respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to perform dry-run")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": result,
+	})
+}
+
 // Helper methods
 
 func (h *WorkflowHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -218,5 +248,97 @@ func (h *WorkflowHandler) respondJSON(w http.ResponseWriter, status int, data in
 func (h *WorkflowHandler) respondError(w http.ResponseWriter, status int, message string) {
 	h.respondJSON(w, status, map[string]string{
 		"error": message,
+	})
+}
+
+// ListVersions retrieves all versions for a workflow
+func (h *WorkflowHandler) ListVersions(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	workflowID := chi.URLParam(r, "workflowID")
+
+	// Verify workflow belongs to tenant
+	_, err := h.service.GetByID(r.Context(), tenantID, workflowID)
+	if err != nil {
+		if err == workflow.ErrNotFound {
+			h.respondError(w, http.StatusNotFound, "workflow not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to get workflow")
+		return
+	}
+
+	versions, err := h.service.ListWorkflowVersions(r.Context(), workflowID)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, "failed to list workflow versions")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": versions,
+	})
+}
+
+// GetVersion retrieves a specific version of a workflow
+func (h *WorkflowHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	workflowID := chi.URLParam(r, "workflowID")
+	versionStr := chi.URLParam(r, "version")
+
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid version number")
+		return
+	}
+
+	// Verify workflow belongs to tenant
+	_, err = h.service.GetByID(r.Context(), tenantID, workflowID)
+	if err != nil {
+		if err == workflow.ErrNotFound {
+			h.respondError(w, http.StatusNotFound, "workflow not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to get workflow")
+		return
+	}
+
+	versionData, err := h.service.GetWorkflowVersion(r.Context(), workflowID, version)
+	if err != nil {
+		if err == workflow.ErrNotFound {
+			h.respondError(w, http.StatusNotFound, "version not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to get workflow version")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": versionData,
+	})
+}
+
+// RestoreVersion restores a workflow to a previous version
+func (h *WorkflowHandler) RestoreVersion(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	workflowID := chi.URLParam(r, "workflowID")
+	versionStr := chi.URLParam(r, "version")
+
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid version number")
+		return
+	}
+
+	restoredWorkflow, err := h.service.RestoreWorkflowVersion(r.Context(), tenantID, workflowID, version)
+	if err != nil {
+		if err == workflow.ErrNotFound {
+			h.respondError(w, http.StatusNotFound, "workflow or version not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to restore workflow version")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": restoredWorkflow,
 	})
 }

@@ -3,7 +3,10 @@ package workflow
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"regexp"
+	"strings"
 )
 
 // WorkflowExecutor interface to avoid circular dependencies
@@ -30,6 +33,10 @@ type RepositoryInterface interface {
 	ListExecutionsAdvanced(ctx context.Context, tenantID string, filter ExecutionFilter, cursor string, limit int) (*ExecutionListResult, error)
 	GetExecutionWithSteps(ctx context.Context, tenantID, executionID string) (*ExecutionWithSteps, error)
 	CountExecutions(ctx context.Context, tenantID string, filter ExecutionFilter) (int, error)
+	CreateWorkflowVersion(ctx context.Context, workflowID string, version int, definition json.RawMessage, createdBy string) (*WorkflowVersion, error)
+	ListWorkflowVersions(ctx context.Context, workflowID string) ([]*WorkflowVersion, error)
+	GetWorkflowVersion(ctx context.Context, workflowID string, version int) (*WorkflowVersion, error)
+	RestoreWorkflowVersion(ctx context.Context, tenantID, workflowID string, version int) (*Workflow, error)
 }
 
 // Service handles workflow business logic
@@ -115,6 +122,15 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, input UpdateW
 	// Sync webhooks if definition was updated and webhook service is available
 	if input.Definition != nil && s.webhookService != nil {
 		webhookNodes := s.extractWebhookNodes(input.Definition)
+	// Create version record if definition was updated
+	if input.Definition != nil {
+		_, err := s.repo.CreateWorkflowVersion(ctx, workflow.ID, workflow.Version, workflow.Definition, workflow.CreatedBy)
+		if err != nil {
+			s.logger.Error("failed to create workflow version", "error", err, "workflow_id", workflow.ID, "version", workflow.Version)
+			// Don't fail the workflow update if version creation fails
+		}
+	}
+
 		if err := s.webhookService.SyncWorkflowWebhooks(ctx, tenantID, workflow.ID, webhookNodes); err != nil {
 			s.logger.Error("failed to sync webhooks", "error", err, "workflow_id", workflow.ID)
 			// Don't fail the workflow update if webhook sync fails
@@ -464,3 +480,475 @@ const (
 	AuthTypeBasic     = "basic"
 	AuthTypeAPIKey    = "api_key"
 )
+
+// ListWorkflowVersions retrieves all versions for a workflow
+func (s *Service) ListWorkflowVersions(ctx context.Context, workflowID string) ([]*WorkflowVersion, error) {
+	return s.repo.ListWorkflowVersions(ctx, workflowID)
+}
+
+// GetWorkflowVersion retrieves a specific version of a workflow
+func (s *Service) GetWorkflowVersion(ctx context.Context, workflowID string, version int) (*WorkflowVersion, error) {
+	return s.repo.GetWorkflowVersion(ctx, workflowID, version)
+}
+
+// RestoreWorkflowVersion restores a workflow to a previous version
+func (s *Service) RestoreWorkflowVersion(ctx context.Context, tenantID, workflowID string, version int) (*Workflow, error) {
+	// Validate workflow exists
+	workflow, err := s.repo.GetByID(ctx, tenantID, workflowID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate version exists
+	versionData, err := s.repo.GetWorkflowVersion(ctx, workflowID, version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Restore the version
+	restoredWorkflow, err := s.repo.RestoreWorkflowVersion(ctx, tenantID, workflowID, version)
+	if err != nil {
+		s.logger.Error("failed to restore workflow version",
+			"error", err,
+			"workflow_id", workflowID,
+			"version", version,
+		)
+		return nil, err
+	}
+
+	// Create version record for the restored state
+	_, err = s.repo.CreateWorkflowVersion(ctx, workflowID, restoredWorkflow.Version, restoredWorkflow.Definition, workflow.CreatedBy)
+	if err != nil {
+		s.logger.Error("failed to create version record after restore",
+			"error", err,
+			"workflow_id", workflowID,
+			"version", restoredWorkflow.Version,
+		)
+		// Don't fail the restore if version record creation fails
+	}
+
+	// Sync webhooks if webhook service is available
+	if s.webhookService != nil {
+		webhookNodes := s.extractWebhookNodes(versionData.Definition)
+		if err := s.webhookService.SyncWorkflowWebhooks(ctx, tenantID, workflowID, webhookNodes); err != nil {
+			s.logger.Error("failed to sync webhooks after restore", "error", err, "workflow_id", workflowID)
+			// Don't fail the restore if webhook sync fails
+		}
+	}
+
+	s.logger.Info("workflow version restored",
+		"workflow_id", workflowID,
+		"restored_from_version", version,
+		"new_version", restoredWorkflow.Version,
+	)
+
+	return restoredWorkflow, nil
+}
+
+// DryRun performs a dry-run validation of a workflow without executing it
+func (s *Service) DryRun(ctx context.Context, tenantID, workflowID string, testData map[string]interface{}) (*DryRunResult, error) {
+	result := &DryRunResult{
+		Valid:           true,
+		ExecutionOrder:  []string{},
+		VariableMapping: make(map[string]string),
+		Warnings:        []DryRunWarning{},
+		Errors:          []DryRunError{},
+	}
+
+	workflow, err := s.repo.GetByID(ctx, tenantID, workflowID)
+	if err != nil {
+		return nil, err
+	}
+
+	var definition WorkflowDefinition
+	if err := json.Unmarshal(workflow.Definition, &definition); err != nil {
+		return nil, &ValidationError{Message: "failed to parse workflow definition: " + err.Error()}
+	}
+
+	if len(definition.Nodes) == 0 {
+		result.Valid = false
+		result.Errors = append(result.Errors, DryRunError{
+			NodeID:  "",
+			Field:   "nodes",
+			Message: "workflow has no nodes",
+		})
+		return result, nil
+	}
+
+	nodeMap := s.buildNodeMapForDryRun(definition.Nodes)
+
+	executionOrder, err := s.validateTopologicalOrder(definition.Nodes, definition.Edges)
+	if err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, DryRunError{
+			NodeID:  "",
+			Field:   "edges",
+			Message: err.Error(),
+		})
+		return result, nil
+	}
+	result.ExecutionOrder = executionOrder
+
+	availableVars := make(map[string]bool)
+	if testData != nil {
+		for key := range testData {
+			availableVars["trigger."+key] = true
+			result.VariableMapping["trigger."+key] = "test_data"
+		}
+	}
+	availableVars["trigger"] = true
+	result.VariableMapping["trigger"] = "trigger_data"
+
+	for _, nodeID := range executionOrder {
+		node, exists := nodeMap[nodeID]
+		if !exists {
+			continue
+		}
+
+		if s.isTriggerNodeType(node.Type) {
+			continue
+		}
+
+		nodeErrors := s.validateNodeConfig(node, availableVars)
+		if len(nodeErrors) > 0 {
+			result.Valid = false
+			result.Errors = append(result.Errors, nodeErrors...)
+		}
+
+		nodeWarnings := s.validateNodeWarnings(node)
+		if len(nodeWarnings) > 0 {
+			result.Warnings = append(result.Warnings, nodeWarnings...)
+		}
+
+		availableVars["steps."+nodeID] = true
+		result.VariableMapping["steps."+nodeID] = "node:" + nodeID
+
+		if node.Type == string(NodeTypeControlLoop) {
+			var loopConfig LoopActionConfig
+			if len(node.Data.Config) > 0 {
+				if err := json.Unmarshal(node.Data.Config, &loopConfig); err == nil {
+					if loopConfig.ItemVariable != "" {
+						availableVars[loopConfig.ItemVariable] = true
+						result.VariableMapping[loopConfig.ItemVariable] = "loop:"+nodeID
+					}
+					if loopConfig.IndexVariable != "" {
+						availableVars[loopConfig.IndexVariable] = true
+						result.VariableMapping[loopConfig.IndexVariable] = "loop:"+nodeID
+					}
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (s *Service) buildNodeMapForDryRun(nodes []Node) map[string]Node {
+	nodeMap := make(map[string]Node)
+	for _, node := range nodes {
+		nodeMap[node.ID] = node
+	}
+	return nodeMap
+}
+
+func (s *Service) isTriggerNodeType(nodeType string) bool {
+	return nodeType == string(NodeTypeTriggerWebhook) ||
+		nodeType == string(NodeTypeTriggerSchedule)
+}
+
+func (s *Service) validateTopologicalOrder(nodes []Node, edges []Edge) ([]string, error) {
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+
+	for _, node := range nodes {
+		inDegree[node.ID] = 0
+		adjList[node.ID] = []string{}
+	}
+
+	for _, edge := range edges {
+		adjList[edge.Source] = append(adjList[edge.Source], edge.Target)
+		inDegree[edge.Target]++
+	}
+
+	var queue []string
+	for nodeID, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, nodeID)
+		}
+	}
+
+	var result []string
+	for len(queue) > 0 {
+		nodeID := queue[0]
+		queue = queue[1:]
+		result = append(result, nodeID)
+
+		for _, neighbor := range adjList[nodeID] {
+			inDegree[neighbor]--
+			if inDegree[neighbor] == 0 {
+				queue = append(queue, neighbor)
+			}
+		}
+	}
+
+	if len(result) != len(nodes) {
+		return nil, &ValidationError{Message: "workflow contains cycles"}
+	}
+
+	return result, nil
+}
+
+func (s *Service) validateNodeConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+
+	switch node.Type {
+	case string(NodeTypeActionHTTP):
+		errors = append(errors, s.validateHTTPConfig(node, availableVars)...)
+	case string(NodeTypeActionTransform):
+		errors = append(errors, s.validateTransformConfig(node, availableVars)...)
+	case string(NodeTypeActionFormula):
+		errors = append(errors, s.validateFormulaConfig(node, availableVars)...)
+	case string(NodeTypeControlIf):
+		errors = append(errors, s.validateConditionalConfig(node, availableVars)...)
+	case string(NodeTypeControlLoop):
+		errors = append(errors, s.validateLoopConfig(node, availableVars)...)
+	}
+
+	return errors
+}
+
+func (s *Service) validateHTTPConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+	var config HTTPActionConfig
+
+	if len(node.Data.Config) == 0 {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "HTTP action requires configuration",
+		})
+		return errors
+	}
+
+	if err := json.Unmarshal(node.Data.Config, &config); err != nil {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "invalid HTTP configuration: " + err.Error(),
+		})
+		return errors
+	}
+
+	if config.Method == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "method",
+			Message: "HTTP method is required",
+		})
+	}
+
+	if config.URL == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "url",
+			Message: "URL is required",
+		})
+	}
+
+	configStr := string(node.Data.Config)
+	errors = append(errors, s.validateVariableReferences(node.ID, configStr, availableVars)...)
+
+	return errors
+}
+
+func (s *Service) validateTransformConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+	var config TransformActionConfig
+
+	if len(node.Data.Config) == 0 {
+		return errors
+	}
+
+	if err := json.Unmarshal(node.Data.Config, &config); err != nil {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "invalid transform configuration: " + err.Error(),
+		})
+		return errors
+	}
+
+	configStr := string(node.Data.Config)
+	errors = append(errors, s.validateVariableReferences(node.ID, configStr, availableVars)...)
+
+	return errors
+}
+
+func (s *Service) validateFormulaConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+	var config FormulaActionConfig
+
+	if len(node.Data.Config) == 0 {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "formula action requires configuration",
+		})
+		return errors
+	}
+
+	if err := json.Unmarshal(node.Data.Config, &config); err != nil {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "invalid formula configuration: " + err.Error(),
+		})
+		return errors
+	}
+
+	if config.Expression == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "expression",
+			Message: "expression is required",
+		})
+	}
+
+	configStr := string(node.Data.Config)
+	errors = append(errors, s.validateVariableReferences(node.ID, configStr, availableVars)...)
+
+	return errors
+}
+
+func (s *Service) validateConditionalConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+	var config ConditionalActionConfig
+
+	if len(node.Data.Config) == 0 {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "conditional action requires configuration",
+		})
+		return errors
+	}
+
+	if err := json.Unmarshal(node.Data.Config, &config); err != nil {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "invalid conditional configuration: " + err.Error(),
+		})
+		return errors
+	}
+
+	if config.Condition == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "condition",
+			Message: "condition is required",
+		})
+	}
+
+	configStr := string(node.Data.Config)
+	errors = append(errors, s.validateVariableReferences(node.ID, configStr, availableVars)...)
+
+	return errors
+}
+
+func (s *Service) validateLoopConfig(node Node, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+	var config LoopActionConfig
+
+	if len(node.Data.Config) == 0 {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "loop action requires configuration",
+		})
+		return errors
+	}
+
+	if err := json.Unmarshal(node.Data.Config, &config); err != nil {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "config",
+			Message: "invalid loop configuration: " + err.Error(),
+		})
+		return errors
+	}
+
+	if config.Source == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "source",
+			Message: "loop source is required",
+		})
+	}
+
+	if config.ItemVariable == "" {
+		errors = append(errors, DryRunError{
+			NodeID:  node.ID,
+			Field:   "item_variable",
+			Message: "item variable name is required",
+		})
+	}
+
+	configStr := string(node.Data.Config)
+	errors = append(errors, s.validateVariableReferences(node.ID, configStr, availableVars)...)
+
+	return errors
+}
+
+func (s *Service) validateVariableReferences(nodeID, configStr string, availableVars map[string]bool) []DryRunError {
+	var errors []DryRunError
+
+	varPattern := `\$\{([^}]+)\}`
+	re := regexp.MustCompile(varPattern)
+	matches := re.FindAllStringSubmatch(configStr, -1)
+
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		varName := match[1]
+
+		parts := strings.Split(varName, ".")
+		if len(parts) == 0 {
+			continue
+		}
+
+		rootVar := parts[0]
+		if len(parts) > 1 {
+			rootVar = parts[0] + "." + parts[1]
+		}
+
+		if !availableVars[parts[0]] && !availableVars[rootVar] {
+			errors = append(errors, DryRunError{
+				NodeID:  nodeID,
+				Field:   "mapping",
+				Message: fmt.Sprintf("undefined variable reference: %s", varName),
+			})
+		}
+	}
+
+	return errors
+}
+
+func (s *Service) validateNodeWarnings(node Node) []DryRunWarning {
+	var warnings []DryRunWarning
+
+	var configMap map[string]interface{}
+	if len(node.Data.Config) > 0 {
+		if err := json.Unmarshal(node.Data.Config, &configMap); err == nil {
+			if credID, exists := configMap["credential_id"]; exists && credID != nil {
+				warnings = append(warnings, DryRunWarning{
+					NodeID:  node.ID,
+					Message: "references credential (not validated during dry-run)",
+				})
+			}
+		}
+	}
+
+	return warnings
+}

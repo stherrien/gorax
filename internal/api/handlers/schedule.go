@@ -198,6 +198,47 @@ func (h *ScheduleHandler) ParseCron(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// PreviewSchedule returns next N execution times for a cron expression
+func (h *ScheduleHandler) PreviewSchedule(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		CronExpression string `json:"cron_expression"`
+		Timezone       string `json:"timezone"`
+		Count          int    `json:"count"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Default timezone to UTC
+	if input.Timezone == "" {
+		input.Timezone = "UTC"
+	}
+
+	// Default count to 10, max 50
+	if input.Count <= 0 {
+		input.Count = 10
+	}
+	if input.Count > 50 {
+		input.Count = 50
+	}
+
+	// Get next N run times
+	nextRuns, err := h.service.GetNextRunTimes(input.CronExpression, input.Timezone, input.Count)
+	if err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid cron expression: "+err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"valid":     true,
+		"next_runs": nextRuns,
+		"count":     len(nextRuns),
+		"timezone":  input.Timezone,
+	})
+}
+
 // Helper methods
 
 func (h *ScheduleHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {

@@ -7,9 +7,11 @@ interface PropertyPanelProps {
   node: Node | null
   onUpdate: (nodeId: string, data: any) => void
   onClose: () => void
+  onSave?: () => Promise<void>
+  isSaving?: boolean
 }
 
-export default function PropertyPanel({ node, onUpdate, onClose }: PropertyPanelProps) {
+export default function PropertyPanel({ node, onUpdate, onClose, onSave, isSaving }: PropertyPanelProps) {
   const [formData, setFormData] = useState<any>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -135,15 +137,28 @@ export default function PropertyPanel({ node, onUpdate, onClose }: PropertyPanel
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) {
       return
     }
 
+    // Update local state first
     onUpdate(node.id, formData)
     setOriginalData(formData)
-    setSuccessMessage('Saved successfully')
-    setTimeout(() => setSuccessMessage(null), 3000)
+
+    // Persist to backend if onSave is provided
+    if (onSave) {
+      try {
+        await onSave()
+        setSuccessMessage('Saved successfully')
+        setTimeout(() => setSuccessMessage(null), 3000)
+      } catch {
+        // Error is handled by parent component
+      }
+    } else {
+      setSuccessMessage('Saved successfully')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    }
   }
 
   const handleReset = () => {
@@ -242,15 +257,17 @@ export default function PropertyPanel({ node, onUpdate, onClose }: PropertyPanel
       <div className="p-4 border-t border-gray-700 flex space-x-2">
         <button
           onClick={handleReset}
-          className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+          disabled={isSaving}
+          className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Reset
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+          disabled={isSaving}
+          className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          Save
+          {isSaving ? 'Saving...' : 'Save'}
         </button>
       </div>
     </div>

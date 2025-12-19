@@ -1,8 +1,19 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useDashboardStats, useRecentExecutions } from '../hooks/useExecutions'
+import { useExecutionTrends, useDurationStats, useTopFailures, useTriggerBreakdown } from '../hooks/useMetrics'
 import type { Execution, ExecutionStatus } from '../api/executions'
+import ExecutionTrendChart from '../components/dashboard/ExecutionTrendChart'
+import SuccessRateChart from '../components/dashboard/SuccessRateChart'
+import DurationChart from '../components/dashboard/DurationChart'
+import TopFailuresTable from '../components/dashboard/TopFailuresTable'
+import TriggerBreakdown from '../components/dashboard/TriggerBreakdown'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+  const [timeRange, setTimeRange] = useState<number>(7) // days
+  const [groupBy, setGroupBy] = useState<'hour' | 'day'>('day')
+
   const { stats, loading: statsLoading, error: statsError } = useDashboardStats()
   const {
     executions: recentExecutions,
@@ -10,8 +21,18 @@ export default function Dashboard() {
     error: executionsError,
   } = useRecentExecutions(5)
 
+  // Metrics hooks
+  const { trends, loading: trendsLoading, error: trendsError, refetch: refetchTrends } = useExecutionTrends({ days: timeRange, groupBy })
+  const { stats: durationStats, loading: durationLoading, error: durationError } = useDurationStats({ days: timeRange })
+  const { failures, loading: failuresLoading, error: failuresError } = useTopFailures({ days: timeRange, limit: 10 })
+  const { breakdown, loading: breakdownLoading, error: breakdownError } = useTriggerBreakdown({ days: timeRange })
+
   const loading = statsLoading || executionsLoading
   const error = statsError || executionsError
+
+  const handleTriggerFilterClick = (triggerType: string) => {
+    navigate(`/executions?triggerType=${triggerType}`)
+  }
 
   // Loading state
   if (loading) {
@@ -83,6 +104,57 @@ export default function Dashboard() {
             View Executions
           </Link>
         </div>
+      </div>
+
+      {/* Metrics Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-white">Analytics & Insights</h2>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(Number(e.target.value))}
+            className="px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-lg text-sm"
+          >
+            <option value={7}>Last 7 days</option>
+            <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
+          </select>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <ExecutionTrendChart
+            trends={trends}
+            loading={trendsLoading}
+            error={trendsError || undefined}
+            onRefresh={refetchTrends}
+          />
+          <SuccessRateChart
+            trends={trends}
+            loading={trendsLoading}
+            error={trendsError || undefined}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <DurationChart
+            stats={durationStats}
+            loading={durationLoading}
+            error={durationError || undefined}
+          />
+          <TriggerBreakdown
+            breakdown={breakdown}
+            loading={breakdownLoading}
+            error={breakdownError || undefined}
+            onFilterClick={handleTriggerFilterClick}
+          />
+        </div>
+
+        <TopFailuresTable
+          failures={failures}
+          loading={failuresLoading}
+          error={failuresError || undefined}
+        />
       </div>
 
       {/* Recent Activity */}

@@ -226,6 +226,7 @@ func (a *AppWithAuth) setupRouter() {
 					r.Put("/{workflowID}", a.workflowHandler.Update)
 					r.Delete("/{workflowID}", a.workflowHandler.Delete)
 					r.Post("/{workflowID}/execute", a.workflowHandler.Execute)
+					r.Post("/{workflowID}/dry-run", a.workflowHandler.DryRun)
 				})
 
 				// Execution routes

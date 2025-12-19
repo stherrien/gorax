@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -387,6 +388,30 @@ func (r *Repository) buildExecutionFilterQuery(filter ExecutionFilter, args []in
 		args = append(args, filter.EndDate)
 	}
 
+	if filter.ErrorSearch != "" {
+		argIndex++
+		conditions = append(conditions, fmt.Sprintf("error_message ILIKE $%d", argIndex))
+		args = append(args, "%"+filter.ErrorSearch+"%")
+	}
+
+	if filter.ExecutionIDPrefix != "" {
+		argIndex++
+		conditions = append(conditions, fmt.Sprintf("id LIKE $%d", argIndex))
+		args = append(args, filter.ExecutionIDPrefix+"%")
+	}
+
+	if filter.MinDurationMs != nil {
+		argIndex++
+		conditions = append(conditions, fmt.Sprintf("(EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000) >= $%d", argIndex))
+		args = append(args, *filter.MinDurationMs)
+	}
+
+	if filter.MaxDurationMs != nil {
+		argIndex++
+		conditions = append(conditions, fmt.Sprintf("(EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000) <= $%d", argIndex))
+		args = append(args, *filter.MaxDurationMs)
+	}
+
 	whereClause := ""
 	if len(conditions) > 0 {
 		whereClause = " AND " + joinConditions(conditions)
@@ -527,4 +552,83 @@ func (r *Repository) CountExecutions(ctx context.Context, tenantID string, filte
 	}
 
 	return count, nil
+}
+
+// CreateWorkflowVersion creates a new workflow version record
+func (r *Repository) CreateWorkflowVersion(ctx context.Context, workflowID string, version int, definition json.RawMessage, createdBy string) (*WorkflowVersion, error) {
+	id := uuid.New().String()
+	now := time.Now()
+
+	query := `
+		INSERT INTO workflow_versions (id, workflow_id, version, definition, created_by, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING *
+	`
+
+	var workflowVersion WorkflowVersion
+	err := r.db.QueryRowxContext(
+		ctx, query,
+		id, workflowID, version, definition, createdBy, now,
+	).StructScan(&workflowVersion)
+
+	if err != nil {
+		return nil, fmt.Errorf("create workflow version: %w", err)
+	}
+
+	return &workflowVersion, nil
+}
+
+// ListWorkflowVersions retrieves all versions for a workflow
+func (r *Repository) ListWorkflowVersions(ctx context.Context, workflowID string) ([]*WorkflowVersion, error) {
+	query := `
+		SELECT * FROM workflow_versions
+		WHERE workflow_id = $1
+		ORDER BY version DESC
+	`
+
+	var versions []*WorkflowVersion
+	err := r.db.SelectContext(ctx, &versions, query, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("list workflow versions: %w", err)
+	}
+
+	return versions, nil
+}
+
+// GetWorkflowVersion retrieves a specific version of a workflow
+func (r *Repository) GetWorkflowVersion(ctx context.Context, workflowID string, version int) (*WorkflowVersion, error) {
+	query := `
+		SELECT * FROM workflow_versions
+		WHERE workflow_id = $1 AND version = $2
+	`
+
+	var workflowVersion WorkflowVersion
+	err := r.db.GetContext(ctx, &workflowVersion, query, workflowID, version)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get workflow version: %w", err)
+	}
+
+	return &workflowVersion, nil
+}
+
+// RestoreWorkflowVersion restores a workflow to a previous version
+func (r *Repository) RestoreWorkflowVersion(ctx context.Context, tenantID, workflowID string, version int) (*Workflow, error) {
+	// Get the version to restore
+	versionData, err := r.GetWorkflowVersion(ctx, workflowID, version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the workflow with the version's definition (increments version automatically)
+	updatedWorkflow, err := r.Update(ctx, tenantID, workflowID, UpdateWorkflowInput{
+		Definition: versionData.Definition,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("restore workflow version: %w", err)
+	}
+
+	return updatedWorkflow, nil
 }

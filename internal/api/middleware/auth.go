@@ -124,6 +124,15 @@ func GetUser(r *http.Request) *User {
 	return user
 }
 
+// GetUserID extracts just the user ID from the request context
+func GetUserID(r *http.Request) string {
+	user := GetUser(r)
+	if user != nil {
+		return user.ID
+	}
+	return ""
+}
+
 // Custom errors
 type AuthError struct {
 	Message string

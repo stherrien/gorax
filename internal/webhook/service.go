@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -36,7 +37,7 @@ func (s *Service) GenerateSecret() (string, error) {
 	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 
-// Create creates a new webhook
+// Create creates a new webhook (original signature for backward compatibility)
 func (s *Service) Create(ctx context.Context, tenantID, workflowID, nodeID, authType string) (*Webhook, error) {
 	// Generate secret if using signature auth
 	secret := ""
@@ -53,6 +54,35 @@ func (s *Service) Create(ctx context.Context, tenantID, workflowID, nodeID, auth
 		s.logger.Error("failed to create webhook", "error", err, "workflow_id", workflowID)
 		return nil, err
 	}
+
+	s.logger.Info("webhook created", "webhook_id", webhook.ID, "workflow_id", workflowID)
+	return webhook, nil
+}
+
+// CreateWithDetails creates a new webhook with full details
+func (s *Service) CreateWithDetails(ctx context.Context, tenantID, workflowID, name, path, authType, description string, priority int) (*Webhook, error) {
+	// For now, use nodeID as name until schema is updated
+	// Generate secret if using signature auth
+	secret := ""
+	if authType == AuthTypeSignature {
+		var err error
+		secret, err = s.GenerateSecret()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Use name as nodeID temporarily
+	webhook, err := s.repo.Create(ctx, tenantID, workflowID, name, secret, authType)
+	if err != nil {
+		s.logger.Error("failed to create webhook", "error", err, "workflow_id", workflowID)
+		return nil, err
+	}
+
+	// Set fields that don't exist in DB yet
+	webhook.Name = name
+	webhook.Description = description
+	webhook.Priority = priority
 
 	s.logger.Info("webhook created", "webhook_id", webhook.ID, "workflow_id", workflowID)
 	return webhook, nil
@@ -185,6 +215,234 @@ func (s *Service) SyncWorkflowWebhooks(ctx context.Context, tenantID, workflowID
 			}
 		}
 	}
+
+	return nil
+}
+
+// List retrieves all webhooks for a tenant with pagination
+func (s *Service) List(ctx context.Context, tenantID string, limit, offset int) ([]*Webhook, int, error) {
+	webhooks, total, err := s.repo.List(ctx, tenantID, limit, offset)
+	if err != nil {
+		s.logger.Error("failed to list webhooks", "error", err, "tenant_id", tenantID)
+		return nil, 0, err
+	}
+	return webhooks, total, nil
+}
+
+// GetByID retrieves a webhook by ID with tenant isolation
+func (s *Service) GetByID(ctx context.Context, tenantID, webhookID string) (*Webhook, error) {
+	webhook, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		s.logger.Error("failed to get webhook", "error", err, "webhook_id", webhookID)
+		return nil, err
+	}
+	return webhook, nil
+}
+
+// Update updates a webhook
+func (s *Service) Update(ctx context.Context, tenantID, webhookID, name, authType, description string, priority int, enabled bool) (*Webhook, error) {
+	// Verify webhook belongs to tenant
+	_, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	webhook, err := s.repo.Update(ctx, webhookID, name, authType, description, priority, enabled)
+	if err != nil {
+		s.logger.Error("failed to update webhook", "error", err, "webhook_id", webhookID)
+		return nil, err
+	}
+
+	s.logger.Info("webhook updated", "webhook_id", webhookID)
+	return webhook, nil
+}
+
+// DeleteByID deletes a webhook with tenant isolation
+func (s *Service) DeleteByID(ctx context.Context, tenantID, webhookID string) error {
+	// Verify webhook belongs to tenant
+	_, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.Delete(ctx, webhookID)
+	if err != nil {
+		s.logger.Error("failed to delete webhook", "error", err, "webhook_id", webhookID)
+		return err
+	}
+
+	s.logger.Info("webhook deleted", "webhook_id", webhookID)
+	return nil
+}
+
+// RegenerateSecret regenerates the secret for a webhook
+func (s *Service) RegenerateSecret(ctx context.Context, tenantID, webhookID string) (*Webhook, error) {
+	// Verify webhook belongs to tenant
+	_, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate new secret
+	secret, err := s.GenerateSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	webhook, err := s.repo.UpdateSecret(ctx, webhookID, secret)
+	if err != nil {
+		s.logger.Error("failed to regenerate secret", "error", err, "webhook_id", webhookID)
+		return nil, err
+	}
+
+	s.logger.Info("webhook secret regenerated", "webhook_id", webhookID)
+	return webhook, nil
+}
+
+// TestWebhook tests a webhook with sample payload
+func (s *Service) TestWebhook(ctx context.Context, tenantID, webhookID, method string, headers map[string]string, body json.RawMessage) (*TestResult, error) {
+	// Verify webhook belongs to tenant
+	webhook, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// This is a simulation - in real implementation would trigger actual workflow
+	result := &TestResult{
+		Success:      true,
+		StatusCode:   200,
+		ResponseTime: 150,
+		ExecutionID:  "test-execution-id",
+	}
+
+	s.logger.Info("webhook tested", "webhook_id", webhookID, "workflow_id", webhook.WorkflowID)
+	return result, nil
+}
+
+// GetEventHistory retrieves webhook event history
+func (s *Service) GetEventHistory(ctx context.Context, tenantID, webhookID string, limit, offset int) ([]*Event, int, error) {
+	// Verify webhook belongs to tenant
+	_, err := s.repo.GetByIDAndTenant(ctx, webhookID, tenantID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Note: This returns empty for now - would need to query webhook_events table
+	// For MVP, returning empty slice
+	events := []*Event{}
+	total := 0
+
+	return events, total, nil
+}
+
+// LogEvent logs a webhook event to the database
+func (s *Service) LogEvent(ctx context.Context, event *WebhookEvent) error {
+	err := s.repo.CreateEvent(ctx, event)
+	if err != nil {
+		s.logger.Error("failed to log webhook event",
+			"error", err,
+			"webhook_id", event.WebhookID,
+			"status", event.Status)
+		return fmt.Errorf("failed to log webhook event: %w", err)
+	}
+
+	s.logger.Debug("webhook event logged",
+		"event_id", event.ID,
+		"webhook_id", event.WebhookID,
+		"status", event.Status)
+
+	return nil
+}
+
+// GetEvents retrieves webhook events with pagination
+func (s *Service) GetEvents(ctx context.Context, tenantID, webhookID string, limit, offset int) ([]*WebhookEvent, int, error) {
+	filter := WebhookEventFilter{
+		WebhookID: webhookID,
+		Limit:     limit,
+		Offset:    offset,
+	}
+
+	events, total, err := s.repo.ListEvents(ctx, tenantID, filter)
+	if err != nil {
+		s.logger.Error("failed to get webhook events",
+			"error", err,
+			"webhook_id", webhookID)
+		return nil, 0, fmt.Errorf("failed to get webhook events: %w", err)
+	}
+
+	return events, total, nil
+}
+
+// MarkEventProcessed marks a webhook event as processed
+func (s *Service) MarkEventProcessed(ctx context.Context, eventID, executionID string, processingTimeMs int) error {
+	// First update the status
+	err := s.repo.UpdateEventStatus(ctx, eventID, EventStatusProcessed, nil)
+	if err != nil {
+		s.logger.Error("failed to mark event as processed",
+			"error", err,
+			"event_id", eventID)
+		return fmt.Errorf("failed to mark event as processed: %w", err)
+	}
+
+	// Then update execution ID and processing time
+	query := `UPDATE webhook_events SET execution_id = $2, processing_time_ms = $3 WHERE id = $1`
+	_, err = s.repo.db.ExecContext(ctx, query, eventID, executionID, processingTimeMs)
+	if err != nil {
+		s.logger.Error("failed to update event execution details",
+			"error", err,
+			"event_id", eventID)
+		return fmt.Errorf("failed to update event execution details: %w", err)
+	}
+
+	s.logger.Info("webhook event marked as processed",
+		"event_id", eventID,
+		"execution_id", executionID,
+		"processing_time_ms", processingTimeMs)
+
+	return nil
+}
+
+// MarkEventFailed marks a webhook event as failed
+func (s *Service) MarkEventFailed(ctx context.Context, eventID string, errorMsg string) error {
+	err := s.repo.UpdateEventStatus(ctx, eventID, EventStatusFailed, &errorMsg)
+	if err != nil {
+		s.logger.Error("failed to mark event as failed",
+			"error", err,
+			"event_id", eventID)
+		return fmt.Errorf("failed to mark event as failed: %w", err)
+	}
+
+	s.logger.Info("webhook event marked as failed",
+		"event_id", eventID,
+		"error", errorMsg)
+
+	return nil
+}
+
+// MarkEventFiltered marks a webhook event as filtered
+func (s *Service) MarkEventFiltered(ctx context.Context, eventID string, reason string) error {
+	// Update status to filtered
+	err := s.repo.UpdateEventStatus(ctx, eventID, EventStatusFiltered, nil)
+	if err != nil {
+		s.logger.Error("failed to mark event as filtered",
+			"error", err,
+			"event_id", eventID)
+		return fmt.Errorf("failed to mark event as filtered: %w", err)
+	}
+
+	// Update filtered reason
+	query := `UPDATE webhook_events SET filtered_reason = $2 WHERE id = $1`
+	_, err = s.repo.db.ExecContext(ctx, query, eventID, reason)
+	if err != nil {
+		s.logger.Error("failed to update filtered reason",
+			"error", err,
+			"event_id", eventID)
+		return fmt.Errorf("failed to update filtered reason: %w", err)
+	}
+
+	s.logger.Info("webhook event marked as filtered",
+		"event_id", eventID,
+		"reason", reason)
 
 	return nil
 }

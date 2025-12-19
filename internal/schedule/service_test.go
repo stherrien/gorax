@@ -174,3 +174,156 @@ func TestCreateWithWorkflowValidation(t *testing.T) {
 	// In a production environment, you would use integration tests with a test database
 	t.Skip("Skipping test that requires database repository")
 }
+
+// TestGetNextRunTimes tests getting multiple next run times
+func TestGetNextRunTimes(t *testing.T) {
+	service := NewService(nil, nil)
+
+	tests := []struct {
+		name       string
+		expression string
+		timezone   string
+		count      int
+		wantErr    bool
+		validate   func(t *testing.T, times []time.Time)
+	}{
+		{
+			name:       "get 5 next runs for hourly schedule",
+			expression: "@hourly",
+			timezone:   "UTC",
+			count:      5,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 5 {
+					t.Errorf("expected 5 times, got %d", len(times))
+				}
+				for i := 0; i < len(times)-1; i++ {
+					if !times[i].Before(times[i+1]) {
+						t.Error("times should be in ascending order")
+					}
+				}
+			},
+		},
+		{
+			name:       "get 10 next runs for daily at 9 AM",
+			expression: "0 9 * * *",
+			timezone:   "America/New_York",
+			count:      10,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 10 {
+					t.Errorf("expected 10 times, got %d", len(times))
+				}
+				for _, tm := range times {
+					if tm.Hour() != 9 {
+						t.Errorf("expected hour 9, got %d", tm.Hour())
+					}
+					if tm.Minute() != 0 {
+						t.Errorf("expected minute 0, got %d", tm.Minute())
+					}
+				}
+			},
+		},
+		{
+			name:       "get 3 next runs for every minute",
+			expression: "* * * * *",
+			timezone:   "UTC",
+			count:      3,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 3 {
+					t.Errorf("expected 3 times, got %d", len(times))
+				}
+			},
+		},
+		{
+			name:       "get 5 next runs with PST timezone",
+			expression: "0 0 * * *",
+			timezone:   "America/Los_Angeles",
+			count:      5,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 5 {
+					t.Errorf("expected 5 times, got %d", len(times))
+				}
+				for _, tm := range times {
+					loc, _ := time.LoadLocation("America/Los_Angeles")
+					tmLocal := tm.In(loc)
+					if tmLocal.Hour() != 0 {
+						t.Errorf("expected hour 0 in PST, got %d", tmLocal.Hour())
+					}
+				}
+			},
+		},
+		{
+			name:       "invalid cron expression",
+			expression: "invalid",
+			timezone:   "UTC",
+			count:      5,
+			wantErr:    true,
+			validate:   func(t *testing.T, times []time.Time) {},
+		},
+		{
+			name:       "count of 0 returns empty array",
+			expression: "@daily",
+			timezone:   "UTC",
+			count:      0,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 0 {
+					t.Errorf("expected 0 times, got %d", len(times))
+				}
+			},
+		},
+		{
+			name:       "negative count returns empty array",
+			expression: "@daily",
+			timezone:   "UTC",
+			count:      -1,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 0 {
+					t.Errorf("expected 0 times, got %d", len(times))
+				}
+			},
+		},
+		{
+			name:       "weekdays at 9 AM",
+			expression: "0 9 * * 1-5",
+			timezone:   "UTC",
+			count:      5,
+			wantErr:    false,
+			validate: func(t *testing.T, times []time.Time) {
+				if len(times) != 5 {
+					t.Errorf("expected 5 times, got %d", len(times))
+				}
+				for _, tm := range times {
+					weekday := tm.Weekday()
+					if weekday == time.Saturday || weekday == time.Sunday {
+						t.Errorf("expected weekday, got %v", weekday)
+					}
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			times, err := service.GetNextRunTimes(tt.expression, tt.timezone, tt.count)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetNextRunTimes() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				tt.validate(t, times)
+				// Verify all times are in the future
+				now := time.Now()
+				for _, tm := range times {
+					if !tm.After(now) {
+						t.Errorf("expected time %v to be after now %v", tm, now)
+					}
+				}
+			}
+		})
+	}
+}
