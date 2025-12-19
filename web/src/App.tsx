@@ -7,6 +7,9 @@ import Executions from './pages/Executions'
 import ExecutionDetail from './pages/ExecutionDetail'
 import Schedules from './pages/Schedules'
 import CreateSchedule from './pages/CreateSchedule'
+import WebhookList from './pages/WebhookList'
+import WebhookDetail from './pages/WebhookDetail'
+import CredentialManager from './pages/CredentialManager'
 
 function App() {
   return (
@@ -16,10 +19,13 @@ function App() {
         <Route path="workflows" element={<WorkflowList />} />
         <Route path="workflows/new" element={<WorkflowEditor />} />
         <Route path="workflows/:id" element={<WorkflowEditor />} />
+        <Route path="webhooks" element={<WebhookList />} />
+        <Route path="webhooks/:id" element={<WebhookDetail />} />
         <Route path="executions" element={<Executions />} />
         <Route path="executions/:id" element={<ExecutionDetail />} />
         <Route path="schedules" element={<Schedules />} />
         <Route path="schedules/new" element={<CreateSchedule />} />
+        <Route path="credentials" element={<CredentialManager />} />
       </Route>
     </Routes>
   )
