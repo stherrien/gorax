@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: rflow-postgres
+    environment:
+      POSTGRES_USER: rflow
+      POSTGRES_PASSWORD: rflow
+      POSTGRES_DB: rflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rflow -d rflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: rflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ory Kratos Identity Server
+  kratos-migrate:
+    image: oryd/kratos:v1.1.0
+    container_name: rflow-kratos-migrate
+    environment:
+      - DSN=postgres://rflow:rflow@postgres:5432/rflow?sslmode=disable&max_conns=20&max_idle_conns=4
+    volumes:
+      - ./kratos:/etc/config/kratos
+    command: migrate sql -e --yes
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  kratos:
+    image: oryd/kratos:v1.1.0
+    container_name: rflow-kratos
+    environment:
+      - DSN=postgres://rflow:rflow@postgres:5432/rflow?sslmode=disable&max_conns=20&max_idle_conns=4
+      - LOG_LEVEL=debug
+      - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
+      - SERVE_ADMIN_BASE_URL=http://localhost:4434/
+    volumes:
+      - ./kratos:/etc/config/kratos
+    command: serve --config /etc/config/kratos/kratos.yml --dev --watch-courier
+    ports:
+      - "4433:4433"  # Public API
+      - "4434:4434"  # Admin API
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4433/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mailslurper for email testing (for Kratos verification emails)
+  mailslurper:
+    image: oryd/mailslurper:latest-smtps
+    container_name: rflow-mailslurper
+    ports:
+      - "4436:4436"  # SMTP
+      - "4437:4437"  # Web UI
+
+  # rflow API (development)
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.api
+    container_name: rflow-api
+    environment:
+      - SERVER_ADDRESS=:8080
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=rflow
+      - DB_PASSWORD=rflow
+      - DB_NAME=rflow
+      - DB_SSLMODE=disable
+      - REDIS_ADDRESS=redis:6379
+      - KRATOS_PUBLIC_URL=http://kratos:4433
+      - KRATOS_ADMIN_URL=http://kratos:4434
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kratos:
+        condition: service_healthy
+    volumes:
+      - ../..:/app
+    command: ["go", "run", "./cmd/api"]
+
+  # rflow Worker (development)
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.worker
+    container_name: rflow-worker
+    environment:
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=rflow
+      - DB_PASSWORD=rflow
+      - DB_NAME=rflow
+      - DB_SSLMODE=disable
+      - REDIS_ADDRESS=redis:6379
+      - WORKER_CONCURRENCY=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../..:/app
+    command: ["go", "run", "./cmd/worker"]
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: rflow-network

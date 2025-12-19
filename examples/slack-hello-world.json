@@ -1,0 +1,61 @@
+{
+  "name": "Slack Hello World",
+  "description": "Simple Slack message workflow - perfect for testing",
+  "status": "draft",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger:webhook",
+        "position": { "x": 100, "y": 50 },
+        "data": {
+          "name": "Webhook Trigger",
+          "config": {
+            "path": "/hello-slack",
+            "method": "POST",
+            "auth_type": "none"
+          }
+        }
+      },
+      {
+        "id": "slack-send-1",
+        "type": "slack:send_message",
+        "position": { "x": 100, "y": 200 },
+        "data": {
+          "name": "Send Hello Message",
+          "config": {
+            "channel": "C1234567890",
+            "text": "Hello from Gorax! 👋",
+            "username": "Gorax Bot",
+            "icon_emoji": ":wave:"
+          }
+        }
+      },
+      {
+        "id": "slack-reaction-1",
+        "type": "slack:add_reaction",
+        "position": { "x": 100, "y": 350 },
+        "data": {
+          "name": "Add Wave Reaction",
+          "config": {
+            "channel": "{{steps.slack-send-1.channel}}",
+            "timestamp": "{{steps.slack-send-1.ts}}",
+            "emoji": "wave"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger-1",
+        "target": "slack-send-1"
+      },
+      {
+        "id": "e2",
+        "source": "slack-send-1",
+        "target": "slack-reaction-1"
+      }
+    ]
+  }
+}

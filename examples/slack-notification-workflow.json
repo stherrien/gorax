@@ -1,0 +1,138 @@
+{
+  "name": "Slack Notification Demo",
+  "description": "Demonstrates all Slack actions: send message, add reaction, update message, and send DM",
+  "status": "draft",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger:webhook",
+        "position": { "x": 100, "y": 50 },
+        "data": {
+          "name": "Webhook Trigger",
+          "config": {
+            "path": "/slack-demo",
+            "method": "POST",
+            "auth_type": "none"
+          }
+        }
+      },
+      {
+        "id": "slack-send-1",
+        "type": "slack:send_message",
+        "position": { "x": 100, "y": 200 },
+        "data": {
+          "name": "Send Initial Notification",
+          "config": {
+            "channel": "C1234567890",
+            "text": "🚀 Workflow started! Processing your request...",
+            "blocks": "[{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Workflow Status*\\n🚀 Processing your request...\"}}]",
+            "username": "Gorax Bot",
+            "icon_emoji": ":robot_face:"
+          }
+        }
+      },
+      {
+        "id": "slack-reaction-1",
+        "type": "slack:add_reaction",
+        "position": { "x": 100, "y": 350 },
+        "data": {
+          "name": "Add Eyes Reaction",
+          "config": {
+            "channel": "{{steps.slack-send-1.channel}}",
+            "timestamp": "{{steps.slack-send-1.ts}}",
+            "emoji": "eyes"
+          }
+        }
+      },
+      {
+        "id": "http-process",
+        "type": "action:http",
+        "position": { "x": 100, "y": 500 },
+        "data": {
+          "name": "Process Data (Simulated)",
+          "config": {
+            "method": "GET",
+            "url": "https://api.example.com/process",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "timeout": 30
+          }
+        }
+      },
+      {
+        "id": "slack-update-1",
+        "type": "slack:update_message",
+        "position": { "x": 100, "y": 650 },
+        "data": {
+          "name": "Update with Results",
+          "config": {
+            "channel": "{{steps.slack-send-1.channel}}",
+            "ts": "{{steps.slack-send-1.ts}}",
+            "text": "✅ Workflow completed successfully!",
+            "blocks": "[{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Workflow Status*\\n✅ Completed successfully!\\n\\n*Details:*\\n• Started: {{trigger.timestamp}}\\n• Duration: {{steps.http-process.duration}}ms\\n• Status: Success\"}}]"
+          }
+        }
+      },
+      {
+        "id": "slack-reaction-2",
+        "type": "slack:add_reaction",
+        "position": { "x": 100, "y": 800 },
+        "data": {
+          "name": "Add Success Reaction",
+          "config": {
+            "channel": "{{steps.slack-send-1.channel}}",
+            "timestamp": "{{steps.slack-send-1.ts}}",
+            "emoji": "white_check_mark"
+          }
+        }
+      },
+      {
+        "id": "slack-dm-1",
+        "type": "slack:send_dm",
+        "position": { "x": 350, "y": 650 },
+        "data": {
+          "name": "Notify Admin",
+          "config": {
+            "user": "admin@example.com",
+            "text": "Workflow completed successfully",
+            "blocks": "[{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Workflow Notification*\\n\\nThe workflow `{{workflow.name}}` has completed successfully.\\n\\n*Execution ID:* {{execution.id}}\\n*Status:* ✅ Success\"}}]"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger-1",
+        "target": "slack-send-1"
+      },
+      {
+        "id": "e2",
+        "source": "slack-send-1",
+        "target": "slack-reaction-1"
+      },
+      {
+        "id": "e3",
+        "source": "slack-reaction-1",
+        "target": "http-process"
+      },
+      {
+        "id": "e4",
+        "source": "http-process",
+        "target": "slack-update-1"
+      },
+      {
+        "id": "e5",
+        "source": "slack-update-1",
+        "target": "slack-reaction-2"
+      },
+      {
+        "id": "e6",
+        "source": "http-process",
+        "target": "slack-dm-1"
+      }
+    ]
+  }
+}

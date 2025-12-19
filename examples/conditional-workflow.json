@@ -1,0 +1,338 @@
+{
+  "name": "Conditional Workflow Example",
+  "description": "Demonstrates conditional branching with nested conditions and complex expressions",
+  "version": 1,
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger-webhook",
+        "type": "trigger:webhook",
+        "position": { "x": 250, "y": 50 },
+        "data": {
+          "name": "Webhook Trigger",
+          "config": {
+            "path": "/webhook/conditional-demo",
+            "auth_type": "signature"
+          }
+        }
+      },
+      {
+        "id": "http-api-call",
+        "type": "action:http",
+        "position": { "x": 250, "y": 150 },
+        "data": {
+          "name": "Fetch User Data",
+          "config": {
+            "method": "GET",
+            "url": "https://api.example.com/users/{{trigger.body.user_id}}",
+            "headers": {
+              "Authorization": "Bearer {{env.api_key}}"
+            },
+            "timeout": 30
+          }
+        }
+      },
+      {
+        "id": "condition-status-check",
+        "type": "control:if",
+        "position": { "x": 250, "y": 280 },
+        "data": {
+          "name": "Check API Response",
+          "config": {
+            "condition": "steps.http-api-call.status == 200",
+            "description": "Verify API call succeeded"
+          }
+        }
+      },
+      {
+        "id": "condition-user-active",
+        "type": "control:if",
+        "position": { "x": 400, "y": 410 },
+        "data": {
+          "name": "Check User Status",
+          "config": {
+            "condition": "steps.http-api-call.body.status == \"active\" && steps.http-api-call.body.verified == true",
+            "description": "Ensure user is active and verified"
+          }
+        }
+      },
+      {
+        "id": "condition-premium-user",
+        "type": "control:if",
+        "position": { "x": 550, "y": 540 },
+        "data": {
+          "name": "Check Premium Status",
+          "config": {
+            "condition": "steps.http-api-call.body.subscription.tier == \"premium\" && steps.http-api-call.body.subscription.expires > {{env.current_timestamp}}",
+            "description": "Check if user has active premium subscription"
+          }
+        }
+      },
+      {
+        "id": "action-premium-workflow",
+        "type": "action:transform",
+        "position": { "x": 700, "y": 670 },
+        "data": {
+          "name": "Premium User Processing",
+          "config": {
+            "expression": "steps.http-api-call.body",
+            "mapping": {
+              "user_id": "steps.http-api-call.body.id",
+              "tier": "premium",
+              "features": ["advanced_analytics", "priority_support", "api_access"],
+              "message": "Welcome back, premium user!"
+            }
+          }
+        }
+      },
+      {
+        "id": "action-standard-workflow",
+        "type": "action:transform",
+        "position": { "x": 400, "y": 670 },
+        "data": {
+          "name": "Standard User Processing",
+          "config": {
+            "expression": "steps.http-api-call.body",
+            "mapping": {
+              "user_id": "steps.http-api-call.body.id",
+              "tier": "standard",
+              "features": ["basic_analytics", "email_support"],
+              "message": "Welcome back!"
+            }
+          }
+        }
+      },
+      {
+        "id": "action-inactive-user",
+        "type": "action:email",
+        "position": { "x": 100, "y": 540 },
+        "data": {
+          "name": "Send Reactivation Email",
+          "config": {
+            "to": "{{steps.http-api-call.body.email}}",
+            "subject": "Reactivate Your Account",
+            "body": "We noticed your account is inactive. Click here to reactivate: {{env.reactivation_url}}"
+          }
+        }
+      },
+      {
+        "id": "action-api-error",
+        "type": "action:email",
+        "position": { "x": 100, "y": 410 },
+        "data": {
+          "name": "Send Error Notification",
+          "config": {
+            "to": "{{env.admin_email}}",
+            "subject": "API Error in Conditional Workflow",
+            "body": "API call failed with status: {{steps.http-api-call.status}}\nError: {{steps.http-api-call.error}}"
+          }
+        }
+      },
+      {
+        "id": "action-final-log",
+        "type": "action:http",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "name": "Log Execution",
+          "config": {
+            "method": "POST",
+            "url": "https://api.example.com/logs",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "workflow_id": "{{env.workflow_id}}",
+              "execution_id": "{{env.execution_id}}",
+              "timestamp": "{{env.current_timestamp}}",
+              "result": "{{steps.action-premium-workflow.result || steps.action-standard-workflow.result}}",
+              "status": "completed"
+            }
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger-webhook",
+        "target": "http-api-call"
+      },
+      {
+        "id": "e2",
+        "source": "http-api-call",
+        "target": "condition-status-check"
+      },
+      {
+        "id": "e3",
+        "source": "condition-status-check",
+        "target": "condition-user-active",
+        "label": "true"
+      },
+      {
+        "id": "e4",
+        "source": "condition-status-check",
+        "target": "action-api-error",
+        "label": "false"
+      },
+      {
+        "id": "e5",
+        "source": "condition-user-active",
+        "target": "condition-premium-user",
+        "label": "true"
+      },
+      {
+        "id": "e6",
+        "source": "condition-user-active",
+        "target": "action-inactive-user",
+        "label": "false"
+      },
+      {
+        "id": "e7",
+        "source": "condition-premium-user",
+        "target": "action-premium-workflow",
+        "label": "true"
+      },
+      {
+        "id": "e8",
+        "source": "condition-premium-user",
+        "target": "action-standard-workflow",
+        "label": "false"
+      },
+      {
+        "id": "e9",
+        "source": "action-premium-workflow",
+        "target": "action-final-log"
+      },
+      {
+        "id": "e10",
+        "source": "action-standard-workflow",
+        "target": "action-final-log"
+      }
+    ]
+  },
+  "metadata": {
+    "created_at": "2025-12-16T23:30:00Z",
+    "author": "gorax-system",
+    "tags": ["conditional", "example", "advanced"],
+    "notes": [
+      "This workflow demonstrates:",
+      "1. Simple conditional: API status check",
+      "2. Complex conditional: User active AND verified",
+      "3. Nested conditional: Premium subscription check",
+      "4. Multiple execution paths based on conditions",
+      "5. Merging paths after conditionals"
+    ]
+  },
+  "test_scenarios": [
+    {
+      "name": "Premium Active User",
+      "trigger_data": {
+        "body": {
+          "user_id": "user-123"
+        }
+      },
+      "expected_path": [
+        "trigger-webhook",
+        "http-api-call",
+        "condition-status-check",
+        "condition-user-active",
+        "condition-premium-user",
+        "action-premium-workflow",
+        "action-final-log"
+      ],
+      "mock_responses": {
+        "http-api-call": {
+          "status": 200,
+          "body": {
+            "id": "user-123",
+            "email": "user@example.com",
+            "status": "active",
+            "verified": true,
+            "subscription": {
+              "tier": "premium",
+              "expires": 1735689600
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Standard Active User",
+      "trigger_data": {
+        "body": {
+          "user_id": "user-456"
+        }
+      },
+      "expected_path": [
+        "trigger-webhook",
+        "http-api-call",
+        "condition-status-check",
+        "condition-user-active",
+        "condition-premium-user",
+        "action-standard-workflow",
+        "action-final-log"
+      ],
+      "mock_responses": {
+        "http-api-call": {
+          "status": 200,
+          "body": {
+            "id": "user-456",
+            "email": "user@example.com",
+            "status": "active",
+            "verified": true,
+            "subscription": {
+              "tier": "standard",
+              "expires": 1735689600
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Inactive User",
+      "trigger_data": {
+        "body": {
+          "user_id": "user-789"
+        }
+      },
+      "expected_path": [
+        "trigger-webhook",
+        "http-api-call",
+        "condition-status-check",
+        "condition-user-active",
+        "action-inactive-user"
+      ],
+      "mock_responses": {
+        "http-api-call": {
+          "status": 200,
+          "body": {
+            "id": "user-789",
+            "email": "inactive@example.com",
+            "status": "inactive",
+            "verified": true
+          }
+        }
+      }
+    },
+    {
+      "name": "API Error",
+      "trigger_data": {
+        "body": {
+          "user_id": "invalid"
+        }
+      },
+      "expected_path": [
+        "trigger-webhook",
+        "http-api-call",
+        "condition-status-check",
+        "action-api-error"
+      ],
+      "mock_responses": {
+        "http-api-call": {
+          "status": 404,
+          "error": "User not found"
+        }
+      }
+    }
+  ]
+}

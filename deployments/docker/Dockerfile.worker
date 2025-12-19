@@ -1,0 +1,35 @@
+# Build stage
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache git
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /rflow-worker ./cmd/worker
+
+# Runtime stage
+FROM alpine:3.19
+
+WORKDIR /app
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates tzdata
+
+# Copy binary from builder
+COPY --from=builder /rflow-worker /app/rflow-worker
+
+# Create non-root user
+RUN adduser -D -g '' appuser
+USER appuser
+
+# Run the application
+CMD ["/app/rflow-worker"]

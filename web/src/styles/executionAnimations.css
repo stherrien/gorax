@@ -1,0 +1,145 @@
+/**
+ * Execution Trace Animations
+ * GPU-accelerated animations for workflow execution visualization
+ */
+
+/* Pulse glow animation for running nodes */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+/* Checkmark appear animation for completed nodes */
+@keyframes checkmark {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-checkmark {
+  animation: checkmark 0.5s ease-out;
+  will-change: transform, opacity;
+}
+
+/* Shake animation for failed nodes */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+  will-change: transform;
+}
+
+/* Slow spin for spinner icon */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.5s linear infinite;
+  will-change: transform;
+}
+
+/* Node status colors */
+.execution-status-pending {
+  border-color: rgba(107, 114, 128, 0.5);
+}
+
+.execution-status-running {
+  border-color: rgba(59, 130, 246, 0.8);
+}
+
+.execution-status-completed {
+  border-color: rgba(34, 197, 94, 0.8);
+}
+
+.execution-status-failed {
+  border-color: rgba(239, 68, 68, 0.8);
+}
+
+/* Edge animation for data flow */
+@keyframes flow {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.edge-animated {
+  stroke-dasharray: 5, 5;
+  animation: flow 1s linear infinite;
+  will-change: stroke-dashoffset;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-glow,
+  .animate-checkmark,
+  .animate-shake,
+  .animate-spin-slow,
+  .edge-animated {
+    animation: none;
+  }
+
+  .animate-pulse-glow {
+    box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .execution-status-pending {
+    border-width: 2px;
+    border-color: rgb(107, 114, 128);
+  }
+
+  .execution-status-running {
+    border-width: 2px;
+    border-color: rgb(59, 130, 246);
+  }
+
+  .execution-status-completed {
+    border-width: 2px;
+    border-color: rgb(34, 197, 94);
+  }
+
+  .execution-status-failed {
+    border-width: 2px;
+    border-color: rgb(239, 68, 68);
+  }
+}

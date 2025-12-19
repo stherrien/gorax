@@ -1,0 +1,179 @@
+{
+  "name": "Deployment Notification Workflow",
+  "description": "Real-world example: notify Slack channel about deployment status with conditional updates",
+  "status": "draft",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "trigger:webhook",
+        "position": { "x": 100, "y": 50 },
+        "data": {
+          "name": "Deployment Webhook",
+          "config": {
+            "path": "/deploy",
+            "method": "POST",
+            "auth_type": "signature",
+            "secret": "${env.WEBHOOK_SECRET}"
+          }
+        }
+      },
+      {
+        "id": "slack-announce",
+        "type": "slack:send_message",
+        "position": { "x": 100, "y": 200 },
+        "data": {
+          "name": "Announce Deployment Start",
+          "config": {
+            "channel": "C1234567890",
+            "blocks": "[{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"🚀 Deployment Started\"}}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Environment:*\\n{{trigger.body.environment}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Version:*\\n{{trigger.body.version}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Deployed By:*\\n{{trigger.body.user}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Status:*\\n🔄 In Progress\"}]}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"Started at {{trigger.timestamp}}\"}]}]",
+            "username": "Deployment Bot",
+            "icon_emoji": ":rocket:"
+          }
+        }
+      },
+      {
+        "id": "deploy-action",
+        "type": "action:http",
+        "position": { "x": 100, "y": 350 },
+        "data": {
+          "name": "Execute Deployment",
+          "config": {
+            "method": "POST",
+            "url": "https://deploy.example.com/api/deploy",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer ${credential.deploy_api_token}"
+            },
+            "body": {
+              "environment": "{{trigger.body.environment}}",
+              "version": "{{trigger.body.version}}",
+              "user": "{{trigger.body.user}}"
+            },
+            "timeout": 300
+          }
+        }
+      },
+      {
+        "id": "check-result",
+        "type": "control:if",
+        "position": { "x": 100, "y": 500 },
+        "data": {
+          "name": "Check Deployment Result",
+          "config": {
+            "condition": "{{steps.deploy-action.status}} === 'success'",
+            "description": "Check if deployment succeeded"
+          }
+        }
+      },
+      {
+        "id": "slack-success",
+        "type": "slack:update_message",
+        "position": { "x": -100, "y": 650 },
+        "data": {
+          "name": "Update Success Status",
+          "config": {
+            "channel": "{{steps.slack-announce.channel}}",
+            "ts": "{{steps.slack-announce.ts}}",
+            "blocks": "[{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"✅ Deployment Successful\"}}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Environment:*\\n{{trigger.body.environment}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Version:*\\n{{trigger.body.version}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Deployed By:*\\n{{trigger.body.user}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Status:*\\n✅ Completed\"}]}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Duration:*\\n{{steps.deploy-action.duration}}ms\"}, {\"type\": \"mrkdwn\", \"text\": \"*Deployment ID:*\\n{{steps.deploy-action.deployment_id}}\"}]}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"Completed at {{execution.completed_at}}\"}]}]"
+          }
+        }
+      },
+      {
+        "id": "slack-success-reaction",
+        "type": "slack:add_reaction",
+        "position": { "x": -100, "y": 800 },
+        "data": {
+          "name": "Add Success Reaction",
+          "config": {
+            "channel": "{{steps.slack-announce.channel}}",
+            "timestamp": "{{steps.slack-announce.ts}}",
+            "emoji": "white_check_mark"
+          }
+        }
+      },
+      {
+        "id": "slack-failure",
+        "type": "slack:update_message",
+        "position": { "x": 300, "y": 650 },
+        "data": {
+          "name": "Update Failure Status",
+          "config": {
+            "channel": "{{steps.slack-announce.channel}}",
+            "ts": "{{steps.slack-announce.ts}}",
+            "blocks": "[{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"❌ Deployment Failed\"}}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Environment:*\\n{{trigger.body.environment}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Version:*\\n{{trigger.body.version}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Deployed By:*\\n{{trigger.body.user}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Status:*\\n❌ Failed\"}]}, {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Error:*\\n```{{steps.deploy-action.error}}```\"}}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"Failed at {{execution.failed_at}}\"}]}]"
+          }
+        }
+      },
+      {
+        "id": "slack-failure-reaction",
+        "type": "slack:add_reaction",
+        "position": { "x": 300, "y": 800 },
+        "data": {
+          "name": "Add Failure Reaction",
+          "config": {
+            "channel": "{{steps.slack-announce.channel}}",
+            "timestamp": "{{steps.slack-announce.ts}}",
+            "emoji": "x"
+          }
+        }
+      },
+      {
+        "id": "slack-notify-oncall",
+        "type": "slack:send_dm",
+        "position": { "x": 300, "y": 950 },
+        "data": {
+          "name": "Alert On-Call Engineer",
+          "config": {
+            "user": "oncall@example.com",
+            "blocks": "[{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"🚨 Deployment Failure Alert\"}}, {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"A deployment has failed and requires immediate attention.\"}}, {\"type\": \"section\", \"fields\": [{\"type\": \"mrkdwn\", \"text\": \"*Environment:*\\n{{trigger.body.environment}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Version:*\\n{{trigger.body.version}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Deployment ID:*\\n{{execution.id}}\"}, {\"type\": \"mrkdwn\", \"text\": \"*Error:*\\n{{steps.deploy-action.error}}\"}]}, {\"type\": \"actions\", \"elements\": [{\"type\": \"button\", \"text\": {\"type\": \"plain_text\", \"text\": \"View Logs\"}, \"url\": \"https://logs.example.com/{{execution.id}}\"}, {\"type\": \"button\", \"text\": {\"type\": \"plain_text\", \"text\": \"Rollback\"}, \"url\": \"https://deploy.example.com/rollback\", \"style\": \"danger\"}]}]"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger-1",
+        "target": "slack-announce"
+      },
+      {
+        "id": "e2",
+        "source": "slack-announce",
+        "target": "deploy-action"
+      },
+      {
+        "id": "e3",
+        "source": "deploy-action",
+        "target": "check-result"
+      },
+      {
+        "id": "e4",
+        "source": "check-result",
+        "target": "slack-success",
+        "label": "true"
+      },
+      {
+        "id": "e5",
+        "source": "slack-success",
+        "target": "slack-success-reaction"
+      },
+      {
+        "id": "e6",
+        "source": "check-result",
+        "target": "slack-failure",
+        "label": "false"
+      },
+      {
+        "id": "e7",
+        "source": "slack-failure",
+        "target": "slack-failure-reaction"
+      },
+      {
+        "id": "e8",
+        "source": "slack-failure-reaction",
+        "target": "slack-notify-oncall"
+      }
+    ]
+  }
+}
