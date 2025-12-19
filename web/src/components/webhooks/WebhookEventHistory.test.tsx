@@ -34,6 +34,7 @@ describe('WebhookEventHistory', () => {
       responseStatus: 200,
       processingTimeMs: 120,
       status: 'processed',
+      replayCount: 0,
       createdAt: '2024-01-15T10:00:00Z',
     },
     {
@@ -48,6 +49,7 @@ describe('WebhookEventHistory', () => {
       responseStatus: 202,
       processingTimeMs: 95,
       status: 'received',
+      replayCount: 0,
       createdAt: '2024-01-15T09:00:00Z',
     },
     {
@@ -62,6 +64,7 @@ describe('WebhookEventHistory', () => {
       processingTimeMs: 50,
       status: 'failed',
       errorMessage: 'Invalid payload format',
+      replayCount: 0,
       createdAt: '2024-01-15T08:00:00Z',
     },
     {
@@ -74,6 +77,7 @@ describe('WebhookEventHistory', () => {
       requestBody: { data: 'filtered payload' },
       processingTimeMs: 10,
       status: 'filtered',
+      replayCount: 0,
       createdAt: '2024-01-15T07:00:00Z',
     },
   ]
@@ -300,8 +304,8 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      // Click on the event ID cell which has the onClick handler
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -318,8 +322,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -338,8 +341,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -357,8 +359,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -376,8 +377,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -395,8 +395,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-3')).toBeInTheDocument()
       })
 
-      const failedRow = screen.getByText('evt-3').closest('tr')!
-      await user.click(failedRow)
+      await user.click(screen.getByText('evt-3'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -414,8 +413,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const modal = screen.getByRole('dialog')
@@ -433,8 +431,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -458,8 +455,7 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -596,6 +592,7 @@ describe('WebhookEventHistory', () => {
         responseStatus: 200,
         processingTimeMs: 100,
         status: 'processed' as const,
+        replayCount: 0,
         createdAt: new Date(2024, 0, 15, 10, 0, i).toISOString(),
       }))
     }
@@ -816,12 +813,432 @@ describe('WebhookEventHistory', () => {
         expect(screen.getByText('evt-1')).toBeInTheDocument()
       })
 
-      const firstRow = screen.getByText('evt-1').closest('tr')!
-      await user.click(firstRow)
+      await user.click(screen.getByText('evt-1'))
 
       await waitFor(() => {
         const dialog = screen.getByRole('dialog')
         expect(dialog).toHaveAttribute('aria-modal', 'true')
+      })
+    })
+  })
+
+  describe('Replay Functionality', () => {
+    const mockEventsWithReplay: WebhookEvent[] = [
+      {
+        id: 'evt-1',
+        webhookId: 'wh-1',
+        executionId: 'exec-1',
+        requestMethod: 'POST',
+        requestHeaders: { 'Content-Type': 'application/json' },
+        requestBody: { data: 'test payload 1' },
+        responseStatus: 200,
+        processingTimeMs: 120,
+        status: 'processed',
+        replayCount: 2,
+        createdAt: '2024-01-15T10:00:00Z',
+      },
+      {
+        id: 'evt-2',
+        webhookId: 'wh-1',
+        executionId: 'exec-2',
+        requestMethod: 'POST',
+        requestHeaders: { 'Content-Type': 'application/json' },
+        requestBody: { data: 'test payload 2' },
+        responseStatus: 202,
+        processingTimeMs: 95,
+        status: 'received',
+        replayCount: 0,
+        createdAt: '2024-01-15T09:00:00Z',
+      },
+      {
+        id: 'evt-3',
+        webhookId: 'wh-1',
+        requestMethod: 'POST',
+        requestHeaders: { 'Content-Type': 'application/json' },
+        requestBody: { data: 'test payload 3' },
+        responseStatus: 400,
+        processingTimeMs: 50,
+        status: 'failed',
+        replayCount: 5,
+        createdAt: '2024-01-15T08:00:00Z',
+      },
+    ]
+
+    beforeEach(() => {
+      ;(webhookAPI.getEvents as any).mockResolvedValue({
+        events: mockEventsWithReplay,
+        total: 3,
+      })
+    })
+
+    it('should display replay button on each event row', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const replayButtons = screen.getAllByRole('button', { name: /replay/i })
+        expect(replayButtons.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should display replay count badge on events that have been replayed', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText(/2×/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should not display replay count badge on events with zero replays', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row')
+        const evt2Row = rows.find(row => row.textContent?.includes('evt-2'))
+        expect(evt2Row?.textContent).not.toMatch(/0×/)
+      })
+    })
+
+    it('should disable replay button when event has reached max replay count', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row')
+        const evt3Row = rows.find(row => row.textContent?.includes('evt-3'))
+        const replayButton = within(evt3Row as HTMLElement).getByRole('button', { name: /replay/i })
+        expect(replayButton).toBeDisabled()
+      })
+    })
+
+    it('should show tooltip on disabled replay button', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row')
+        const evt3Row = rows.find(row => row.textContent?.includes('evt-3'))
+        const replayButton = within(evt3Row as HTMLElement).getByRole('button', { name: /replay/i })
+        expect(replayButton).toHaveAttribute('title', 'Maximum replay limit reached')
+      })
+    })
+
+    it('should open replay modal when clicking replay button', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const rows = screen.getAllByRole('row')
+      const evt1Row = rows.find(row => row.textContent?.includes('evt-1'))
+      const replayButton = within(evt1Row as HTMLElement).getByRole('button', { name: /replay/i })
+      await user.click(replayButton)
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByText(/replay webhook event/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should display checkbox for batch selection', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole('checkbox')
+        expect(checkboxes.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should not show batch replay button when no events selected', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByRole('button', { name: /replay selected/i })).not.toBeInTheDocument()
+    })
+
+    it('should show batch replay button when events are selected', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1]) // Skip header checkbox, click first event
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /replay selected/i })).toBeInTheDocument()
+      })
+    })
+
+    it('should display count of selected events in batch replay button', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+      await user.click(checkboxes[2])
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /replay selected \(2\)/i })).toBeInTheDocument()
+      })
+    })
+
+    it('should disable checkboxes for events at max replay count', async () => {
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row')
+        const evt3Row = rows.find(row => row.textContent?.includes('evt-3'))
+        const checkbox = within(evt3Row as HTMLElement).getByRole('checkbox')
+        expect(checkbox).toBeDisabled()
+      })
+    })
+
+    it('should prevent selecting more than 10 events for batch replay', async () => {
+      const user = userEvent.setup()
+      const manyEvents = Array.from({ length: 15 }, (_, i) => ({
+        ...mockEventsWithReplay[0],
+        id: `evt-${i + 1}`,
+        replayCount: 0,
+      }))
+
+      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+        events: manyEvents,
+        total: 15,
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+
+      // Try to select 11 events (skip header checkbox)
+      for (let i = 1; i <= 11; i++) {
+        await user.click(checkboxes[i])
+      }
+
+      // Should only show 10 selected
+      await waitFor(() => {
+        expect(screen.getByText(/replay selected \(10\)/i)).toBeInTheDocument()
+      })
+
+      // 11th checkbox should remain unchecked
+      expect(checkboxes[11]).not.toBeChecked()
+    })
+
+    it('should show warning message when trying to select more than 10', async () => {
+      const user = userEvent.setup()
+      const manyEvents = Array.from({ length: 15 }, (_, i) => ({
+        ...mockEventsWithReplay[0],
+        id: `evt-${i + 1}`,
+        replayCount: 0,
+      }))
+
+      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+        events: manyEvents,
+        total: 15,
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+
+      // Select 10 events
+      for (let i = 1; i <= 10; i++) {
+        await user.click(checkboxes[i])
+      }
+
+      // Try to select 11th
+      await user.click(checkboxes[11])
+
+      await waitFor(() => {
+        expect(screen.getByText(/maximum 10 events/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should show confirmation dialog before batch replay', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+      await user.click(checkboxes[2])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/confirm batch replay/i)).toBeInTheDocument()
+        expect(screen.getByText(/replay 2 events/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should call batchReplayEvents API when confirmed', async () => {
+      const user = userEvent.setup()
+      ;(webhookAPI.batchReplayEvents as any) = vi.fn().mockResolvedValue({
+        results: {
+          'evt-1': { success: true, executionId: 'exec-new-1' },
+          'evt-2': { success: true, executionId: 'exec-new-2' },
+        },
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+      await user.click(checkboxes[2])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/confirm batch replay/i)).toBeInTheDocument()
+      })
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i })
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(webhookAPI.batchReplayEvents).toHaveBeenCalledWith('wh-1', ['evt-1', 'evt-2'])
+      })
+    })
+
+    it('should show success notification after batch replay', async () => {
+      const user = userEvent.setup()
+      ;(webhookAPI.batchReplayEvents as any) = vi.fn().mockResolvedValue({
+        results: {
+          'evt-1': { success: true, executionId: 'exec-new-1' },
+          'evt-2': { success: true, executionId: 'exec-new-2' },
+        },
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i })
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/successfully replayed/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should show partial success notification when some replays fail', async () => {
+      const user = userEvent.setup()
+      ;(webhookAPI.batchReplayEvents as any) = vi.fn().mockResolvedValue({
+        results: {
+          'evt-1': { success: true, executionId: 'exec-new-1' },
+          'evt-2': { success: false, error: 'Replay failed' },
+        },
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+      await user.click(checkboxes[2])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i })
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/1 succeeded, 1 failed/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should clear selection after successful batch replay', async () => {
+      const user = userEvent.setup()
+      ;(webhookAPI.batchReplayEvents as any) = vi.fn().mockResolvedValue({
+        results: {
+          'evt-1': { success: true, executionId: 'exec-new-1' },
+        },
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i })
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /replay selected/i })).not.toBeInTheDocument()
+      })
+    })
+
+    it('should refresh events list after successful replay', async () => {
+      const user = userEvent.setup()
+      ;(webhookAPI.batchReplayEvents as any) = vi.fn().mockResolvedValue({
+        results: {
+          'evt-1': { success: true, executionId: 'exec-new-1' },
+        },
+      })
+
+      renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('evt-1')).toBeInTheDocument()
+      })
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await user.click(checkboxes[1])
+
+      const replayButton = screen.getByRole('button', { name: /replay selected/i })
+      await user.click(replayButton)
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i })
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        // getEvents should be called again to refresh
+        expect(webhookAPI.getEvents).toHaveBeenCalledTimes(2)
       })
     })
   })
