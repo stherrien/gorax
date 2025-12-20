@@ -150,7 +150,6 @@ func (r *repository) List(ctx context.Context, filter TaskFilter) ([]*HumanTask,
 	if filter.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET $%d", argPos)
 		args = append(args, filter.Offset)
-		argPos++
 	}
 
 	err := r.db.SelectContext(ctx, &tasks, query, args...)
@@ -306,7 +305,6 @@ func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{
 	if filter.DueAfter != nil {
 		conditions = append(conditions, fmt.Sprintf("due_date > $%d", argPos))
 		args = append(args, *filter.DueAfter)
-		argPos++
 	}
 
 	query := baseQuery

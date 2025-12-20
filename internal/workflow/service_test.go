@@ -582,9 +582,3 @@ func TestGetExecutionStats_ZeroCounts(t *testing.T) {
 	assert.Equal(t, 0, result.StatusCounts["cancelled"])
 	mockRepo.AssertExpectations(t)
 }
-
-// Helper functions
-
-func jsonRawMessage(s string) json.RawMessage {
-	return json.RawMessage(s)
-}

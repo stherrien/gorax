@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/validation"
 )
 
 // CredentialHandler handles credential-related HTTP requests
@@ -71,8 +71,12 @@ func (h *CredentialHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse query parameters
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	// Parse filters
 	filter := credential.CredentialListFilter{
@@ -311,8 +315,12 @@ func (h *CredentialHandler) GetAccessLog(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	logs, err := h.service.GetAccessLog(r.Context(), tenantID, credentialID, limit, offset)
 	if err != nil {

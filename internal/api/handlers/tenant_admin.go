@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorax/gorax/internal/tenant"
+	"github.com/gorax/gorax/internal/validation"
 )
 
 // TenantAdminHandler handles tenant administration endpoints
@@ -54,16 +54,13 @@ func (h *TenantAdminHandler) CreateTenant(w http.ResponseWriter, r *http.Request
 
 // ListTenants handles GET /api/v1/admin/tenants
 func (h *TenantAdminHandler) ListTenants(w http.ResponseWriter, r *http.Request) {
-	// Parse pagination parameters
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-
-	if limit <= 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
+	// Parse pagination parameters with overflow protection
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		100, // Admin endpoint has a lower max of 100
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	tenants, err := h.tenantService.List(r.Context(), limit, offset)
 	if err != nil {

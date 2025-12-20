@@ -286,7 +286,7 @@ func (c *Client) doRequestOnce(ctx context.Context, method, endpoint string, bod
 	if resp.StatusCode >= 400 {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(respBody, &errResp); err == nil {
-			return fmt.Errorf("Jira API error: %v", errResp.ErrorMessages)
+			return fmt.Errorf("jira API error: %v", errResp.ErrorMessages)
 		}
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
 	}

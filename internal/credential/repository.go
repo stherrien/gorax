@@ -281,7 +281,6 @@ func (r *Repository) List(ctx context.Context, tenantID string, filter Credentia
 		query += fmt.Sprintf(" AND (name ILIKE $%d OR description ILIKE $%d)", argIndex, argIndex)
 		searchPattern := "%" + filter.Search + "%"
 		args = append(args, searchPattern)
-		argIndex++
 	}
 
 	query += " ORDER BY created_at DESC"

@@ -177,7 +177,7 @@ func (c *CreateCredentialInput) Validate() error {
 	if c.Type != TypeAPIKey && c.Type != TypeOAuth2 && c.Type != TypeBasicAuth && c.Type != TypeCustom {
 		return &ValidationError{Message: "invalid credential type"}
 	}
-	if c.Value == nil || len(c.Value) == 0 {
+	if len(c.Value) == 0 {
 		return &ValidationError{Message: "value is required"}
 	}
 	return nil
@@ -198,7 +198,7 @@ func (u *UpdateCredentialInput) Validate() error {
 
 // Validate validates RotateCredentialInput
 func (r *RotateCredentialInput) Validate() error {
-	if r.Value == nil || len(r.Value) == 0 {
+	if len(r.Value) == 0 {
 		return &ValidationError{Message: "value is required"}
 	}
 	return nil

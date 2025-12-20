@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/gorax/gorax/internal/validation"
 )
 
 var (
@@ -79,10 +80,7 @@ func GetValueByPath(data map[string]interface{}, path string) (interface{}, erro
 		if matches := arrayIndexRegex.FindStringSubmatch(part); matches != nil {
 			// Handle array access like "users[0]"
 			arrayKey := matches[1]
-			index, err := strconv.Atoi(matches[2])
-			if err != nil {
-				return nil, fmt.Errorf("invalid array index '%s'", matches[2])
-			}
+			indexStr := matches[2]
 
 			// Get the array first
 			switch v := current.(type) {
@@ -92,11 +90,12 @@ func GetValueByPath(data map[string]interface{}, path string) (interface{}, erro
 				return nil, fmt.Errorf("cannot access key '%s' on non-object type", arrayKey)
 			}
 
-			// Then access the index
+			// Then access the index with overflow protection
 			switch arr := current.(type) {
 			case []interface{}:
-				if index < 0 || index >= len(arr) {
-					return nil, fmt.Errorf("array index %d out of bounds", index)
+				index, valid := validation.ParseArrayIndex(indexStr, len(arr))
+				if !valid {
+					return nil, fmt.Errorf("invalid or out of bounds array index '%s'", indexStr)
 				}
 				current = arr[index]
 			default:

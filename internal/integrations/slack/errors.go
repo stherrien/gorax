@@ -15,14 +15,14 @@ var (
 	ErrEmojiRequired          = errors.New("emoji is required")
 	ErrInvalidCredential      = errors.New("invalid or missing Slack credential")
 	ErrInvalidToken           = errors.New("invalid or expired access token")
-	ErrRateLimitExceeded      = errors.New("Slack API rate limit exceeded")
+	ErrRateLimitExceeded      = errors.New("slack API rate limit exceeded")
 	ErrChannelNotFound        = errors.New("channel not found")
 	ErrMessageNotFound        = errors.New("message not found")
 	ErrUserNotFound           = errors.New("user not found")
 	ErrUnauthorized           = errors.New("unauthorized: missing required scopes")
 	ErrChannelArchived        = errors.New("cannot post to archived channel")
 	ErrRestrictedAction       = errors.New("action restricted in this channel")
-	ErrAccountInactive        = errors.New("Slack account inactive")
+	ErrAccountInactive        = errors.New("slack account inactive")
 	ErrInvalidAuth            = errors.New("invalid authentication")
 	ErrMissingScope           = errors.New("missing required OAuth scope")
 	ErrTokenRevoked           = errors.New("access token has been revoked")
@@ -77,9 +77,9 @@ func ParseSlackError(errorCode string) error {
 		"not_authed":            ErrInvalidAuth,
 		"invalid_arguments":     errors.New("invalid arguments provided"),
 		"invalid_name":          errors.New("invalid arguments provided"),
-		"internal_error":        errors.New("Slack internal error"),
-		"fatal_error":           errors.New("Slack fatal error"),
-		"service_unavailable":   errors.New("Slack service temporarily unavailable"),
+		"internal_error":        errors.New("slack internal error"),
+		"fatal_error":           errors.New("slack fatal error"),
+		"service_unavailable":   errors.New("slack service temporarily unavailable"),
 	}
 
 	if err, ok := errorMap[errorCode]; ok {
@@ -91,7 +91,7 @@ func ParseSlackError(errorCode string) error {
 
 	return &SlackError{
 		ErrorCode: errorCode,
-		Message:   fmt.Sprintf("unknown Slack error: %s", errorCode),
+		Message:   fmt.Sprintf("unknown slack error: %s", errorCode),
 	}
 }
 

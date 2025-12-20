@@ -4,22 +4,25 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds all application configuration
 type Config struct {
-	Server        ServerConfig
-	Database      DatabaseConfig
-	Redis         RedisConfig
-	Kratos        KratosConfig
-	Worker        WorkerConfig
-	AWS           AWSConfig
-	Queue         QueueConfig
-	Credential    CredentialConfig
-	Cleanup       CleanupConfig
-	Retention     RetentionConfig
-	Observability ObservabilityConfig
-	Notification  NotificationConfig
+	Server         ServerConfig
+	Database       DatabaseConfig
+	Redis          RedisConfig
+	Kratos         KratosConfig
+	Worker         WorkerConfig
+	AWS            AWSConfig
+	Queue          QueueConfig
+	Credential     CredentialConfig
+	Cleanup        CleanupConfig
+	Retention      RetentionConfig
+	Observability  ObservabilityConfig
+	Notification   NotificationConfig
+	CORS           CORSConfig
+	SecurityHeader SecurityHeaderConfig
 }
 
 // CredentialConfig holds credential vault configuration
@@ -29,8 +32,10 @@ type CredentialConfig struct {
 	MasterKey string
 	// UseKMS indicates whether to use AWS KMS for key management
 	UseKMS bool
-	// KMSKeyID is the AWS KMS key ID for production encryption
+	// KMSKeyID is the AWS KMS key ID or alias for production encryption
 	KMSKeyID string
+	// KMSRegion is the AWS region for KMS operations (defaults to AWS_REGION if not set)
+	KMSRegion string
 }
 
 // ServerConfig holds HTTP server configuration
@@ -178,6 +183,36 @@ type NotificationConfig struct {
 	InAppRetentionDays int
 }
 
+// CORSConfig holds CORS configuration
+type CORSConfig struct {
+	// AllowedOrigins is the list of allowed origins for CORS
+	// Development: Can include localhost origins
+	// Production: Must use HTTPS origins only, no localhost
+	AllowedOrigins []string
+	// AllowedMethods is the list of allowed HTTP methods
+	AllowedMethods []string
+	// AllowedHeaders is the list of allowed HTTP headers
+	AllowedHeaders []string
+	// ExposedHeaders is the list of headers exposed to the client
+	ExposedHeaders []string
+	// AllowCredentials indicates whether credentials are allowed
+	AllowCredentials bool
+	// MaxAge is the preflight cache duration in seconds
+	MaxAge int
+}
+
+// SecurityHeaderConfig holds security headers configuration
+type SecurityHeaderConfig struct {
+	// EnableHSTS controls whether to set Strict-Transport-Security header
+	EnableHSTS bool
+	// HSTSMaxAge is the max-age value for HSTS in seconds
+	HSTSMaxAge int
+	// CSPDirectives is the Content-Security-Policy directive
+	CSPDirectives string
+	// FrameOptions controls X-Frame-Options header (DENY or SAMEORIGIN)
+	FrameOptions string
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -233,6 +268,8 @@ func Load() (*Config, error) {
 			MasterKey: getEnv("CREDENTIAL_MASTER_KEY", "dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS0xMjM0NTY="),
 			UseKMS:    getEnvAsBool("CREDENTIAL_USE_KMS", false),
 			KMSKeyID:  getEnv("CREDENTIAL_KMS_KEY_ID", ""),
+			// KMSRegion defaults to AWS_REGION if not explicitly set
+			KMSRegion: getEnvWithFallback("CREDENTIAL_KMS_REGION", "AWS_REGION", "us-east-1"),
 		},
 		Cleanup: CleanupConfig{
 			Enabled:       getEnvAsBool("CLEANUP_ENABLED", true),
@@ -279,6 +316,8 @@ func Load() (*Config, error) {
 			SlackTimeoutSeconds:    getEnvAsInt("NOTIFICATION_SLACK_TIMEOUT_SECONDS", 30),
 			InAppRetentionDays:     getEnvAsInt("NOTIFICATION_INAPP_RETENTION_DAYS", 90),
 		},
+		CORS:           loadCORSConfig(),
+		SecurityHeader: loadSecurityHeaderConfig(),
 	}
 
 	return cfg, nil
@@ -316,4 +355,85 @@ func getEnvAsFloat(key string, defaultValue float64) float64 {
 		}
 	}
 	return defaultValue
+}
+
+func getEnvAsSlice(key string, defaultValue []string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	// Split by comma and trim whitespace
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+// getEnvWithFallback gets an environment variable with a fallback to another env var
+func getEnvWithFallback(key, fallbackKey, defaultValue string) string {
+	// Try primary key first
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	// Try fallback key
+	if value := os.Getenv(fallbackKey); value != "" {
+		return value
+	}
+	// Return default
+	return defaultValue
+}
+
+func loadCORSConfig() CORSConfig {
+	return CORSConfig{
+		AllowedOrigins: getEnvAsSlice("CORS_ALLOWED_ORIGINS", []string{
+			"http://localhost:5173",
+			"http://localhost:5174",
+			"http://localhost:3000",
+		}),
+		AllowedMethods: getEnvAsSlice("CORS_ALLOWED_METHODS", []string{
+			"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH",
+		}),
+		AllowedHeaders: getEnvAsSlice("CORS_ALLOWED_HEADERS", []string{
+			"Accept", "Authorization", "Content-Type", "X-Tenant-ID",
+		}),
+		ExposedHeaders: getEnvAsSlice("CORS_EXPOSED_HEADERS", []string{
+			"Link",
+		}),
+		AllowCredentials: getEnvAsBool("CORS_ALLOW_CREDENTIALS", true),
+		MaxAge:           getEnvAsInt("CORS_MAX_AGE", 300),
+	}
+}
+
+func loadSecurityHeaderConfig() SecurityHeaderConfig {
+	env := getEnv("APP_ENV", "development")
+
+	// Default values based on environment
+	var defaultEnableHSTS bool
+	var defaultHSTSMaxAge int
+	var defaultCSPDirectives string
+	var defaultFrameOptions string
+
+	if env == "production" {
+		defaultEnableHSTS = true
+		defaultHSTSMaxAge = 63072000 // 2 years
+		defaultCSPDirectives = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' wss:"
+		defaultFrameOptions = "DENY"
+	} else {
+		defaultEnableHSTS = false // Disable HSTS in development
+		defaultHSTSMaxAge = 31536000
+		defaultCSPDirectives = "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws: wss:"
+		defaultFrameOptions = "SAMEORIGIN"
+	}
+
+	return SecurityHeaderConfig{
+		EnableHSTS:    getEnvAsBool("SECURITY_HEADER_ENABLE_HSTS", defaultEnableHSTS),
+		HSTSMaxAge:    getEnvAsInt("SECURITY_HEADER_HSTS_MAX_AGE", defaultHSTSMaxAge),
+		CSPDirectives: getEnv("SECURITY_HEADER_CSP_DIRECTIVES", defaultCSPDirectives),
+		FrameOptions:  getEnv("SECURITY_HEADER_FRAME_OPTIONS", defaultFrameOptions),
+	}
 }

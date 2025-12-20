@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/validation"
 	"github.com/gorax/gorax/internal/webhook"
 )
 
@@ -69,15 +69,27 @@ type TestWebhookRequest struct {
 }
 
 // List returns all webhooks for the tenant
+// @Summary List webhooks
+// @Description Returns a paginated list of webhooks for the authenticated tenant
+// @Tags Webhooks
+// @Accept json
+// @Produce json
+// @Param limit query int false "Maximum number of results" default(20)
+// @Param offset query int false "Offset for pagination" default(0)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} map[string]interface{} "List of webhooks"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /webhooks [get]
 func (h *WebhookManagementHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-
-	if limit == 0 {
-		limit = 20
-	}
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	webhooks, total, err := h.service.List(r.Context(), tenantID, limit, offset)
 	if err != nil {
@@ -94,6 +106,18 @@ func (h *WebhookManagementHandler) List(w http.ResponseWriter, r *http.Request) 
 }
 
 // Get retrieves a single webhook
+// @Summary Get webhook
+// @Description Retrieves a webhook by ID
+// @Tags Webhooks
+// @Accept json
+// @Produce json
+// @Param id path string true "Webhook ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} map[string]interface{} "Webhook details"
+// @Failure 404 {object} map[string]string "Webhook not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /webhooks/{id} [get]
 func (h *WebhookManagementHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	webhookID := chi.URLParam(r, "id")
@@ -114,6 +138,18 @@ func (h *WebhookManagementHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create creates a new webhook
+// @Summary Create webhook
+// @Description Creates a new webhook endpoint for a workflow
+// @Tags Webhooks
+// @Accept json
+// @Produce json
+// @Param webhook body CreateWebhookRequest true "Webhook creation request"
+// @Security TenantID
+// @Security UserID
+// @Success 201 {object} map[string]interface{} "Created webhook"
+// @Failure 400 {object} map[string]string "Invalid request or validation error"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /webhooks [post]
 func (h *WebhookManagementHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 
@@ -208,6 +244,18 @@ func (h *WebhookManagementHandler) Delete(w http.ResponseWriter, r *http.Request
 }
 
 // RegenerateSecret regenerates the webhook secret
+// @Summary Regenerate webhook secret
+// @Description Regenerates the secret key for webhook signature verification
+// @Tags Webhooks
+// @Accept json
+// @Produce json
+// @Param id path string true "Webhook ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} map[string]interface{} "Webhook with new secret"
+// @Failure 404 {object} map[string]string "Webhook not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /webhooks/{id}/regenerate-secret [post]
 func (h *WebhookManagementHandler) RegenerateSecret(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	webhookID := chi.URLParam(r, "id")
@@ -268,12 +316,12 @@ func (h *WebhookManagementHandler) GetEventHistory(w http.ResponseWriter, r *htt
 	tenantID := middleware.GetTenantID(r)
 	webhookID := chi.URLParam(r, "id")
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-
-	if limit == 0 {
-		limit = 20
-	}
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	events, total, err := h.service.GetEventHistory(r.Context(), tenantID, webhookID, limit, offset)
 	if err != nil {
