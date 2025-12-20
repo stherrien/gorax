@@ -8,15 +8,16 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server     ServerConfig
-	Database   DatabaseConfig
-	Redis      RedisConfig
-	Kratos     KratosConfig
-	Worker     WorkerConfig
-	AWS        AWSConfig
-	Queue      QueueConfig
-	Credential CredentialConfig
-	Cleanup    CleanupConfig
+	Server        ServerConfig
+	Database      DatabaseConfig
+	Redis         RedisConfig
+	Kratos        KratosConfig
+	Worker        WorkerConfig
+	AWS           AWSConfig
+	Queue         QueueConfig
+	Credential    CredentialConfig
+	Cleanup       CleanupConfig
+	Observability ObservabilityConfig
 }
 
 // CredentialConfig holds credential vault configuration
@@ -111,6 +112,25 @@ type CleanupConfig struct {
 	Schedule string
 }
 
+// ObservabilityConfig holds observability configuration
+type ObservabilityConfig struct {
+	// Metrics configuration
+	MetricsEnabled bool
+	MetricsPort    string
+
+	// Tracing configuration
+	TracingEnabled     bool
+	TracingEndpoint    string // OTLP endpoint (e.g., "localhost:4317")
+	TracingSampleRate  float64
+	TracingServiceName string
+
+	// Error tracking configuration
+	SentryEnabled     bool
+	SentryDSN         string
+	SentryEnvironment string
+	SentrySampleRate  float64
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -173,6 +193,18 @@ func Load() (*Config, error) {
 			BatchSize:     getEnvAsInt("CLEANUP_BATCH_SIZE", 1000),
 			Schedule:      getEnv("CLEANUP_SCHEDULE", "0 0 * * *"), // Daily at midnight
 		},
+		Observability: ObservabilityConfig{
+			MetricsEnabled:     getEnvAsBool("METRICS_ENABLED", true),
+			MetricsPort:        getEnv("METRICS_PORT", "9090"),
+			TracingEnabled:     getEnvAsBool("TRACING_ENABLED", false),
+			TracingEndpoint:    getEnv("TRACING_ENDPOINT", "localhost:4317"),
+			TracingSampleRate:  getEnvAsFloat("TRACING_SAMPLE_RATE", 1.0),
+			TracingServiceName: getEnv("TRACING_SERVICE_NAME", "gorax"),
+			SentryEnabled:      getEnvAsBool("SENTRY_ENABLED", false),
+			SentryDSN:          getEnv("SENTRY_DSN", ""),
+			SentryEnvironment:  getEnv("SENTRY_ENVIRONMENT", "development"),
+			SentrySampleRate:   getEnvAsFloat("SENTRY_SAMPLE_RATE", 1.0),
+		},
 	}
 
 	return cfg, nil
@@ -198,6 +230,15 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if boolValue, err := strconv.ParseBool(value); err == nil {
 			return boolValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsFloat(key string, defaultValue float64) float64 {
+	if value := os.Getenv(key); value != "" {
+		if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
+			return floatValue
 		}
 	}
 	return defaultValue

@@ -33,9 +33,10 @@ func (h *TenantAdminHandler) CreateTenant(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// TODO: Add validation using validator
-	if input.Name == "" || input.Subdomain == "" {
-		http.Error(w, "name and subdomain are required", http.StatusBadRequest)
+	// Validate input
+	if err := ValidateCreateTenantInput(input); err != nil {
+		h.logger.Warn("invalid create tenant input", "error", err)
+		http.Error(w, "validation error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -126,6 +127,13 @@ func (h *TenantAdminHandler) UpdateTenant(w http.ResponseWriter, r *http.Request
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.logger.Error("failed to decode update tenant request", "error", err)
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate input
+	if err := ValidateUpdateTenantInput(input); err != nil {
+		h.logger.Warn("invalid update tenant input", "error", err)
+		http.Error(w, "validation error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

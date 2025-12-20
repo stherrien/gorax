@@ -364,6 +364,27 @@ type QueueAttributes struct {
 	ApproximateNumberOfMessagesDelayed     int
 }
 
+// HealthCheck checks if the SQS queue is accessible and healthy
+func (c *SQSClient) HealthCheck(ctx context.Context) error {
+	if c.client == nil {
+		return fmt.Errorf("SQS client not initialized")
+	}
+
+	// Try to get queue attributes as a health check
+	// This will fail if queue doesn't exist or we don't have permissions
+	_, err := c.client.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
+		QueueUrl: aws.String(c.queueURL),
+		AttributeNames: []types.QueueAttributeName{
+			types.QueueAttributeNameApproximateNumberOfMessages,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("queue health check failed: %w", err)
+	}
+
+	return nil
+}
+
 // Helper function to extract approximate receive count from message attributes
 func getApproximateReceiveCount(attrs map[string]string) int {
 	if val, ok := attrs[string(types.MessageSystemAttributeNameApproximateReceiveCount)]; ok {

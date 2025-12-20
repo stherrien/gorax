@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gorax-config
+  labels:
+    app: gorax
+data:
+  # Logging configuration
+  log-level: "info"
+  log-format: "json"
+
+  # CORS configuration
+  cors-allowed-origins: "https://app.gorax.io,https://staging.gorax.io"
+  cors-allowed-methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+  cors-allowed-headers: "Content-Type,Authorization,X-Request-ID"
+  cors-max-age: "3600"
+
+  # Worker configuration
+  worker-concurrency: "10"
+  worker-poll-interval: "5s"
+
+  # Workflow execution configuration
+  max-workflow-execution-time: "3600"  # 1 hour in seconds
+  workflow-timeout: "300"  # 5 minutes in seconds
+  max-retry-attempts: "3"
+  retry-backoff-base: "2s"
+  retry-backoff-max: "30s"
+
+  # Rate limiting
+  rate-limit-requests: "100"
+  rate-limit-window: "60s"
+
+  # Feature flags
+  feature-webhook-replay: "true"
+  feature-workflow-versioning: "true"
+  feature-advanced-filtering: "true"
+
+  # Database connection pool
+  db-max-open-conns: "25"
+  db-max-idle-conns: "10"
+  db-conn-max-lifetime: "5m"
+  db-conn-max-idle-time: "1m"
+
+  # Observability
+  metrics-enabled: "true"
+  metrics-port: "8080"
+  tracing-enabled: "true"
+  tracing-sample-rate: "0.1"

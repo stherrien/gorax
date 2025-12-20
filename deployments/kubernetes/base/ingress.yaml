@@ -1,0 +1,121 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gorax-ingress
+  labels:
+    app: gorax
+  annotations:
+    # TLS and certificate management
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Nginx ingress controller annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+
+    # CORS configuration
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type,Authorization,X-Request-ID"
+    nginx.ingress.kubernetes.io/cors-max-age: "3600"
+
+    # Request/response sizes
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Timeouts for long-running webhook processing
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.gorax.io
+    - webhooks.gorax.io
+    secretName: gorax-tls
+  rules:
+  # API endpoints
+  - host: api.gorax.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gorax-api
+            port:
+              number: 80
+
+  # Webhook ingress endpoints (may have different rate limits)
+  - host: webhooks.gorax.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gorax-api
+            port:
+              number: 80
+---
+# Alternative: Single host with path-based routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gorax-ingress-single-host
+  labels:
+    app: gorax
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type,Authorization,X-Request-ID"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Different rate limits for different paths
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location /api/webhooks {
+        limit_req zone=webhook_limit burst=20 nodelay;
+      }
+      location /api {
+        limit_req zone=api_limit burst=50 nodelay;
+      }
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - gorax.io
+    secretName: gorax-tls
+  rules:
+  - host: gorax.io
+    http:
+      paths:
+      # API endpoints
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gorax-api
+            port:
+              number: 80
+
+      # Webhook endpoints (higher rate limits, different timeout)
+      - path: /webhooks
+        pathType: Prefix
+        backend:
+          service:
+            name: gorax-api
+            port:
+              number: 80

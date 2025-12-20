@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gorax-api-pdb
+  labels:
+    app: gorax
+    component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gorax
+      component: api

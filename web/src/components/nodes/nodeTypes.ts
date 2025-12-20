@@ -8,6 +8,9 @@ import TriggerNode from './TriggerNode'
 import ActionNode from './ActionNode'
 import ConditionalNode from './ConditionalNode'
 import LoopNode from './LoopNode'
+import ParallelNode from './ParallelNode'
+import ForkNode from './ForkNode'
+import JoinNode from './JoinNode'
 
 /**
  * Node types registry for ReactFlow
@@ -18,6 +21,9 @@ export const nodeTypes = {
   action: ExecutionStatusNode(ActionNode),
   conditional: ExecutionStatusNode(ConditionalNode),
   loop: ExecutionStatusNode(LoopNode),
+  parallel: ExecutionStatusNode(ParallelNode),
+  fork: ExecutionStatusNode(ForkNode),
+  join: ExecutionStatusNode(JoinNode),
 } as const
 
 /**

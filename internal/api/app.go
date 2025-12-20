@@ -154,17 +154,24 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	}
 
 	// Create encryption service (SimpleEncryption for dev, KMS for production)
+	// NOTE: KMS support is planned but not yet implemented
+	// When implementing KMS support:
+	// 1. Create a KMS client using AWS SDK v2: kms.NewFromConfig()
+	// 2. Implement KMSEncryptionService that satisfies EncryptionServiceInterface
+	// 3. Use KMS Encrypt/Decrypt operations with the configured key ID
+	// 4. Handle key rotation and versioning
+	// 5. Add proper error handling and retry logic
+	// For now, we use SimpleEncryption which is suitable for development and single-server deployments
 	var encryptionService credential.EncryptionServiceInterface
 	if cfg.Credential.UseKMS {
-		// TODO: Initialize AWS KMS client when KMS support is needed
-		return nil, fmt.Errorf("KMS encryption not yet implemented")
-	} else {
-		simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create encryption service: %w", err)
-		}
-		encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
+		return nil, fmt.Errorf("KMS encryption is not yet implemented - please set USE_KMS=false and provide a CREDENTIAL_MASTER_KEY")
 	}
+
+	simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create encryption service: %w", err)
+	}
+	encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
 
 	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
 	app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
