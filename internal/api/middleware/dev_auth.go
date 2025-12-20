@@ -30,15 +30,25 @@ func DevAuth() func(next http.Handler) http.Handler {
 				userID = "00000000-0000-0000-0000-000000000002"
 			}
 
+			// Get role from header (optional, for testing admin routes)
+			role := r.Header.Get("X-User-Role")
+
 			// Create development user
+			traits := map[string]interface{}{
+				"email":     "dev@example.com",
+				"tenant_id": tenantID,
+			}
+
+			// Add role to traits if specified
+			if role != "" {
+				traits["role"] = role
+			}
+
 			user := &User{
 				ID:       userID,
 				Email:    "dev@example.com",
 				TenantID: tenantID,
-				Traits: map[string]interface{}{
-					"email":     "dev@example.com",
-					"tenant_id": tenantID,
-				},
+				Traits:   traits,
 			}
 
 			// Add user to context

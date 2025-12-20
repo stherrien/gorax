@@ -216,7 +216,8 @@ func (a *App) setupRouter() {
 
 		// Admin routes (no tenant context, no quotas)
 		r.Route("/admin", func(r chi.Router) {
-			// TODO: Add admin role check middleware
+			// Require admin role for all admin routes
+			r.Use(apiMiddleware.RequireAdmin())
 			r.Route("/tenants", func(r chi.Router) {
 				r.Get("/", a.tenantAdminHandler.ListTenants)
 				r.Post("/", a.tenantAdminHandler.CreateTenant)
