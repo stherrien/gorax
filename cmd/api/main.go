@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorax/gorax/internal/api"
 	"github.com/gorax/gorax/internal/config"
+	"github.com/gorax/gorax/internal/tracing"
 )
 
 func main() {
@@ -25,6 +26,22 @@ func main() {
 	if err != nil {
 		slog.Error("failed to load configuration", "error", err)
 		os.Exit(1)
+	}
+
+	// Initialize tracing
+	tracingCleanup, err := tracing.InitGlobalTracer(context.Background(), &cfg.Observability)
+	if err != nil {
+		slog.Error("failed to initialize tracing", "error", err)
+		os.Exit(1)
+	}
+	defer tracingCleanup()
+
+	if cfg.Observability.TracingEnabled {
+		slog.Info("distributed tracing enabled",
+			"endpoint", cfg.Observability.TracingEndpoint,
+			"service_name", cfg.Observability.TracingServiceName,
+			"sample_rate", cfg.Observability.TracingSampleRate,
+		)
 	}
 
 	// Initialize application
