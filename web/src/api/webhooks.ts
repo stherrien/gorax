@@ -49,6 +49,14 @@ export interface WebhookUpdateInput {
   priority?: number
 }
 
+export interface EventMetadata {
+  sourceIp: string
+  userAgent: string
+  receivedAt: string
+  contentType: string
+  contentLength: number
+}
+
 export interface WebhookEvent {
   id: string
   webhookId: string
@@ -60,6 +68,8 @@ export interface WebhookEvent {
   processingTimeMs?: number
   status: 'received' | 'processed' | 'filtered' | 'failed'
   errorMessage?: string
+  replayCount: number
+  metadata?: EventMetadata
   createdAt: string
 }
 
@@ -179,6 +189,57 @@ class WebhookAPI {
       eventIds
     })
   }
+
+  /**
+   * Get all filters for a webhook
+   */
+  async getFilters(webhookId: string): Promise<WebhookFilterListResponse> {
+    const response = await apiClient.get(`/api/v1/webhooks/${webhookId}/filters`)
+    if (response.data && Array.isArray(response.data)) {
+      return { filters: response.data, total: response.data.length }
+    }
+    return response
+  }
+
+  /**
+   * Create a new filter for a webhook
+   */
+  async createFilter(
+    webhookId: string,
+    filter: WebhookFilterCreateInput
+  ): Promise<WebhookFilter> {
+    const response = await apiClient.post(`/api/v1/webhooks/${webhookId}/filters`, filter)
+    return response.data || response
+  }
+
+  /**
+   * Update an existing filter
+   */
+  async updateFilter(
+    webhookId: string,
+    filterId: string,
+    updates: WebhookFilterUpdateInput
+  ): Promise<WebhookFilter> {
+    const response = await apiClient.put(
+      `/api/v1/webhooks/${webhookId}/filters/${filterId}`,
+      updates
+    )
+    return response.data || response
+  }
+
+  /**
+   * Delete a filter
+   */
+  async deleteFilter(webhookId: string, filterId: string): Promise<void> {
+    await apiClient.delete(`/api/v1/webhooks/${webhookId}/filters/${filterId}`)
+  }
+
+  /**
+   * Test filters against a sample payload
+   */
+  async testFilters(webhookId: string, input: TestFilterInput): Promise<TestFilterResult> {
+    return await apiClient.post(`/api/v1/webhooks/${webhookId}/filters/test`, input)
+  }
 }
 
 export const webhookAPI = new WebhookAPI()
@@ -192,4 +253,66 @@ export interface ReplayResult {
 
 export interface BatchReplayResponse {
   results: Record<string, ReplayResult>
+}
+
+// Filter types
+export type FilterOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'regex'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'in'
+  | 'not_in'
+  | 'exists'
+  | 'not_exists'
+
+export interface WebhookFilter {
+  id: string
+  webhookId: string
+  fieldPath: string
+  operator: FilterOperator
+  value: unknown
+  logicGroup: number
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WebhookFilterListResponse {
+  filters: WebhookFilter[]
+  total: number
+}
+
+export interface WebhookFilterCreateInput {
+  fieldPath: string
+  operator: FilterOperator
+  value: unknown
+  logicGroup?: number
+  enabled?: boolean
+}
+
+export interface WebhookFilterUpdateInput {
+  fieldPath?: string
+  operator?: FilterOperator
+  value?: unknown
+  logicGroup?: number
+  enabled?: boolean
+}
+
+export interface TestFilterInput {
+  filters: Omit<WebhookFilter, 'id' | 'webhookId' | 'createdAt' | 'updatedAt'>[]
+  payload: unknown
+}
+
+export interface TestFilterResult {
+  passed: boolean
+  reason: string
+  details: Record<string, unknown>
 }

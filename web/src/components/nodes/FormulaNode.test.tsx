@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { ReactFlowProvider } from '@xyflow/react';
 import FormulaNode from './FormulaNode';
+
+// Wrapper component that provides React Flow context
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <ReactFlowProvider>{children}</ReactFlowProvider>
+);
 
 describe('FormulaNode', () => {
   it('renders with default label', () => {
@@ -12,7 +18,7 @@ describe('FormulaNode', () => {
       },
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     expect(screen.getByText('Calculate Total')).toBeInTheDocument();
   });
@@ -23,7 +29,7 @@ describe('FormulaNode', () => {
       actionType: 'formula' as const,
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     expect(screen.getByText('Formula')).toBeInTheDocument();
   });
@@ -37,7 +43,7 @@ describe('FormulaNode', () => {
       },
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     expect(screen.getByText('upper(name)')).toBeInTheDocument();
   });
@@ -52,7 +58,7 @@ describe('FormulaNode', () => {
       },
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     // Should be truncated with ellipsis
     const expressionElement = screen.getByTitle(longExpression);
@@ -67,7 +73,7 @@ describe('FormulaNode', () => {
       config: {},
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     expect(screen.getByText('No formula set')).toBeInTheDocument();
   });
@@ -78,7 +84,7 @@ describe('FormulaNode', () => {
       actionType: 'formula' as const,
     };
 
-    render(<FormulaNode data={data} selected={true} />);
+    render(<FormulaNode data={data} selected={true} />, { wrapper: Wrapper });
 
     const node = screen.getByTestId('formula-node');
     expect(node.className).toContain('ring-2');
@@ -90,7 +96,7 @@ describe('FormulaNode', () => {
       actionType: 'formula' as const,
     };
 
-    render(<FormulaNode data={data} selected={false} />);
+    render(<FormulaNode data={data} selected={false} />, { wrapper: Wrapper });
 
     const node = screen.getByTestId('formula-node');
     expect(node.className).not.toContain('ring-2');
@@ -102,7 +108,7 @@ describe('FormulaNode', () => {
       actionType: 'formula' as const,
     };
 
-    render(<FormulaNode data={data} />);
+    render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     expect(screen.getByText('🔢')).toBeInTheDocument();
   });
@@ -113,7 +119,7 @@ describe('FormulaNode', () => {
       actionType: 'formula' as const,
     };
 
-    const { container } = render(<FormulaNode data={data} />);
+    const { container } = render(<FormulaNode data={data} />, { wrapper: Wrapper });
 
     // Check for Handle components (they render as divs with specific classes)
     const handles = container.querySelectorAll('.react-flow__handle');

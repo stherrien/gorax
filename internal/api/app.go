@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -16,6 +18,7 @@ import (
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/eventtypes"
 	"github.com/gorax/gorax/internal/executor"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
@@ -38,6 +41,7 @@ type App struct {
 	workflowService   *workflow.Service
 	webhookService    *webhook.Service
 	scheduleService   *schedule.Service
+	eventTypeService  *eventtypes.Service
 	credentialService credential.Service
 
 	// WebSocket
@@ -49,6 +53,7 @@ type App struct {
 	webhookHandler           *handlers.WebhookHandler
 	webhookManagementHandler *handlers.WebhookManagementHandler
 	webhookReplayHandler     *handlers.WebhookReplayHandler
+	webhookFilterHandler     *handlers.WebhookFilterHandler
 	websocketHandler         *handlers.WebSocketHandler
 	tenantAdminHandler       *handlers.TenantAdminHandler
 	scheduleHandler          *handlers.ScheduleHandler
@@ -56,6 +61,7 @@ type App struct {
 	usageHandler             *handlers.UsageHandler
 	credentialHandler        *handlers.CredentialHandler
 	metricsHandler           *handlers.MetricsHandler
+	eventTypesHandler        *handlers.EventTypesHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -92,12 +98,14 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	workflowRepo := workflow.NewRepository(db)
 	webhookRepo := webhook.NewRepository(db)
 	scheduleRepo := schedule.NewRepository(db)
+	eventTypeRepo := eventtypes.NewRepository(db)
 
 	// Initialize services
 	app.tenantService = tenant.NewService(tenantRepo, logger)
 	app.workflowService = workflow.NewService(workflowRepo, logger)
 	app.webhookService = webhook.NewService(webhookRepo, logger)
 	app.scheduleService = schedule.NewService(scheduleRepo, logger)
+	app.eventTypeService = eventtypes.NewService(eventTypeRepo, logger)
 
 	// Initialize WebSocket hub
 	app.wsHub = websocket.NewHub(logger)
@@ -126,16 +134,40 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	replayService := webhook.NewReplayService(webhookRepo, workflowExecutorForReplay, logger)
 	app.webhookReplayHandler = handlers.NewWebhookReplayHandler(replayService, logger)
 
+	// Initialize filter handler
+	app.webhookFilterHandler = handlers.NewWebhookFilterHandler(app.webhookService, logger)
+
 	app.websocketHandler = handlers.NewWebSocketHandler(app.wsHub, logger)
 	app.tenantAdminHandler = handlers.NewTenantAdminHandler(app.tenantService, logger)
 	app.scheduleHandler = handlers.NewScheduleHandler(app.scheduleService, logger)
 	app.executionHandler = handlers.NewExecutionHandler(app.workflowService, logger)
 	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
+	app.eventTypesHandler = handlers.NewEventTypesHandler(app.eventTypeService, logger)
 
-	// TODO: Initialize credential service and handler once service implementation is complete
-	// credentialRepo := credential.NewRepository(db)
-	// app.credentialService = credential.NewService(credentialRepo, kmsClient, logger)
-	// app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
+	// Initialize credential service
+	credentialRepo := credential.NewRepository(db)
+
+	// Decode master key from base64
+	masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode credential master key: %w", err)
+	}
+
+	// Create encryption service (SimpleEncryption for dev, KMS for production)
+	var encryptionService credential.EncryptionServiceInterface
+	if cfg.Credential.UseKMS {
+		// TODO: Initialize AWS KMS client when KMS support is needed
+		return nil, fmt.Errorf("KMS encryption not yet implemented")
+	} else {
+		simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create encryption service: %w", err)
+		}
+		encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
+	}
+
+	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
+	app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
 
 	// Initialize quota tracker
 	app.quotaTracker = quota.NewTracker(app.redis)
@@ -206,7 +238,8 @@ func (a *App) setupRouter() {
 
 		// Admin routes (no tenant context, no quotas)
 		r.Route("/admin", func(r chi.Router) {
-			// TODO: Add admin role check middleware
+			// Require admin role for all admin routes
+			r.Use(apiMiddleware.RequireAdmin())
 			r.Route("/tenants", func(r chi.Router) {
 				r.Get("/", a.tenantAdminHandler.ListTenants)
 				r.Post("/", a.tenantAdminHandler.CreateTenant)
@@ -290,11 +323,26 @@ func (a *App) setupRouter() {
 				r.Post("/{id}/test", a.webhookManagementHandler.TestWebhook)
 				r.Get("/{id}/events", a.webhookManagementHandler.GetEventHistory)
 				r.Post("/{webhookID}/events/replay", a.webhookReplayHandler.BatchReplayEvents)
+
+				// Filter routes
+				r.Route("/{id}/filters", func(r chi.Router) {
+					r.Get("/", a.webhookFilterHandler.List)
+					r.Post("/", a.webhookFilterHandler.Create)
+					r.Get("/{filterID}", a.webhookFilterHandler.Get)
+					r.Put("/{filterID}", a.webhookFilterHandler.Update)
+					r.Delete("/{filterID}", a.webhookFilterHandler.Delete)
+					r.Post("/test", a.webhookFilterHandler.Test)
+				})
 			})
 
 			// Webhook event replay routes
 			r.Route("/events", func(r chi.Router) {
 				r.Post("/{eventID}/replay", a.webhookReplayHandler.ReplayEvent)
+			})
+
+			// Event types registry routes
+			r.Route("/event-types", func(r chi.Router) {
+				r.Get("/", a.eventTypesHandler.List)
 			})
 
 			// WebSocket routes
@@ -305,18 +353,17 @@ func (a *App) setupRouter() {
 			})
 
 			// Credential routes
-			// TODO: Uncomment once credential service is implemented
-			// r.Route("/credentials", func(r chi.Router) {
-			// 	r.Get("/", a.credentialHandler.List)
-			// 	r.Post("/", a.credentialHandler.Create)
-			// 	r.Get("/{credentialID}", a.credentialHandler.Get)
-			// 	r.Get("/{credentialID}/value", a.credentialHandler.GetValue) // Sensitive endpoint
-			// 	r.Put("/{credentialID}", a.credentialHandler.Update)
-			// 	r.Delete("/{credentialID}", a.credentialHandler.Delete)
-			// 	r.Post("/{credentialID}/rotate", a.credentialHandler.Rotate)
-			// 	r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
-			// 	r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
-			// })
+			r.Route("/credentials", func(r chi.Router) {
+				r.Get("/", a.credentialHandler.List)
+				r.Post("/", a.credentialHandler.Create)
+				r.Get("/{credentialID}", a.credentialHandler.Get)
+				r.Get("/{credentialID}/value", a.credentialHandler.GetValue) // Sensitive endpoint
+				r.Put("/{credentialID}", a.credentialHandler.Update)
+				r.Delete("/{credentialID}", a.credentialHandler.Delete)
+				r.Post("/{credentialID}/rotate", a.credentialHandler.Rotate)
+				r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
+				r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
+			})
 		})
 	})
 

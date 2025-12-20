@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -28,6 +29,7 @@ type Worker struct {
 
 	// Queue-based processing
 	queueConsumer  *queue.Consumer
+	sqsClient      *queue.SQSClient
 	queueEnabled   bool
 
 	concurrency      int
@@ -119,6 +121,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*Worker, error) {
 
 		// Create consumer
 		w.queueConsumer = queue.NewConsumer(sqsClient, handler, consumerConfig, logger)
+		w.sqsClient = sqsClient // Store SQS client for requeue operations
 		logger.Info("queue consumer initialized", "queue_url", cfg.AWS.SQSQueueURL)
 	}
 
@@ -174,18 +177,77 @@ func (w *Worker) processLoop(ctx context.Context, workerID int) {
 	}
 }
 
-// pollExecution polls for pending executions
+// pollExecution polls for pending executions from the database
 func (w *Worker) pollExecution(ctx context.Context) (*workflow.Execution, error) {
-	// TODO: Implement polling from queue (SQS) or database
-	// For now, this is a placeholder that returns an error to indicate no work
+	return w.pollPendingExecution(ctx)
+}
 
-	// In production, this would:
-	// 1. Receive message from SQS queue
-	// 2. Parse execution ID from message
-	// 3. Load execution from database
-	// 4. Return execution for processing
+// pollPendingExecution fetches the oldest pending execution from database
+func (w *Worker) pollPendingExecution(ctx context.Context) (*workflow.Execution, error) {
+	// Mark stale executions as failed (older than 1 hour)
+	if err := w.markStaleExecutionsAsFailed(ctx); err != nil {
+		w.logger.Error("failed to mark stale executions", "error", err)
+	}
 
-	return nil, ErrNoWork
+	// Query for oldest pending execution and atomically update to running
+	execution, err := w.claimPendingExecution(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if execution == nil {
+		return nil, ErrNoWork
+	}
+
+	return execution, nil
+}
+
+// claimPendingExecution atomically claims a pending execution
+func (w *Worker) claimPendingExecution(ctx context.Context) (*workflow.Execution, error) {
+	// Use FOR UPDATE SKIP LOCKED for atomic claim without blocking
+	query := `
+		UPDATE executions
+		SET status = $1, started_at = $2
+		WHERE id = (
+			SELECT id FROM executions
+			WHERE status = 'pending'
+			ORDER BY created_at ASC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING *
+	`
+
+	now := time.Now()
+	var execution workflow.Execution
+
+	err := w.db.QueryRowxContext(ctx, query, "running", now).StructScan(&execution)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, ErrNoWork
+		}
+		return nil, err
+	}
+
+	return &execution, nil
+}
+
+// markStaleExecutionsAsFailed marks executions pending for too long as failed
+func (w *Worker) markStaleExecutionsAsFailed(ctx context.Context) error {
+	staleThreshold := time.Now().Add(-1 * time.Hour)
+	errorMsg := "execution timeout: pending for more than 1 hour"
+
+	query := `
+		UPDATE executions
+		SET status = $1,
+		    error_message = $2,
+		    completed_at = $3
+		WHERE status = 'pending'
+		  AND created_at < $4
+	`
+
+	_, err := w.db.ExecContext(ctx, query, "failed", errorMsg, time.Now(), staleThreshold)
+	return err
 }
 
 // processExecution processes a single execution
@@ -200,12 +262,18 @@ func (w *Worker) processExecution(ctx context.Context, execution *workflow.Execu
 	}
 
 	if !acquired {
-		w.logger.Warn("tenant at concurrency limit, requeueing execution",
+		w.logger.Warn("tenant at concurrency limit, execution will be retried",
 			"tenant_id", execution.TenantID,
 			"execution_id", execution.ID,
 			"max_concurrent", w.concurrencyLimit.GetMaxPerTenant(),
 		)
-		// TODO: Requeue the message with delay
+
+		// In queue mode, the message will be requeued by returning ErrTenantAtCapacity
+		// The consumer should handle this by extending visibility timeout
+		// In polling mode, the execution stays pending and will be picked up later
+
+		// For queue mode: return error so consumer can handle requeue
+		// For polling mode: execution remains pending in database
 		return ErrTenantAtCapacity
 	}
 
@@ -233,11 +301,15 @@ func (w *Worker) processExecution(ctx context.Context, execution *workflow.Execu
 }
 
 // processExecutionMessage processes an execution message from the queue
+// Note: This is called by the queue consumer. When tenant is at capacity,
+// the consumer's built-in retry mechanism will handle requeue.
+// For custom requeue with delay, use QueueMessageHandler instead.
 func (w *Worker) processExecutionMessage(ctx context.Context, msg *queue.ExecutionMessage) error {
 	w.logger.Info("processing execution message",
 		"execution_id", msg.ExecutionID,
 		"workflow_id", msg.WorkflowID,
 		"tenant_id", msg.TenantID,
+		"retry_count", msg.RetryCount,
 	)
 
 	// Load execution from database
@@ -252,10 +324,20 @@ func (w *Worker) processExecutionMessage(ctx context.Context, msg *queue.Executi
 
 	// Process the execution
 	if err := w.processExecution(ctx, execution); err != nil {
-		w.logger.Error("execution processing failed",
-			"error", err,
-			"execution_id", msg.ExecutionID,
-		)
+		// If tenant at capacity, log and return error
+		// The consumer will not delete the message, allowing SQS to retry
+		if errors.Is(err, ErrTenantAtCapacity) {
+			w.logger.Info("tenant at capacity, message will be retried by SQS",
+				"tenant_id", msg.TenantID,
+				"execution_id", msg.ExecutionID,
+				"retry_count", msg.RetryCount,
+			)
+		} else {
+			w.logger.Error("execution processing failed",
+				"error", err,
+				"execution_id", msg.ExecutionID,
+			)
+		}
 		return err
 	}
 

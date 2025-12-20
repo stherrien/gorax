@@ -1,49 +1,77 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useExecutionTrace } from './useExecutionTrace'
 import { useExecutionTraceStore } from '../stores/executionTraceStore'
 import type { ExecutionEvent } from '../lib/websocket'
 
-// Mock WebSocket
-class MockWebSocket {
-  static instances: MockWebSocket[] = []
-
-  url: string
-  onopen: (() => void) | null = null
-  onclose: (() => void) | null = null
-  onerror: ((error: Event) => void) | null = null
-  onmessage: ((event: MessageEvent) => void) | null = null
-  readyState: number = WebSocket.CONNECTING
-
-  constructor(url: string) {
-    this.url = url
-    MockWebSocket.instances.push(this)
-
-    setTimeout(() => {
-      this.readyState = WebSocket.OPEN
-      this.onopen?.()
-    }, 10)
+// Use vi.hoisted to define the mock class before vi.mock runs
+const { MockWebSocketClient, mockClientInstances, resetInstances } = vi.hoisted(() => {
+  type EventHandler = (event: any) => void
+  type WebSocketConfig = {
+    url: string
+    onOpen?: () => void
+    onClose?: () => void
+    onError?: (error: Event) => void
+    onReconnecting?: (attempt: number) => void
+    onReconnected?: () => void
   }
 
-  close() {
-    this.readyState = WebSocket.CLOSED
-    this.onclose?.()
+  const instances: any[] = []
+
+  class MockWebSocketClient {
+    private config: WebSocketConfig
+    private handlers: Set<EventHandler> = new Set()
+    private _connected: boolean = false
+
+    constructor(config: WebSocketConfig) {
+      this.config = config
+      instances.push(this)
+    }
+
+    connect(): void {
+      // Connection is handled synchronously when simulateOpen is called
+    }
+
+    disconnect(): void {
+      this._connected = false
+      this.config.onClose?.()
+    }
+
+    on(handler: EventHandler): () => void {
+      this.handlers.add(handler)
+      return () => this.handlers.delete(handler)
+    }
+
+    isConnected(): boolean {
+      return this._connected
+    }
+
+    // Test helper methods
+    simulateMessage(event: any) {
+      this.handlers.forEach(handler => handler(event))
+    }
+
+    simulateOpen() {
+      this._connected = true
+      this.config.onOpen?.()
+    }
   }
 
-  simulateMessage(data: any) {
-    const event = new MessageEvent('message', {
-      data: JSON.stringify(data),
-    })
-    this.onmessage?.(event)
+  return {
+    MockWebSocketClient,
+    mockClientInstances: instances,
+    resetInstances: () => { instances.length = 0 },
   }
+})
 
-  static reset() {
-    MockWebSocket.instances = []
+// Mock the websocket module
+vi.mock('../lib/websocket', async () => {
+  const actual = await vi.importActual('../lib/websocket')
+  return {
+    ...actual,
+    WebSocketClient: MockWebSocketClient,
   }
-}
-
-// @ts-ignore
-global.WebSocket = MockWebSocket
+})
 
 // Mock the store
 vi.mock('../stores/executionTraceStore', () => ({
@@ -52,11 +80,23 @@ vi.mock('../stores/executionTraceStore', () => ({
   },
 }))
 
+// Helper to open the WebSocket connection with proper act wrapping
+async function openConnection() {
+  // Wait for client to be created
+  await waitFor(() => {
+    expect(mockClientInstances.length).toBeGreaterThan(0)
+  })
+
+  await act(async () => {
+    mockClientInstances[0].simulateOpen()
+  })
+}
+
 describe('useExecutionTrace', () => {
   let mockStore: any
 
   beforeEach(() => {
-    MockWebSocket.reset()
+    resetInstances()
 
     mockStore = {
       setCurrentExecutionId: vi.fn(),
@@ -78,18 +118,19 @@ describe('useExecutionTrace', () => {
     it('should connect when execution ID is provided', async () => {
       const { result } = renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(result.current.connected).toBe(true)
-      })
+      expect(mockClientInstances).toHaveLength(1)
 
-      expect(MockWebSocket.instances).toHaveLength(1)
+      // Simulate WebSocket connection opening
+      await openConnection()
+
+      expect(result.current.connected).toBe(true)
     })
 
     it('should not connect when execution ID is null', () => {
       const { result } = renderHook(() => useExecutionTrace(null))
 
       expect(result.current.connected).toBe(false)
-      expect(MockWebSocket.instances).toHaveLength(0)
+      expect(mockClientInstances).toHaveLength(0)
     })
 
     it('should set current execution ID on connect', async () => {
@@ -101,18 +142,15 @@ describe('useExecutionTrace', () => {
     })
 
     it('should disconnect and reset store on unmount', async () => {
-      const { unmount } = renderHook(() => useExecutionTrace('exec-123'))
+      const { result, unmount } = renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
+
+      expect(result.current.connected).toBe(true)
 
       unmount()
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.CLOSED)
-        expect(mockStore.reset).toHaveBeenCalled()
-      })
+      expect(mockStore.reset).toHaveBeenCalled()
     })
 
     it('should update execution ID when it changes', async () => {
@@ -137,9 +175,7 @@ describe('useExecutionTrace', () => {
     it('should update node status on execution.started', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'execution.started',
@@ -150,7 +186,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
@@ -167,9 +203,7 @@ describe('useExecutionTrace', () => {
     it('should set node status to running on step.started', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'step.started',
@@ -185,7 +219,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.setNodeStatus).toHaveBeenCalledWith('node-1', 'running')
@@ -195,9 +229,7 @@ describe('useExecutionTrace', () => {
     it('should add timeline event on step.started', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'step.started',
@@ -213,7 +245,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
@@ -230,9 +262,7 @@ describe('useExecutionTrace', () => {
     it('should set node status to completed on step.completed', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'step.completed',
@@ -250,7 +280,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.setNodeStatus).toHaveBeenCalledWith('node-1', 'completed')
@@ -260,9 +290,7 @@ describe('useExecutionTrace', () => {
     it('should add step log on step.completed', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const stepInfo = {
         step_id: 'step-1',
@@ -281,7 +309,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.addStepLog).toHaveBeenCalledWith('node-1', stepInfo)
@@ -293,9 +321,7 @@ describe('useExecutionTrace', () => {
     it('should set node status to failed on step.failed', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'step.failed',
@@ -312,7 +338,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.setNodeStatus).toHaveBeenCalledWith('node-1', 'failed')
@@ -322,9 +348,7 @@ describe('useExecutionTrace', () => {
     it('should add timeline event with error info on step.failed', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'step.failed',
@@ -341,7 +365,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
@@ -359,9 +383,7 @@ describe('useExecutionTrace', () => {
     it('should add progress timeline event', async () => {
       renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(MockWebSocket.instances[0].readyState).toBe(WebSocket.OPEN)
-      })
+      await openConnection()
 
       const event: ExecutionEvent = {
         type: 'execution.progress',
@@ -376,7 +398,7 @@ describe('useExecutionTrace', () => {
         timestamp: new Date().toISOString(),
       }
 
-      MockWebSocket.instances[0].simulateMessage(event)
+      mockClientInstances[0].simulateMessage(event)
 
       await waitFor(() => {
         expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
@@ -395,18 +417,17 @@ describe('useExecutionTrace', () => {
 
       expect(result.current.connected).toBe(false)
 
-      await waitFor(() => {
-        expect(result.current.connected).toBe(true)
-      })
+      await openConnection()
+
+      expect(result.current.connected).toBe(true)
     })
 
     it('should expose reconnecting state', async () => {
       const { result } = renderHook(() => useExecutionTrace('exec-123'))
 
-      await waitFor(() => {
-        expect(result.current.connected).toBe(true)
-      })
+      await openConnection()
 
+      expect(result.current.connected).toBe(true)
       // Initially not reconnecting
       expect(result.current.reconnecting).toBe(false)
     })

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -34,6 +35,14 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	webhookID := chi.URLParam(r, "webhookID")
 
 	h.logger.Info("webhook received", "workflow_id", workflowID, "webhook_id", webhookID)
+
+	// Capture metadata from request
+	metadata := webhook.ExtractMetadataFromRequest(
+		r.RemoteAddr,
+		r.Header.Get("User-Agent"),
+		r.Header.Get("Content-Type"),
+		r.ContentLength,
+	)
 
 	// Look up webhook configuration
 	webhookConfig, err := h.webhookService.GetByWorkflowAndWebhookID(r.Context(), workflowID, webhookID)
@@ -91,11 +100,18 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.logger.Error("failed to execute workflow from webhook", "error", err, "workflow_id", workflowID)
+
+		// Log failed event with metadata
+		h.logWebhookEvent(r.Context(), webhookConfig, r, body, nil, webhook.EventStatusFailed, metadata, stringPtr(err.Error()))
+
 		h.respondError(w, http.StatusInternalServerError, "failed to execute workflow")
 		return
 	}
 
 	h.logger.Info("workflow execution triggered", "execution_id", execution.ID, "workflow_id", workflowID)
+
+	// Log successful event with metadata
+	h.logWebhookEvent(r.Context(), webhookConfig, r, body, &execution.ID, webhook.EventStatusProcessed, metadata, nil)
 
 	// Return execution ID
 	h.respondJSON(w, http.StatusAccepted, map[string]interface{}{
@@ -134,4 +150,38 @@ func (h *WebhookHandler) respondError(w http.ResponseWriter, status int, message
 	h.respondJSON(w, status, map[string]string{
 		"error": message,
 	})
+}
+
+// logWebhookEvent logs a webhook event with metadata
+func (h *WebhookHandler) logWebhookEvent(
+	ctx context.Context,
+	webhookConfig *webhook.Webhook,
+	r *http.Request,
+	body []byte,
+	executionID *string,
+	status webhook.WebhookEventStatus,
+	metadata *webhook.EventMetadata,
+	errorMsg *string,
+) {
+	event := &webhook.WebhookEvent{
+		TenantID:       webhookConfig.TenantID,
+		WebhookID:      webhookConfig.ID,
+		ExecutionID:    executionID,
+		RequestMethod:  r.Method,
+		RequestHeaders: flattenHeaders(r.Header),
+		RequestBody:    json.RawMessage(body),
+		Status:         status,
+		ErrorMessage:   errorMsg,
+		Metadata:       metadata,
+	}
+
+	// Log the event (best effort - don't fail request if logging fails)
+	if err := h.webhookService.LogEvent(ctx, event); err != nil {
+		h.logger.Error("failed to log webhook event", "error", err, "webhook_id", webhookConfig.ID)
+	}
+}
+
+// stringPtr returns a pointer to the given string
+func stringPtr(s string) *string {
+	return &s
 }

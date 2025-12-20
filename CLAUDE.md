@@ -566,3 +566,208 @@ function DataFetcher<T>({ url, children }: DataFetcherProps<T>) {
 2. Run `/refactor` for suggestions
 3. Make small, incremental changes
 4. Run tests after each change
+
+## Gorax Expert Agents
+
+Use these specialized agents for domain-specific tasks. Launch with the Task tool using the appropriate `subagent_type`.
+
+### gorax-workflow-expert
+
+**When to use**: Workflow execution, actions, triggers, expressions, node graph traversal
+
+**Key files**:
+- `internal/executor/` - Execution engine, action handlers
+- `internal/workflow/` - Workflow models, repository, service
+- `internal/executor/expression/` - CEL expression evaluation
+- `internal/executor/actions/` - HTTP, Transform, Condition actions
+
+**Domain knowledge**:
+- Executor uses visitor pattern for node traversal
+- Actions implement `Action` interface with `Execute(ctx, input) (output, error)`
+- Expressions use cel-go for dynamic evaluation
+- Workflows stored as JSON graph with nodes and edges
+- Execution creates step records for each node processed
+- Triggers: webhook, schedule, manual
+- Node types: trigger, action, condition, loop, parallel
+
+**Patterns**:
+```go
+// Action execution flow
+type Action interface {
+    Execute(ctx context.Context, input map[string]any) (map[string]any, error)
+}
+
+// Node traversal
+executor.Visit(node) -> resolveInputs() -> executeAction() -> storeStepResult()
+```
+
+### gorax-credential-expert
+
+**When to use**: Credential encryption, injection, masking, security, audit logging
+
+**Key files**:
+- `internal/credential/encryption.go` - Envelope encryption (DEK/KEK)
+- `internal/credential/injector.go` - Credential injection into workflows
+- `internal/credential/masker.go` - Output masking
+- `internal/credential/service_impl.go` - CRUD operations
+- `internal/credential/repository.go` - Database operations
+
+**Domain knowledge**:
+- Envelope encryption: DEK encrypts data, KEK (master key or KMS) encrypts DEK
+- AES-256-GCM for symmetric encryption
+- Credentials referenced as `{{credentials.name}}` in workflow configs
+- Injector extracts references, decrypts values, replaces in config
+- Masker replaces sensitive values with `[REDACTED]` in outputs
+- Access logging tracks all credential reads/updates/rotations
+- SimpleEncryptionService for dev, KMS for production
+
+**Patterns**:
+```go
+// Credential injection flow
+injector.InjectCredentials(config, ctx) ->
+    ExtractCredentialReferences(config) ->
+    getCredentialValue(name) ->  // decrypt
+    injectValues(config, credentials) ->
+    return InjectResult{Config, Values}
+
+// Masking flow
+masker.MaskOutput(output, credentialValues) -> replaces all occurrences
+```
+
+### gorax-worker-expert
+
+**When to use**: Queue processing, SQS, job orchestration, concurrency, retries
+
+**Key files**:
+- `internal/worker/worker.go` - Main worker loop, message processing
+- `internal/worker/health.go` - Health checks
+- `internal/queue/` - SQS client, message types
+- `internal/config/config.go` - Worker and queue configuration
+
+**Domain knowledge**:
+- Workers poll SQS for execution messages
+- Tenant concurrency limits prevent resource exhaustion
+- Dead-letter queue (DLQ) for failed messages after max retries
+- Visibility timeout prevents duplicate processing
+- Health endpoint reports worker status, queue depth
+- Graceful shutdown waits for in-flight executions
+
+**Configuration**:
+```go
+WorkerConfig {
+    Concurrency             int  // Max parallel executions
+    MaxConcurrencyPerTenant int  // Per-tenant limit
+    HealthPort              string
+    QueueURL                string
+}
+
+QueueConfig {
+    MaxMessages        int32  // Batch size
+    WaitTimeSeconds    int32  // Long polling
+    VisibilityTimeout  int32  // Processing window
+    MaxRetries         int    // Before DLQ
+}
+```
+
+**Patterns**:
+```go
+// Worker loop
+for {
+    messages := queue.ReceiveMessages()
+    for _, msg := range messages {
+        if !tenantLimiter.Allow(msg.TenantID) {
+            requeue(msg)  // Tenant at capacity
+            continue
+        }
+        go processMessage(msg)
+    }
+}
+```
+
+### gorax-frontend-expert
+
+**When to use**: React canvas editor, workflow visualization, state management, API integration
+
+**Key files**:
+- `web/src/components/canvas/` - ReactFlow canvas, nodes, edges
+- `web/src/pages/WorkflowEditor.tsx` - Main editor page
+- `web/src/stores/` - Zustand state stores
+- `web/src/hooks/` - Custom React hooks
+- `web/src/api/` - API client with TanStack Query
+
+**Domain knowledge**:
+- ReactFlow for node-based workflow canvas
+- Custom node types: TriggerNode, ActionNode, ConditionNode
+- Zustand for canvas state (nodes, edges, selection)
+- TanStack Query for server state (workflows, executions)
+- Property panel for node configuration
+- Real-time execution updates via WebSocket
+
+**Patterns**:
+```typescript
+// Canvas state (Zustand)
+const useCanvasStore = create<CanvasState>((set) => ({
+  nodes: [],
+  edges: [],
+  addNode: (node) => set((state) => ({ nodes: [...state.nodes, node] })),
+  updateNode: (id, data) => set((state) => ({
+    nodes: state.nodes.map(n => n.id === id ? { ...n, data } : n)
+  })),
+}));
+
+// API hooks (TanStack Query)
+const useWorkflow = (id: string) => useQuery({
+  queryKey: ['workflow', id],
+  queryFn: () => api.workflows.get(id),
+});
+
+const useUpdateWorkflow = () => useMutation({
+  mutationFn: (data) => api.workflows.update(data.id, data),
+  onSuccess: () => queryClient.invalidateQueries(['workflow']),
+});
+```
+
+### gorax-webhook-expert
+
+**When to use**: Webhook handling, event filtering, replay, signature verification
+
+**Key files**:
+- `internal/webhook/` - Webhook models, service, repository
+- `internal/webhook/filter.go` - Event filtering with JSONPath
+- `internal/webhook/replay.go` - Event replay service
+- `internal/api/handlers/webhook*.go` - HTTP handlers
+
+**Domain knowledge**:
+- Webhooks trigger workflow executions
+- Secret-based signature verification (HMAC-SHA256)
+- Filters use JSONPath expressions with operators (eq, ne, contains, etc.)
+- Event history stored for replay and debugging
+- Replay re-executes workflow with historical payload
+
+**Patterns**:
+```go
+// Webhook handling flow
+handler.Handle(request) ->
+    verifySignature(secret, payload) ->
+    storeEvent(webhookID, payload, headers) ->
+    evaluateFilters(filters, payload) ->
+    if passesFilters: triggerWorkflow(workflowID, payload)
+
+// Filter evaluation
+filter.Evaluate(payload) ->
+    extractValue(jsonPath) ->
+    applyOperator(operator, value, expected) ->
+    return bool
+```
+
+### Using Expert Agents
+
+Launch an expert agent for complex domain-specific tasks:
+
+```
+Task tool with:
+- subagent_type: "gorax-workflow-expert"
+- prompt: "Implement parallel node execution with proper error handling..."
+```
+
+The agent will have context about patterns, file locations, and domain concepts specific to that area of the codebase.

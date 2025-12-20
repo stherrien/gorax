@@ -13,8 +13,8 @@ describe('DateRangePicker', () => {
 
   it('displays selected date range', () => {
     const onChange = vi.fn()
-    const startDate = new Date('2025-01-01')
-    const endDate = new Date('2025-01-31')
+    const startDate = new Date('2025-01-01T12:00:00')
+    const endDate = new Date('2025-01-31T12:00:00')
 
     render(
       <DateRangePicker
@@ -181,8 +181,8 @@ describe('DateRangePicker', () => {
 
   it('formats date range according to locale', () => {
     const onChange = vi.fn()
-    const startDate = new Date('2025-12-01')
-    const endDate = new Date('2025-12-15')
+    const startDate = new Date('2025-12-01T12:00:00')
+    const endDate = new Date('2025-12-15T12:00:00')
 
     render(
       <DateRangePicker

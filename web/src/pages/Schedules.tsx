@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSchedules, useScheduleMutations } from '../hooks/useSchedules'
 import { useWorkflows } from '../hooks/useWorkflows'
 import ScheduleList from '../components/schedule/ScheduleList'
@@ -10,6 +10,7 @@ type ViewMode = 'list' | 'calendar' | 'timeline'
 type StatusFilter = 'all' | 'enabled' | 'disabled'
 
 export default function Schedules() {
+  const navigate = useNavigate()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,8 +70,7 @@ export default function Schedules() {
   }
 
   const handleEdit = (id: string) => {
-    // TODO: Navigate to edit page when implemented
-    console.log('Edit schedule:', id)
+    navigate(`/schedules/${id}/edit`)
   }
 
   if (loading) {

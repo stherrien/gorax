@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { Node } from '@xyflow/react'
 import LoopConfigPanel from './LoopConfigPanel'
+import ParallelConfigPanel from './ParallelConfigPanel'
 import SlackConfigPanel from './SlackConfigPanel'
+import PrioritySelector from '../webhooks/PrioritySelector'
 
 interface PropertyPanelProps {
   node: Node | null
@@ -239,6 +241,22 @@ export default function PropertyPanel({ node, onUpdate, onClose, onSave, isSavin
           />
         )}
 
+        {/* Parallel Control Fields */}
+        {nodeType === 'parallel' && (
+          <ParallelConfigPanel
+            config={{
+              errorStrategy: formData.errorStrategy || 'fail_fast',
+              maxConcurrency: formData.maxConcurrency ?? 0,
+            }}
+            onChange={(parallelConfig) => {
+              // Update all parallel fields at once
+              Object.entries(parallelConfig).forEach(([key, value]) => {
+                handleChange(key, value)
+              })
+            }}
+          />
+        )}
+
         {/* Slack Action Fields */}
         {(nodeType === 'slack_send_message' ||
           nodeType === 'slack_send_dm' ||
@@ -309,6 +327,12 @@ function WebhookFields({ formData, onChange }: any) {
           <option value="PATCH">PATCH</option>
         </select>
       </div>
+
+      <PrioritySelector
+        value={formData.priority ?? 1}
+        onChange={(priority) => onChange('priority', priority)}
+        id="webhook-priority"
+      />
     </>
   )
 }
