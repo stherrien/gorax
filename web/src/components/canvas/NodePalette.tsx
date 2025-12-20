@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 
 interface NodeDefinition {
-  type: 'trigger' | 'action' | 'control'
+  type: 'trigger' | 'action' | 'ai' | 'control'
   nodeType: string
   label: string
   description: string
@@ -94,6 +94,43 @@ const NODE_DEFINITIONS: NodeDefinition[] = [
     icon: '👍',
   },
 
+  // AI Actions
+  {
+    type: 'ai',
+    nodeType: 'ai_chat',
+    label: 'AI: Chat Completion',
+    description: 'Generate AI responses with LLM',
+    icon: '🤖',
+  },
+  {
+    type: 'ai',
+    nodeType: 'ai_summarize',
+    label: 'AI: Summarize',
+    description: 'Summarize text using AI',
+    icon: '📝',
+  },
+  {
+    type: 'ai',
+    nodeType: 'ai_classify',
+    label: 'AI: Classify',
+    description: 'Classify text into categories',
+    icon: '🏷️',
+  },
+  {
+    type: 'ai',
+    nodeType: 'ai_extract',
+    label: 'AI: Extract Entities',
+    description: 'Extract named entities from text',
+    icon: '🔍',
+  },
+  {
+    type: 'ai',
+    nodeType: 'ai_embed',
+    label: 'AI: Generate Embeddings',
+    description: 'Create vector embeddings for text',
+    icon: '📊',
+  },
+
   // Controls
   {
     type: 'control',
@@ -130,6 +167,7 @@ export default function NodePalette({ onAddNode }: NodePaletteProps) {
   const [expandedSections, setExpandedSections] = useState({
     triggers: true,
     actions: true,
+    ai: true,
     controls: true,
   })
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
@@ -148,9 +186,10 @@ export default function NodePalette({ onAddNode }: NodePaletteProps) {
 
   const triggerNodes = filteredNodes.filter((n) => n.type === 'trigger')
   const actionNodes = filteredNodes.filter((n) => n.type === 'action')
+  const aiNodes = filteredNodes.filter((n) => n.type === 'ai')
   const controlNodes = filteredNodes.filter((n) => n.type === 'control')
 
-  const toggleSection = (section: 'triggers' | 'actions' | 'controls') => {
+  const toggleSection = (section: 'triggers' | 'actions' | 'ai' | 'controls') => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -212,6 +251,20 @@ export default function NodePalette({ onAddNode }: NodePaletteProps) {
                 nodes={actionNodes}
                 expanded={expandedSections.actions}
                 onToggle={() => toggleSection('actions')}
+                onNodeClick={handleNodeClick}
+                onDragStart={handleDragStart}
+                hoveredNode={hoveredNode}
+                onNodeHover={setHoveredNode}
+              />
+            )}
+
+            {/* AI Section */}
+            {aiNodes.length > 0 && (
+              <NodeSection
+                title="AI"
+                nodes={aiNodes}
+                expanded={expandedSections.ai}
+                onToggle={() => toggleSection('ai')}
                 onNodeClick={handleNodeClick}
                 onDragStart={handleDragStart}
                 hoveredNode={hoveredNode}

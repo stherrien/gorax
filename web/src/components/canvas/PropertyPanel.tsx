@@ -4,6 +4,28 @@ import LoopConfigPanel from './LoopConfigPanel'
 import ParallelConfigPanel from './ParallelConfigPanel'
 import SlackConfigPanel from './SlackConfigPanel'
 import PrioritySelector from '../webhooks/PrioritySelector'
+import { AIConfigPanel } from '../ai/AIConfigPanel'
+import type { AIAction, AIConfigData } from '../ai/AIConfigPanel'
+import { AI_MODELS } from '../../types/ai'
+
+// Mock credentials for now - in production this would come from useCredentials hook
+const mockCredentials = [
+  { id: 'cred-openai', tenantId: 't1', name: 'OpenAI API Key', type: 'api_key' as const, createdAt: '', updatedAt: '' },
+  { id: 'cred-anthropic', tenantId: 't1', name: 'Anthropic API Key', type: 'api_key' as const, createdAt: '', updatedAt: '' },
+]
+
+// Map node types to AI actions
+const AI_NODE_TYPE_MAP: Record<string, AIAction> = {
+  ai_chat: 'chat_completion',
+  ai_summarize: 'summarization',
+  ai_classify: 'classification',
+  ai_extract: 'entity_extraction',
+  ai_embed: 'embedding',
+}
+
+const isAINodeType = (nodeType: string): boolean => {
+  return nodeType in AI_NODE_TYPE_MAP
+}
 
 interface PropertyPanelProps {
   node: Node | null
@@ -267,6 +289,18 @@ export default function PropertyPanel({ node, onUpdate, onClose, onSave, isSavin
             formData={formData}
             onChange={handleChange}
             errors={errors}
+          />
+        )}
+
+        {/* AI Action Fields */}
+        {isAINodeType(nodeType) && (
+          <AIConfigPanel
+            action={AI_NODE_TYPE_MAP[nodeType]}
+            config={formData.aiConfig || {}}
+            models={AI_MODELS}
+            credentials={mockCredentials}
+            onChange={(config: AIConfigData) => handleChange('aiConfig', config)}
+            variables={['trigger.data', 'steps.previous.output', 'env.api_url']}
           />
         )}
       </div>
