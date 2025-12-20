@@ -1,7 +1,8 @@
 import { Handle, Position } from '@xyflow/react'
 import type { TriggerNodeData } from '../../stores/workflowStore'
 
-interface TriggerNodeProps {
+export interface TriggerNodeProps {
+  id: string
   data: TriggerNodeData
   selected?: boolean
 }

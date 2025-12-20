@@ -7,7 +7,11 @@
 Build, deploy, and manage complex workflows with ease. No code required.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.23-00ADD8?logo=go)](https://go.dev/)
+[![CI](https://github.com/stherrien/gorax/actions/workflows/ci.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/ci.yml)
+[![Security](https://github.com/stherrien/gorax/actions/workflows/security.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/security.yml)
+[![CodeQL](https://github.com/stherrien/gorax/actions/workflows/codeql.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/stherrien/gorax/branch/main/graph/badge.svg)](https://codecov.io/gh/stherrien/gorax)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-red?logo=github)](https://github.com/sponsors/stherrien)
 
 [Getting Started](#-quick-start) • [Documentation](docs/) • [Examples](examples/) • [Contributing](#-contributing)
@@ -211,7 +215,7 @@ Create a deployment notification in minutes:
 
 ### Prerequisites
 
-- Go 1.25+
+- Go 1.23+
 - Node.js 18+
 - PostgreSQL 14+
 - Redis 6+

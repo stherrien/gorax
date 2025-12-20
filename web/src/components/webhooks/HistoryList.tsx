@@ -1,10 +1,18 @@
+interface TestHistoryResponse {
+  success: boolean
+  statusCode: number
+  responseTimeMs: number
+  executionId?: string
+  error?: string
+}
+
 interface TestHistory {
   id: string
   timestamp: Date
   method: string
   headers: Record<string, string>
   body: unknown
-  response: { statusCode: number } | null
+  response: TestHistoryResponse | null
   error: string | null
 }
 

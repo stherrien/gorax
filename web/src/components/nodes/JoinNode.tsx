@@ -1,6 +1,6 @@
 import { Handle, Position } from '@xyflow/react'
 
-interface JoinNodeData {
+export interface JoinNodeData {
   label: string
   joinStrategy?: 'wait_all' | 'wait_n'
   requiredCount?: number
@@ -8,7 +8,8 @@ interface JoinNodeData {
   onTimeout?: 'fail' | 'continue'
 }
 
-interface JoinNodeProps {
+export interface JoinNodeProps {
+  id: string
   data: JoinNodeData
   selected?: boolean
 }

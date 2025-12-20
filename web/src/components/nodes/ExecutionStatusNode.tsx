@@ -1,8 +1,17 @@
 import { ComponentType } from 'react'
-import type { NodeProps } from '@xyflow/react'
 import { useExecutionTraceStore } from '../../stores/executionTraceStore'
 import type { NodeStatus } from '../../stores/executionTraceStore'
 import '../../styles/executionAnimations.css'
+
+/**
+ * Props that node components must accept
+ * Using generic data type to allow specific node data interfaces
+ */
+interface BaseNodeProps<T = Record<string, unknown>> {
+  id: string
+  data: T
+  selected?: boolean
+}
 
 /**
  * Status indicator icons for each execution state
@@ -113,10 +122,10 @@ function getStatusClass(status: NodeStatus | undefined): string {
  * const TriggerNodeWithStatus = ExecutionStatusNode(TriggerNode)
  * ```
  */
-export function ExecutionStatusNode<T extends Record<string, unknown>>(
-  BaseNode: ComponentType<NodeProps<T>>
-) {
-  return function WrappedNode(props: NodeProps<T>) {
+export function ExecutionStatusNode<P extends BaseNodeProps<any>>(
+  BaseNode: ComponentType<P>
+): ComponentType<P> {
+  return function WrappedNode(props: P) {
     // Get node status from store
     const { nodeStatuses } = useExecutionTraceStore()
     const status = nodeStatuses[props.id]

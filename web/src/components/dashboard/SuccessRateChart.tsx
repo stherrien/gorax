@@ -47,11 +47,9 @@ const SuccessRateChart: React.FC<SuccessRateChartProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const formatTooltip = (value: number, name: string) => {
-    if (name === 'successRate') {
-      return `${value.toFixed(2)}%`;
-    }
-    return value;
+  const formatTooltip = (value: number | undefined, _name: string | undefined) => {
+    if (value === undefined) return '';
+    return `${value.toFixed(2)}%`;
   };
 
   // Calculate overall success rate
@@ -63,7 +61,6 @@ const SuccessRateChart: React.FC<SuccessRateChartProps> = ({
   const getTrend = () => {
     if (data.length < 2) return 'stable';
     const recentRates = data.slice(-7).map(d => d.successRate);
-    const avg = recentRates.reduce((sum, r) => sum + r, 0) / recentRates.length;
     const firstHalf = recentRates.slice(0, Math.floor(recentRates.length / 2));
     const secondHalf = recentRates.slice(Math.floor(recentRates.length / 2));
     const firstAvg = firstHalf.reduce((sum, r) => sum + r, 0) / firstHalf.length;

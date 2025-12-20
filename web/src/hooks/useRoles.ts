@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { rbacApi, Role, CreateRoleRequest, UpdateRoleRequest, Permission } from '../api/rbac';
+import { rbacApi, CreateRoleRequest, UpdateRoleRequest, Permission } from '../api/rbac';
 import { toast } from 'react-hot-toast';
 
 export const useRoles = () => {

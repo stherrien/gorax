@@ -5,6 +5,7 @@
  * to display live execution progress.
  */
 
+import { useState } from 'react'
 import { useExecutionUpdates } from '../hooks/useExecutionUpdates'
 
 interface ExecutionMonitorProps {
@@ -146,7 +147,7 @@ export function MinimalExecutionMonitor({ executionId }: { executionId: string }
  * Example: With callbacks
  */
 export function ExecutionMonitorWithCallbacks({ executionId }: { executionId: string }) {
-  const [notifications, setNotifications] = React.useState<string[]>([])
+  const [notifications, setNotifications] = useState<string[]>([])
 
   const addNotification = (message: string) => {
     setNotifications((prev) => [...prev, message])
@@ -180,7 +181,7 @@ export function ExecutionMonitorWithCallbacks({ executionId }: { executionId: st
  * Example: Dashboard view (monitoring multiple executions)
  */
 export function ExecutionDashboard() {
-  const [activeExecutions, setActiveExecutions] = React.useState<string[]>([
+  const [activeExecutions] = useState<string[]>([
     'exec-1',
     'exec-2',
     'exec-3',
@@ -227,8 +228,9 @@ function ExecutionCard({ executionId }: { executionId: string }) {
 
 /**
  * Example CSS (for reference)
+ * Exported for documentation purposes
  */
-const exampleCSS = `
+export const exampleCSS = `
 .execution-monitor {
   padding: 1rem;
   border: 1px solid #ddd;

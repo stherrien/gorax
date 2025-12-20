@@ -1,5 +1,4 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 
 interface SlackNodeData {
   action: 'send_message' | 'send_dm' | 'add_reaction' | 'update_message';
@@ -12,7 +11,13 @@ interface SlackNodeData {
   };
 }
 
-const SlackNode: React.FC<NodeProps<SlackNodeData>> = ({ data, selected }) => {
+interface SlackNodeProps {
+  id: string;
+  data: SlackNodeData;
+  selected?: boolean;
+}
+
+const SlackNode = ({ data, selected }: SlackNodeProps) => {
   const getActionLabel = () => {
     switch (data.action) {
       case 'send_message':

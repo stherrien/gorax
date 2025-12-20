@@ -12,7 +12,7 @@ import TriggerBreakdown from '../components/dashboard/TriggerBreakdown'
 export default function Dashboard() {
   const navigate = useNavigate()
   const [timeRange, setTimeRange] = useState<number>(7) // days
-  const [groupBy, setGroupBy] = useState<'hour' | 'day'>('day')
+  const [groupBy] = useState<'hour' | 'day'>('day')
 
   const { stats, loading: statsLoading, error: statsError } = useDashboardStats()
   const {

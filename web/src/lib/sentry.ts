@@ -62,7 +62,7 @@ export function initializeSentry(config: SentryConfig): void {
     ],
 
     // Filter out known third-party script errors
-    beforeSend(event, hint) {
+    beforeSend(event, _hint) {
       // Filter out errors from browser extensions
       if (event.exception?.values?.[0]?.stacktrace?.frames) {
         const frames = event.exception.values[0].stacktrace.frames;

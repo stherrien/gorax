@@ -1,11 +1,12 @@
 import { Handle, Position } from '@xyflow/react'
 
-interface ForkNodeData {
+export interface ForkNodeData {
   label: string
   branchCount?: number
 }
 
-interface ForkNodeProps {
+export interface ForkNodeProps {
+  id: string
   data: ForkNodeData
   selected?: boolean
 }

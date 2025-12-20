@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface SlackConfigPanelProps {
   nodeType: string
   formData: any

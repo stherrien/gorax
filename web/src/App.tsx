@@ -10,7 +10,7 @@ import CreateSchedule from './pages/CreateSchedule'
 import EditSchedule from './pages/EditSchedule'
 import WebhookList from './pages/WebhookList'
 import WebhookDetail from './pages/WebhookDetail'
-import CredentialManager from './pages/CredentialManager'
+import { CredentialManager } from './pages/CredentialManager'
 
 function App() {
   return (

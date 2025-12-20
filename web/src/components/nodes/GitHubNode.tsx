@@ -1,5 +1,4 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 
 interface GitHubNodeData {
   action: 'create_issue' | 'create_pr_comment' | 'add_label';
@@ -12,7 +11,13 @@ interface GitHubNodeData {
   };
 }
 
-const GitHubNode: React.FC<NodeProps<GitHubNodeData>> = ({ data, selected }) => {
+interface GitHubNodeProps {
+  id: string;
+  data: GitHubNodeData;
+  selected?: boolean;
+}
+
+const GitHubNode = ({ data, selected }: GitHubNodeProps) => {
   const getActionLabel = () => {
     switch (data.action) {
       case 'create_issue':

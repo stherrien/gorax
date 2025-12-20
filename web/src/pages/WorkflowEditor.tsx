@@ -376,15 +376,15 @@ export default function WorkflowEditor() {
                     id: node.id,
                     type: node.type || 'default',
                     position: node.position,
-                    data: node.data,
+                    data: node.data as { name: string; config: unknown },
                   })),
                   edges: edges.map(edge => ({
                     id: edge.id,
                     source: edge.source,
                     target: edge.target,
-                    sourceHandle: edge.sourceHandle,
-                    targetHandle: edge.targetHandle,
-                    label: edge.label,
+                    sourceHandle: edge.sourceHandle ?? undefined,
+                    targetHandle: edge.targetHandle ?? undefined,
+                    label: edge.label as string | undefined,
                   })),
                 }}
                 onSuccess={handleSaveAsTemplateSuccess}
