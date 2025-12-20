@@ -98,10 +98,24 @@ src/
 
 ## Git Workflow
 
-- **Never commit directly to main or dev**
-- Branch naming: `<ticket>-<short-description>` (e.g., `RFLOW-123-add-webhook-auth`)
-- Write meaningful commit messages
-- Squash commits before merging
+**MANDATORY**: Follow Git Flow process:
+
+1. **Never commit directly to `main` or `dev` branches** - Always create a feature branch first
+2. **Create branches off `dev`** before making any commits:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b <ticket>-<short-description>
+   ```
+3. **Branch naming**: `<ticket>-<short-description>` (e.g., `RFLOW-123-add-webhook-auth`)
+4. Write meaningful commit messages
+5. Squash commits before merging
+6. Create PR to merge back into `dev`
+
+**Before committing, always verify:**
+```bash
+git branch  # Ensure you're NOT on main or dev
+```
 
 ## Code Review Checklist
 
