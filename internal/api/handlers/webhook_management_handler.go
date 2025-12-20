@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/validation"
 	"github.com/gorax/gorax/internal/webhook"
 )
@@ -291,16 +292,24 @@ func (h *WebhookManagementHandler) TestWebhook(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	result, err := h.service.TestWebhook(
-		r.Context(),
-		tenantID,
-		webhookID,
-		input.Method,
-		input.Headers,
-		input.Body,
-	)
-	if err != nil {
-		if err == webhook.ErrNotFound {
+	var result *webhook.TestResult
+	var testErr error
+
+	// Wrap webhook test operation with tracing
+	_ = tracing.TraceWebhookReceive(r.Context(), tenantID, webhookID, input.Method, "/webhooks/test", func(ctx context.Context) error {
+		result, testErr = h.service.TestWebhook(
+			ctx,
+			tenantID,
+			webhookID,
+			input.Method,
+			input.Headers,
+			input.Body,
+		)
+		return testErr
+	})
+
+	if testErr != nil {
+		if testErr == webhook.ErrNotFound {
 			h.respondError(w, http.StatusNotFound, "webhook not found")
 			return
 		}
