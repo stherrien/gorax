@@ -300,20 +300,20 @@ func (m *MockRepository) LogAccess(ctx context.Context, log *AccessLog) error {
 	return nil
 }
 
-func (m *MockRepository) GetAccessLog(ctx context.Context, tenantID, credentialID string, limit, offset int) ([]*AccessLog, error) {
+func (m *MockRepository) GetAccessLogs(ctx context.Context, credentialID string, limit, offset int) ([]*AccessLog, error) {
 	return nil, nil
 }
 
 type MockEncryptionService struct {
-	EncryptFunc func(ctx context.Context, data *CredentialData) (encryptedData []byte, encryptedKey []byte, err error)
+	EncryptFunc func(ctx context.Context, tenantID string, data *CredentialData) (*EncryptedSecret, error)
 	DecryptFunc func(ctx context.Context, encryptedData, encryptedKey []byte) (*CredentialData, error)
 }
 
-func (m *MockEncryptionService) Encrypt(ctx context.Context, data *CredentialData) (encryptedData []byte, encryptedKey []byte, err error) {
+func (m *MockEncryptionService) Encrypt(ctx context.Context, tenantID string, data *CredentialData) (*EncryptedSecret, error) {
 	if m.EncryptFunc != nil {
-		return m.EncryptFunc(ctx, data)
+		return m.EncryptFunc(ctx, tenantID, data)
 	}
-	return nil, nil, nil
+	return nil, nil
 }
 
 func (m *MockEncryptionService) Decrypt(ctx context.Context, encryptedData, encryptedKey []byte) (*CredentialData, error) {

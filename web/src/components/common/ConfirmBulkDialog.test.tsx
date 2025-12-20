@@ -42,7 +42,7 @@ describe('ConfirmBulkDialog', () => {
       />
     )
 
-    expect(screen.getByText(/Delete 5 items/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Delete 5 items/i })).toBeInTheDocument()
   })
 
   it('should show warning message for destructive actions', () => {

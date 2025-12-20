@@ -111,6 +111,13 @@ const NODE_DEFINITIONS: NodeDefinition[] = [
   },
   {
     type: 'control',
+    nodeType: 'parallel',
+    label: 'Parallel',
+    description: 'Execute branches concurrently',
+    icon: '⚡',
+  },
+  {
+    type: 'control',
     nodeType: 'delay',
     label: 'Delay',
     description: 'Wait for a specified time',

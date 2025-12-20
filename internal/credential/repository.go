@@ -378,6 +378,42 @@ func (r *Repository) LogAccess(ctx context.Context, log *AccessLog) error {
 	return nil
 }
 
+// GetAccessLogs retrieves access log entries for a credential
+func (r *Repository) GetAccessLogs(ctx context.Context, credentialID string, limit, offset int) ([]*AccessLog, error) {
+	if credentialID == "" {
+		return nil, ErrInvalidCredentialID
+	}
+
+	// Set default limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `
+		SELECT id, credential_id, tenant_id, accessed_by, access_type,
+		       accessed_at, ip_address, user_agent, success, error_message
+		FROM credential_access_log
+		WHERE credential_id = $1
+		ORDER BY accessed_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	var logs []*AccessLog
+	err := r.db.SelectContext(ctx, &logs, query, credentialID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access logs: %w", err)
+	}
+
+	if logs == nil {
+		logs = []*AccessLog{}
+	}
+
+	return logs, nil
+}
+
 // joinUpdates joins SQL SET clauses with commas
 func joinUpdates(updates []string) string {
 	result := ""

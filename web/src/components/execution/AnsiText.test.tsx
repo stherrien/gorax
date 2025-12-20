@@ -25,92 +25,121 @@ describe('AnsiText', () => {
 
   describe('colored text', () => {
     it('should render red text', () => {
-      const { container } = render(<AnsiText text="\x1b[31mRed Text\x1b[0m" />)
+      const text = '\u001b[31mRed Text\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Red Text')
       const spans = container.querySelectorAll('span')
-      const redSpan = Array.from(spans).find(s => s.textContent === 'Red Text')
-      expect(redSpan).toBeDefined()
-      expect(redSpan!).toHaveStyle({ color: '#ef4444' })
+      expect(spans.length).toBeGreaterThan(0)
+      const redSpan = spans[0] // The parsed text becomes the first span
+      expect(redSpan.textContent).toBe('Red Text')
+      expect(redSpan.style.color).toBe('#ef4444')
     })
 
     it('should render green text', () => {
-      const { container } = render(<AnsiText text="\x1b[32mGreen Text\x1b[0m" />)
+      const text = '\u001b[32mGreen Text\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Green Text')
       const spans = container.querySelectorAll('span')
-      const greenSpan = Array.from(spans).find(s => s.textContent === 'Green Text')
-      expect(greenSpan).toBeDefined()
-      expect(greenSpan!).toHaveStyle({ color: '#22c55e' })
+      expect(spans.length).toBeGreaterThan(0)
+      const greenSpan = spans[0]
+      expect(greenSpan.textContent).toBe('Green Text')
+      expect(greenSpan.style.color).toBe('#22c55e')
     })
 
     it('should render multiple colors', () => {
-      const { container } = render(
-        <AnsiText text="\x1b[31mRed\x1b[0m \x1b[32mGreen\x1b[0m" />
-      )
+      const text = '\u001b[31mRed\u001b[0m \u001b[32mGreen\u001b[0m'
+      const { container} = render(<AnsiText text={text} />)
       const spans = container.querySelectorAll('span')
+      expect(spans.length).toBe(3) // Red, space, Green
       const redSpan = Array.from(spans).find(s => s.textContent === 'Red')
       const greenSpan = Array.from(spans).find(s => s.textContent === 'Green')
       expect(redSpan).toBeDefined()
       expect(greenSpan).toBeDefined()
-      expect(redSpan!).toHaveStyle({ color: '#ef4444' })
-      expect(greenSpan!).toHaveStyle({ color: '#22c55e' })
+      expect(redSpan!.style.color).toBe('#ef4444')
+      expect(greenSpan!.style.color).toBe('#22c55e')
     })
 
     it('should render background colors', () => {
-      const { container } = render(<AnsiText text="\x1b[41mRed BG\x1b[0m" />)
+      const text = '\u001b[41mRed BG\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Red BG')
       const spans = container.querySelectorAll('span')
-      const bgSpan = Array.from(spans).find(s => s.textContent === 'Red BG')
-      expect(bgSpan).toBeDefined()
-      expect(bgSpan!).toHaveStyle({ backgroundColor: '#ef4444' })
+      expect(spans.length).toBeGreaterThan(0)
+      const bgSpan = spans[0]
+      expect(bgSpan.textContent).toBe('Red BG')
+      expect(bgSpan.style.backgroundColor).toBe('#ef4444')
     })
   })
 
   describe('text styles', () => {
     it('should render bold text', () => {
-      const { container } = render(<AnsiText text="\x1b[1mBold\x1b[0m" />)
+      const text = '\u001b[1mBold\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Bold')
       const spans = container.querySelectorAll('span')
-      const boldSpan = Array.from(spans).find(s => s.textContent === 'Bold')
-      expect(boldSpan).toBeDefined()
-      expect(boldSpan!).toHaveStyle({ fontWeight: 'bold' })
+      expect(spans.length).toBeGreaterThan(0)
+      const boldSpan = spans[0]
+      expect(boldSpan.textContent).toBe('Bold')
+      expect(boldSpan.style.fontWeight).toBe('bold')
     })
 
     it('should render italic text', () => {
-      const { container } = render(<AnsiText text="\x1b[3mItalic\x1b[0m" />)
+      const text = '\u001b[3mItalic\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Italic')
       const spans = container.querySelectorAll('span')
-      const italicSpan = Array.from(spans).find(s => s.textContent === 'Italic')
-      expect(italicSpan).toBeDefined()
-      expect(italicSpan!).toHaveStyle({ fontStyle: 'italic' })
+      expect(spans.length).toBeGreaterThan(0)
+      const italicSpan = spans[0]
+      expect(italicSpan.textContent).toBe('Italic')
+      expect(italicSpan.style.fontStyle).toBe('italic')
     })
 
     it('should render underlined text', () => {
-      const { container } = render(<AnsiText text="\x1b[4mUnderline\x1b[0m" />)
+      const text = '\u001b[4mUnderline\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Underline')
       const spans = container.querySelectorAll('span')
-      const underlineSpan = Array.from(spans).find(s => s.textContent === 'Underline')
-      expect(underlineSpan).toBeDefined()
-      expect(underlineSpan!).toHaveStyle({ textDecoration: 'underline' })
+      expect(spans.length).toBeGreaterThan(0)
+      const underlineSpan = spans[0]
+      expect(underlineSpan.textContent).toBe('Underline')
+      expect(underlineSpan.style.textDecoration).toBe('underline')
     })
 
     it('should render dim text', () => {
-      const { container } = render(<AnsiText text="\x1b[2mDim\x1b[0m" />)
+      const text = '\u001b[2mDim\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Dim')
       const spans = container.querySelectorAll('span')
-      const dimSpan = Array.from(spans).find(s => s.textContent === 'Dim')
-      expect(dimSpan).toBeDefined()
-      expect(dimSpan!).toHaveStyle({ opacity: '0.6' })
+      expect(spans.length).toBeGreaterThan(0)
+      const dimSpan = spans[0]
+      expect(dimSpan.textContent).toBe('Dim')
+      expect(dimSpan.style.opacity).toBe('0.6')
     })
   })
 
   describe('combined styles', () => {
     it('should render bold red text', () => {
-      const { container } = render(<AnsiText text="\x1b[31;1mBold Red\x1b[0m" />)
+      const text = '\u001b[31;1mBold Red\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Bold Red')
       const spans = container.querySelectorAll('span')
-      const styledSpan = Array.from(spans).find(s => s.textContent === 'Bold Red')
-      expect(styledSpan).toBeDefined()
-      expect(styledSpan!).toHaveStyle({ color: '#ef4444', fontWeight: 'bold' })
+      expect(spans.length).toBeGreaterThan(0)
+      const styledSpan = spans[0]
+      expect(styledSpan.textContent).toBe('Bold Red')
+      expect(styledSpan.style.color).toBe('#ef4444')
+      expect(styledSpan.style.fontWeight).toBe('bold')
     })
 
     it('should render text with foreground and background', () => {
-      const { container } = render(<AnsiText text="\x1b[31;42mRed on Green\x1b[0m" />)
+      const text = '\u001b[31;42mRed on Green\u001b[0m'
+      const { container } = render(<AnsiText text={text} />)
+      expect(container.textContent).toContain('Red on Green')
       const spans = container.querySelectorAll('span')
-      const styledSpan = Array.from(spans).find(s => s.textContent === 'Red on Green')
-      expect(styledSpan).toBeDefined()
-      expect(styledSpan!).toHaveStyle({ color: '#ef4444', backgroundColor: '#22c55e' })
+      expect(spans.length).toBeGreaterThan(0)
+      const styledSpan = spans[0]
+      expect(styledSpan.textContent).toBe('Red on Green')
+      expect(styledSpan.style.color).toBe('#ef4444')
+      expect(styledSpan.style.backgroundColor).toBe('#22c55e')
     })
   })
 
@@ -131,32 +160,36 @@ describe('AnsiText', () => {
 
   describe('real-world log examples', () => {
     it('should render Docker-style logs', () => {
-      const log = '[2024-01-01 12:00:00] \x1b[32mINFO\x1b[0m Starting server...'
+      const log = '[2024-01-01 12:00:00] \u001b[32mINFO\u001b[0m Starting server...'
       const { container } = render(<AnsiText text={log} />)
       const spans = container.querySelectorAll('span')
       const infoSpan = Array.from(spans).find(s => s.textContent === 'INFO')
-      expect(infoSpan).toHaveStyle({ color: '#22c55e' })
+      expect(infoSpan).toBeDefined()
+      expect(infoSpan!.style.color).toBe('#22c55e')
       expect(container.textContent).toContain('[2024-01-01 12:00:00]')
       expect(container.textContent).toContain('Starting server...')
     })
 
     it('should render error logs', () => {
-      const log = '\x1b[31mERROR\x1b[0m: Connection failed'
+      const log = '\u001b[31mERROR\u001b[0m: Connection failed'
       const { container } = render(<AnsiText text={log} />)
       const spans = container.querySelectorAll('span')
       const errorSpan = Array.from(spans).find(s => s.textContent === 'ERROR')
-      expect(errorSpan).toHaveStyle({ color: '#ef4444' })
+      expect(errorSpan).toBeDefined()
+      expect(errorSpan!.style.color).toBe('#ef4444')
       expect(container.textContent).toContain(': Connection failed')
     })
 
     it('should render kubectl-style colored output', () => {
-      const log = 'NAME\t\x1b[32mREADY\x1b[0m\t\x1b[36mSTATUS\x1b[0m'
+      const log = 'NAME\t\u001b[32mREADY\u001b[0m\t\u001b[36mSTATUS\u001b[0m'
       const { container } = render(<AnsiText text={log} />)
       const spans = container.querySelectorAll('span')
       const readySpan = Array.from(spans).find(s => s.textContent === 'READY')
       const statusSpan = Array.from(spans).find(s => s.textContent === 'STATUS')
-      expect(readySpan).toHaveStyle({ color: '#22c55e' })
-      expect(statusSpan).toHaveStyle({ color: '#06b6d4' })
+      expect(readySpan).toBeDefined()
+      expect(statusSpan).toBeDefined()
+      expect(readySpan!.style.color).toBe('#22c55e')
+      expect(statusSpan!.style.color).toBe('#06b6d4')
     })
   })
 

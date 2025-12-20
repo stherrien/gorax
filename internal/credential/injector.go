@@ -19,6 +19,7 @@ type RepositoryInterface interface {
 
 // EncryptionServiceInterface defines the interface for encryption operations
 type EncryptionServiceInterface interface {
+	Encrypt(ctx context.Context, tenantID string, data *CredentialData) (*EncryptedSecret, error)
 	Decrypt(ctx context.Context, encryptedData, encryptedKey []byte) (*CredentialData, error)
 }
 

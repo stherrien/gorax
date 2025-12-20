@@ -12,7 +12,7 @@ describe('AdvancedFilters', () => {
     render(<AdvancedFilters filters={defaultFilters} onChange={onChange} />)
 
     expect(screen.getByText(/advanced filters/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/status/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/completed/i)).not.toBeInTheDocument()
   })
 
   it('expands when toggle button is clicked', async () => {
@@ -23,7 +23,7 @@ describe('AdvancedFilters', () => {
 
     await user.click(screen.getByText(/advanced filters/i))
 
-    expect(screen.getByLabelText(/status/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/completed/i)).toBeInTheDocument()
   })
 
   it('collapses when toggle button is clicked again', async () => {
@@ -33,11 +33,11 @@ describe('AdvancedFilters', () => {
     render(<AdvancedFilters filters={defaultFilters} onChange={onChange} />)
 
     await user.click(screen.getByText(/advanced filters/i))
-    expect(screen.getByLabelText(/status/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/completed/i)).toBeInTheDocument()
 
     await user.click(screen.getByText(/advanced filters/i))
     await waitFor(() => {
-      expect(screen.queryByLabelText(/status/i)).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/completed/i)).not.toBeInTheDocument()
     })
   })
 
@@ -73,12 +73,19 @@ describe('AdvancedFilters', () => {
 
   it('allows multiple status selections', async () => {
     const user = userEvent.setup()
-    const onChange = vi.fn()
+    let currentFilters: ExecutionListParams = {}
+    const onChange = vi.fn((newFilters) => {
+      currentFilters = newFilters
+    })
 
-    render(<AdvancedFilters filters={defaultFilters} onChange={onChange} />)
+    const { rerender } = render(<AdvancedFilters filters={currentFilters} onChange={onChange} />)
 
     await user.click(screen.getByText(/advanced filters/i))
     await user.click(screen.getByLabelText(/completed/i))
+
+    // Rerender with updated filters to simulate parent component passing updated props
+    rerender(<AdvancedFilters filters={currentFilters} onChange={onChange} />)
+
     await user.click(screen.getByLabelText(/failed/i))
 
     expect(onChange).toHaveBeenLastCalledWith(
@@ -96,9 +103,9 @@ describe('AdvancedFilters', () => {
 
     await user.click(screen.getByText(/advanced filters/i))
 
-    expect(screen.getByLabelText(/manual/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/scheduled/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/webhook/i)).toBeInTheDocument()
+    expect(screen.getByLabelText('Manual')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scheduled')).toBeInTheDocument()
+    expect(screen.getByLabelText('Webhook')).toBeInTheDocument()
   })
 
   it('updates trigger type filter when checkbox is clicked', async () => {
@@ -108,7 +115,7 @@ describe('AdvancedFilters', () => {
     render(<AdvancedFilters filters={defaultFilters} onChange={onChange} />)
 
     await user.click(screen.getByText(/advanced filters/i))
-    await user.click(screen.getByLabelText(/webhook/i))
+    await user.click(screen.getByLabelText('Webhook'))
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -125,7 +132,8 @@ describe('AdvancedFilters', () => {
 
     await user.click(screen.getByText(/advanced filters/i))
 
-    expect(screen.getByText(/date range/i)).toBeInTheDocument()
+    const dateRangeElements = screen.getAllByText(/date range/i)
+    expect(dateRangeElements.length).toBeGreaterThan(0)
   })
 
   it('shows error search input', async () => {

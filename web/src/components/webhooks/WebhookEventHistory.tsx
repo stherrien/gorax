@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { webhookAPI, type WebhookEvent } from '../../api/webhooks'
+import { ReplayModal } from './ReplayModal'
+import { convertToCSV, downloadCSV, formatDateForCSV, truncateForCSV } from '../../utils/csvExport'
 
 interface WebhookEventHistoryProps {
   webhookId: string
@@ -8,6 +10,9 @@ interface WebhookEventHistoryProps {
 
 type SortOrder = 'asc' | 'desc'
 type EventStatus = 'all' | 'received' | 'processed' | 'filtered' | 'failed'
+
+const MAX_REPLAY_COUNT = 5
+const MAX_BATCH_SIZE = 10
 
 export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
   const [events, setEvents] = useState<WebhookEvent[]>([])
@@ -19,6 +24,11 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<EventStatus>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<WebhookEvent | null>(null)
+  const [replayEvent, setReplayEvent] = useState<WebhookEvent | null>(null)
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set())
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false)
+  const [notification, setNotification] = useState<string | null>(null)
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning'>('success')
 
   const limit = 20
 
@@ -79,8 +89,121 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
   }
 
   const handleExport = () => {
-    // Mock implementation for now
-    console.log('Export CSV clicked')
+    const eventsToExport = filteredAndSortedEvents.map((event) => ({
+      eventId: event.id,
+      timestamp: formatDateForCSV(event.createdAt),
+      method: event.requestMethod,
+      status: event.status,
+      responseCode: event.responseStatus ?? 'N/A',
+      processingTime: event.processingTimeMs ?? 'N/A',
+      executionId: event.executionId ?? 'N/A',
+      errorMessage: event.errorMessage ?? '',
+      replayCount: event.replayCount,
+      sourceIp: event.metadata?.sourceIp ?? 'N/A',
+      userAgent: truncateForCSV(event.metadata?.userAgent ?? 'N/A', 100),
+      contentType: event.metadata?.contentType ?? 'N/A',
+      contentLength: event.metadata?.contentLength ?? 'N/A',
+      receivedAt: event.metadata?.receivedAt ? formatDateForCSV(event.metadata.receivedAt) : 'N/A',
+      headers: truncateForCSV(JSON.stringify(event.requestHeaders), 200),
+      payload: truncateForCSV(JSON.stringify(event.requestBody), 500),
+    }))
+
+    const csv = convertToCSV(
+      eventsToExport,
+      [
+        'eventId',
+        'timestamp',
+        'method',
+        'status',
+        'responseCode',
+        'processingTime',
+        'executionId',
+        'errorMessage',
+        'replayCount',
+        'sourceIp',
+        'userAgent',
+        'contentType',
+        'contentLength',
+        'receivedAt',
+        'headers',
+        'payload',
+      ],
+      [
+        'Event ID',
+        'Timestamp',
+        'Method',
+        'Status',
+        'Response Code',
+        'Processing Time (ms)',
+        'Execution ID',
+        'Error Message',
+        'Replay Count',
+        'Source IP',
+        'User Agent',
+        'Content Type',
+        'Content Length',
+        'Received At',
+        'Headers',
+        'Payload',
+      ]
+    )
+
+    const filename = `webhook-events-${webhookId}-${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csv, filename)
+  }
+
+  const handleCheckboxChange = (eventId: string, checked: boolean) => {
+    const newSelection = new Set(selectedEvents)
+
+    if (checked) {
+      if (newSelection.size >= MAX_BATCH_SIZE) {
+        showNotification(`Maximum ${MAX_BATCH_SIZE} events can be selected for batch replay`, 'warning')
+        return
+      }
+      newSelection.add(eventId)
+    } else {
+      newSelection.delete(eventId)
+    }
+
+    setSelectedEvents(newSelection)
+  }
+
+  const handleBatchReplay = () => {
+    setShowBatchConfirm(true)
+  }
+
+  const confirmBatchReplay = async () => {
+    try {
+      const eventIds = Array.from(selectedEvents)
+      const result = await webhookAPI.batchReplayEvents(webhookId, eventIds)
+
+      const successCount = Object.values(result.results).filter(r => r.success).length
+      const failureCount = Object.values(result.results).filter(r => !r.success).length
+
+      if (failureCount === 0) {
+        showNotification(`Successfully replayed ${successCount} event${successCount !== 1 ? 's' : ''}`, 'success')
+      } else {
+        showNotification(`${successCount} succeeded, ${failureCount} failed`, 'warning')
+      }
+
+      setSelectedEvents(new Set())
+      setShowBatchConfirm(false)
+      fetchEvents()
+    } catch (err) {
+      showNotification('Failed to replay events', 'error')
+    }
+  }
+
+  const handleReplaySuccess = (executionId: string) => {
+    showNotification(`Event replayed successfully. Execution ID: ${executionId}`, 'success')
+    setReplayEvent(null)
+    fetchEvents()
+  }
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
+    setNotification(message)
+    setNotificationType(type)
+    setTimeout(() => setNotification(null), 5000)
   }
 
   // Loading state
@@ -122,6 +245,21 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
 
   return (
     <div>
+      {/* Notification Banner */}
+      {notification && (
+        <div
+          className={`mb-4 p-3 rounded-lg ${
+            notificationType === 'success'
+              ? 'bg-green-900/30 border border-green-600/50 text-green-300'
+              : notificationType === 'error'
+              ? 'bg-red-900/30 border border-red-600/50 text-red-300'
+              : 'bg-yellow-900/30 border border-yellow-600/50 text-yellow-300'
+          }`}
+        >
+          {notification}
+        </div>
+      )}
+
       {/* Filters and Actions */}
       <div className="mb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -159,12 +297,22 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleExport}
-          className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
-        >
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedEvents.size > 0 && (
+            <button
+              onClick={handleBatchReplay}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+            >
+              Replay Selected ({selectedEvents.size})
+            </button>
+          )}
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Events Table */}
@@ -172,6 +320,33 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
         <table className="w-full" role="table">
           <thead>
             <tr className="border-b border-gray-700">
+              <th className="text-left px-6 py-4 text-sm font-medium text-gray-400" role="columnheader">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredAndSortedEvents.length > 0 &&
+                    filteredAndSortedEvents.every(
+                      (e) => selectedEvents.has(e.id) || e.replayCount >= MAX_REPLAY_COUNT
+                    )
+                  }
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const newSelection = new Set<string>()
+                      let count = 0
+                      for (const event of filteredAndSortedEvents) {
+                        if (event.replayCount < MAX_REPLAY_COUNT && count < MAX_BATCH_SIZE) {
+                          newSelection.add(event.id)
+                          count++
+                        }
+                      }
+                      setSelectedEvents(newSelection)
+                    } else {
+                      setSelectedEvents(new Set())
+                    }
+                  }}
+                  className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500 focus:ring-2"
+                />
+              </th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400" role="columnheader">
                 Event ID
               </th>
@@ -192,6 +367,9 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400" role="columnheader">
                 Processing Time
               </th>
+              <th className="text-left px-6 py-4 text-sm font-medium text-gray-400" role="columnheader">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -199,22 +377,68 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
               <tr
                 key={event.id}
                 role="row"
-                onClick={() => handleEventClick(event)}
-                className="border-b border-gray-700 hover:bg-gray-700/50 cursor-pointer"
+                className="border-b border-gray-700 hover:bg-gray-700/50"
               >
-                <td className="px-6 py-4 text-gray-300 text-sm">{event.id}</td>
-                <td className="px-6 py-4 text-gray-300 text-sm">
+                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectedEvents.has(event.id)}
+                    disabled={event.replayCount >= MAX_REPLAY_COUNT}
+                    onChange={(e) => handleCheckboxChange(event.id, e.target.checked)}
+                    className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500 focus:ring-2 disabled:opacity-50"
+                  />
+                </td>
+                <td
+                  className="px-6 py-4 text-gray-300 text-sm cursor-pointer"
+                  onClick={() => handleEventClick(event)}
+                >
+                  {event.id}
+                  {event.replayCount > 0 && (
+                    <span className="ml-2 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                      {event.replayCount}×
+                    </span>
+                  )}
+                </td>
+                <td
+                  className="px-6 py-4 text-gray-300 text-sm cursor-pointer"
+                  onClick={() => handleEventClick(event)}
+                >
                   {formatTime(event.createdAt)}
                 </td>
-                <td className="px-6 py-4 text-gray-300 text-sm">{event.requestMethod}</td>
-                <td className="px-6 py-4">
+                <td
+                  className="px-6 py-4 text-gray-300 text-sm cursor-pointer"
+                  onClick={() => handleEventClick(event)}
+                >
+                  {event.requestMethod}
+                </td>
+                <td className="px-6 py-4 cursor-pointer" onClick={() => handleEventClick(event)}>
                   <StatusBadge status={event.status} />
                 </td>
-                <td className="px-6 py-4 text-gray-300 text-sm">
+                <td
+                  className="px-6 py-4 text-gray-300 text-sm cursor-pointer"
+                  onClick={() => handleEventClick(event)}
+                >
                   {event.responseStatus ?? 'N/A'}
                 </td>
-                <td className="px-6 py-4 text-gray-300 text-sm">
+                <td
+                  className="px-6 py-4 text-gray-300 text-sm cursor-pointer"
+                  onClick={() => handleEventClick(event)}
+                >
                   {event.processingTimeMs ? `${event.processingTimeMs} ms` : 'N/A'}
+                </td>
+                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => setReplayEvent(event)}
+                    disabled={event.replayCount >= MAX_REPLAY_COUNT}
+                    title={
+                      event.replayCount >= MAX_REPLAY_COUNT
+                        ? 'Maximum replay limit reached'
+                        : 'Replay this event'
+                    }
+                    className="px-3 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Replay
+                  </button>
                 </td>
               </tr>
             ))}
@@ -254,6 +478,56 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
       {/* Event Detail Modal */}
       {selectedEvent && (
         <EventDetailModal event={selectedEvent} onClose={closeModal} />
+      )}
+
+      {/* Replay Modal */}
+      {replayEvent && (
+        <ReplayModal
+          event={replayEvent}
+          onClose={() => setReplayEvent(null)}
+          onSuccess={handleReplaySuccess}
+        />
+      )}
+
+      {/* Batch Replay Confirmation Modal */}
+      {showBatchConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowBatchConfirm(false)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="batch-confirm-title"
+            className="bg-gray-800 rounded-lg p-6 max-w-md w-full"
+          >
+            <h2 id="batch-confirm-title" className="text-xl font-bold text-white mb-4">
+              Confirm Batch Replay
+            </h2>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to replay {selectedEvents.size} event
+              {selectedEvents.size !== 1 ? 's' : ''}?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBatchConfirm(false)}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBatchReplay}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -377,6 +651,41 @@ function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                   />
                 </svg>
               </Link>
+            </div>
+          )}
+
+          {/* Request Metadata */}
+          {event.metadata && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Request Details</h3>
+              <div className="p-4 bg-gray-900 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Source IP</p>
+                    <p className="text-sm text-gray-300">{event.metadata.sourceIp}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Received At</p>
+                    <p className="text-sm text-gray-300">
+                      {new Date(event.metadata.receivedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">User Agent</p>
+                    <p className="text-sm text-gray-300 break-all">
+                      {event.metadata.userAgent || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Content Type</p>
+                    <p className="text-sm text-gray-300">{event.metadata.contentType || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Content Length</p>
+                    <p className="text-sm text-gray-300">{event.metadata.contentLength} bytes</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

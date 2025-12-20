@@ -585,3 +585,282 @@ func mustMarshal(v interface{}) json.RawMessage {
 	}
 	return data
 }
+
+// Tests for findLoopBody function
+
+func TestFindLoopBody_LinearChain(t *testing.T) {
+	// Test: Loop -> Node1 -> Node2 -> Node3 -> NodeAfterLoop
+	// Expected: Loop body should include Node1, Node2, Node3
+	// NodeAfterLoop is connected from something else, not part of loop
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "trigger", Type: string(workflow.NodeTypeTriggerWebhook)},
+			{ID: "loop1", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node1", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node2", Type: string(workflow.NodeTypeActionTransform)},
+			{ID: "node3", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node_after", Type: string(workflow.NodeTypeActionHTTP)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "trigger", Target: "loop1"},
+			{ID: "e2", Source: "loop1", Target: "node1"}, // Loop starts here
+			{ID: "e3", Source: "node1", Target: "node2"},
+			{ID: "e4", Source: "node2", Target: "node3"},
+			{ID: "e5", Source: "loop1", Target: "node_after"}, // Exit loop - goes directly from loop to after
+		},
+	}
+
+	exec := &Executor{}
+	bodyNodes, bodyEdges := exec.findLoopBody("loop1", definition)
+
+	// Should find all nodes in the chain that are reachable from loop
+	// but not the node_after (which is outside the loop body)
+	bodyNodeIDs := make(map[string]bool)
+	for _, node := range bodyNodes {
+		bodyNodeIDs[node.ID] = true
+	}
+
+	// Should include nodes in the loop body
+	assert.True(t, bodyNodeIDs["node1"], "node1 should be in loop body")
+	assert.True(t, bodyNodeIDs["node2"], "node2 should be in loop body")
+	assert.True(t, bodyNodeIDs["node3"], "node3 should be in loop body")
+
+	// Should NOT include node_after (it's outside loop body)
+	assert.False(t, bodyNodeIDs["node_after"], "node_after should not be in loop body")
+	assert.False(t, bodyNodeIDs["trigger"], "trigger should not be in loop body")
+	assert.False(t, bodyNodeIDs["loop1"], "loop node itself should not be in loop body")
+
+	// Check edges - should only include edges between body nodes
+	bodyEdgeMap := make(map[string]bool)
+	for _, edge := range bodyEdges {
+		bodyEdgeMap[edge.ID] = true
+	}
+
+	assert.True(t, bodyEdgeMap["e3"], "edge between node1->node2 should be included")
+	assert.True(t, bodyEdgeMap["e4"], "edge between node2->node3 should be included")
+	assert.False(t, bodyEdgeMap["e1"], "edge trigger->loop should not be included")
+	assert.False(t, bodyEdgeMap["e5"], "edge loop->node_after should not be included")
+}
+
+func TestFindLoopBody_BranchingPaths(t *testing.T) {
+	// Test: Loop -> Condition -> [TruePath: Node1, Node2] / [FalsePath: Node3]
+	// All merge back before exiting loop
+	// Expected: All nodes in both branches should be in loop body
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "loop1", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "condition", Type: string(workflow.NodeTypeControlIf)},
+			{ID: "node1", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node2", Type: string(workflow.NodeTypeActionTransform)},
+			{ID: "node3", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "merge", Type: string(workflow.NodeTypeActionTransform)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "loop1", Target: "condition"},
+			{ID: "e2", Source: "condition", Target: "node1", Label: "true"},
+			{ID: "e3", Source: "node1", Target: "node2"},
+			{ID: "e4", Source: "condition", Target: "node3", Label: "false"},
+			{ID: "e5", Source: "node2", Target: "merge"},
+			{ID: "e6", Source: "node3", Target: "merge"},
+		},
+	}
+
+	exec := &Executor{}
+	bodyNodes, bodyEdges := exec.findLoopBody("loop1", definition)
+
+	bodyNodeIDs := make(map[string]bool)
+	for _, node := range bodyNodes {
+		bodyNodeIDs[node.ID] = true
+	}
+
+	// All nodes should be in loop body
+	assert.True(t, bodyNodeIDs["condition"], "condition should be in loop body")
+	assert.True(t, bodyNodeIDs["node1"], "node1 (true branch) should be in loop body")
+	assert.True(t, bodyNodeIDs["node2"], "node2 (true branch) should be in loop body")
+	assert.True(t, bodyNodeIDs["node3"], "node3 (false branch) should be in loop body")
+	assert.True(t, bodyNodeIDs["merge"], "merge node should be in loop body")
+
+	// Verify we got all expected edges
+	assert.Len(t, bodyEdges, 6, "should have all 6 edges in loop body")
+}
+
+func TestFindLoopBody_NestedLoop(t *testing.T) {
+	// Test: OuterLoop -> Node1 -> InnerLoop -> Node2 -> Node3
+	// Expected: OuterLoop body should include Node1, InnerLoop (as a node), Node2, Node3
+	// InnerLoop body detection is separate
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "outer_loop", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node1", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "inner_loop", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node2", Type: string(workflow.NodeTypeActionTransform)},
+			{ID: "node3", Type: string(workflow.NodeTypeActionHTTP)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "outer_loop", Target: "node1"},
+			{ID: "e2", Source: "node1", Target: "inner_loop"},
+			{ID: "e3", Source: "inner_loop", Target: "node2"},
+			{ID: "e4", Source: "node2", Target: "node3"},
+		},
+	}
+
+	exec := &Executor{}
+
+	// Test outer loop body detection
+	outerBodyNodes, outerBodyEdges := exec.findLoopBody("outer_loop", definition)
+	outerBodyNodeIDs := make(map[string]bool)
+	for _, node := range outerBodyNodes {
+		outerBodyNodeIDs[node.ID] = true
+	}
+
+	// Outer loop should include everything reachable from it
+	assert.True(t, outerBodyNodeIDs["node1"], "node1 should be in outer loop body")
+	assert.True(t, outerBodyNodeIDs["inner_loop"], "inner_loop should be in outer loop body")
+	assert.True(t, outerBodyNodeIDs["node2"], "node2 should be in outer loop body")
+	assert.True(t, outerBodyNodeIDs["node3"], "node3 should be in outer loop body")
+	assert.Len(t, outerBodyEdges, 4, "should have all 4 edges in outer loop body")
+
+	// Test inner loop body detection
+	innerBodyNodes, innerBodyEdges := exec.findLoopBody("inner_loop", definition)
+	innerBodyNodeIDs := make(map[string]bool)
+	for _, node := range innerBodyNodes {
+		innerBodyNodeIDs[node.ID] = true
+	}
+
+	// Inner loop should only include nodes reachable from it
+	assert.False(t, innerBodyNodeIDs["node1"], "node1 should NOT be in inner loop body")
+	assert.True(t, innerBodyNodeIDs["node2"], "node2 should be in inner loop body")
+	assert.True(t, innerBodyNodeIDs["node3"], "node3 should be in inner loop body")
+	assert.Len(t, innerBodyEdges, 2, "should have 2 edges in inner loop body")
+}
+
+func TestFindLoopBody_WithExitEdge(t *testing.T) {
+	// Test: Loop has an exit edge that bypasses the loop body
+	// Loop -> Node1 -> Node2
+	//  |                  |
+	//  +---> NodeAfter <--+
+	// Expected: Loop body should include Node1, Node2 but not NodeAfter
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "loop1", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node1", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node2", Type: string(workflow.NodeTypeActionTransform)},
+			{ID: "node_after", Type: string(workflow.NodeTypeActionHTTP)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "loop1", Target: "node1"},      // Enter loop body
+			{ID: "e2", Source: "node1", Target: "node2"},      // Within loop body
+			{ID: "e3", Source: "node2", Target: "node_after"}, // Exit from loop body
+			{ID: "e4", Source: "loop1", Target: "node_after"}, // Direct exit (bypass loop body)
+		},
+	}
+
+	exec := &Executor{}
+	bodyNodes, bodyEdges := exec.findLoopBody("loop1", definition)
+
+	bodyNodeIDs := make(map[string]bool)
+	for _, node := range bodyNodes {
+		bodyNodeIDs[node.ID] = true
+	}
+
+	// Loop body should include the chain of nodes
+	assert.True(t, bodyNodeIDs["node1"], "node1 should be in loop body")
+	assert.True(t, bodyNodeIDs["node2"], "node2 should be in loop body")
+
+	// node_after is not in loop body (it's the exit point)
+	assert.False(t, bodyNodeIDs["node_after"], "node_after should not be in loop body")
+
+	// Check edges within loop body
+	bodyEdgeMap := make(map[string]bool)
+	for _, edge := range bodyEdges {
+		bodyEdgeMap[edge.ID] = true
+	}
+
+	assert.True(t, bodyEdgeMap["e2"], "edge node1->node2 should be in loop body")
+	assert.False(t, bodyEdgeMap["e3"], "exit edge node2->node_after should not be in loop body")
+	assert.False(t, bodyEdgeMap["e4"], "direct exit edge should not be in loop body")
+}
+
+func TestFindLoopBody_EmptyLoop(t *testing.T) {
+	// Test: Loop with no body nodes (edge goes directly to exit)
+	// Loop -> NodeAfter
+	// Expected: Empty loop body
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "loop1", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node_after", Type: string(workflow.NodeTypeActionHTTP)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "loop1", Target: "node_after"},
+		},
+	}
+
+	exec := &Executor{}
+	bodyNodes, bodyEdges := exec.findLoopBody("loop1", definition)
+
+	// Should have no body nodes or edges
+	assert.Len(t, bodyNodes, 0, "empty loop should have no body nodes")
+	assert.Len(t, bodyEdges, 0, "empty loop should have no body edges")
+}
+
+func TestFindLoopBody_MultipleExitPoints(t *testing.T) {
+	// Test: Loop with multiple body nodes that branch and both exit to the same node
+	// The loop uses an explicit exit edge to mark node_after as outside the body
+	//
+	// Loop -> Node1 -> Node2 ----+
+	//   |         |-> Node3 -----|---> NodeAfter
+	//   +---------------------------->
+	//
+	// Expected: Node1, Node2, Node3 in body; NodeAfter outside (marked by explicit exit)
+
+	definition := &workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{ID: "loop1", Type: string(workflow.NodeTypeControlLoop)},
+			{ID: "node1", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node2", Type: string(workflow.NodeTypeActionTransform)},
+			{ID: "node3", Type: string(workflow.NodeTypeActionHTTP)},
+			{ID: "node_after", Type: string(workflow.NodeTypeActionTransform)},
+		},
+		Edges: []workflow.Edge{
+			{ID: "e1", Source: "loop1", Target: "node1"},        // Body entrance
+			{ID: "e2", Source: "node1", Target: "node2"},        // Branch 1
+			{ID: "e3", Source: "node1", Target: "node3"},        // Branch 2
+			{ID: "e4", Source: "node2", Target: "node_after"},   // Exit from branch 1
+			{ID: "e5", Source: "node3", Target: "node_after"},   // Exit from branch 2
+			{ID: "e6", Source: "loop1", Target: "node_after"},   // Explicit loop exit
+		},
+	}
+
+	exec := &Executor{}
+	bodyNodes, bodyEdges := exec.findLoopBody("loop1", definition)
+
+	bodyNodeIDs := make(map[string]bool)
+	for _, node := range bodyNodes {
+		bodyNodeIDs[node.ID] = true
+	}
+
+	// Should include all nodes in the loop body
+	assert.True(t, bodyNodeIDs["node1"], "node1 should be in loop body")
+	assert.True(t, bodyNodeIDs["node2"], "node2 should be in loop body")
+	assert.True(t, bodyNodeIDs["node3"], "node3 should be in loop body")
+
+	// Should not include the exit node (marked by explicit loop exit edge)
+	assert.False(t, bodyNodeIDs["node_after"], "node_after should not be in loop body")
+
+	// Check that internal edges are included
+	bodyEdgeMap := make(map[string]bool)
+	for _, edge := range bodyEdges {
+		bodyEdgeMap[edge.ID] = true
+	}
+
+	assert.True(t, bodyEdgeMap["e2"], "edge node1->node2 should be in loop body")
+	assert.True(t, bodyEdgeMap["e3"], "edge node1->node3 should be in loop body")
+	assert.False(t, bodyEdgeMap["e4"], "exit edge node2->node_after should not be in loop body")
+	assert.False(t, bodyEdgeMap["e5"], "exit edge node3->node_after should not be in loop body")
+	assert.False(t, bodyEdgeMap["e6"], "explicit loop exit edge should not be in loop body")
+}

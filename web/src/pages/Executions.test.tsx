@@ -348,6 +348,313 @@ describe('Executions List Integration', () => {
     })
   })
 
+  describe('Advanced Filters Integration', () => {
+    it('should display advanced filters component', () => {
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      expect(screen.getByText(/advanced filters/i)).toBeInTheDocument()
+    })
+
+    it('should expand advanced filters when clicked', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      expect(screen.getByPlaceholderText(/search error messages/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/search by execution id/i)).toBeInTheDocument()
+    })
+
+    it('should pass filter changes to useExecutions hook', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      const completedCheckbox = screen.getByLabelText(/completed/i)
+      await user.click(completedCheckbox)
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: ['completed'],
+          })
+        )
+      })
+    })
+
+    it('should filter by error search text with debounce', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      const errorSearchInput = screen.getByPlaceholderText(/search error messages/i)
+      await user.type(errorSearchInput, 'timeout')
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            errorSearch: 'timeout',
+          })
+        )
+      }, { timeout: 500 })
+    })
+
+    it('should filter by execution ID prefix with debounce', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      const executionIdInput = screen.getByPlaceholderText(/search by execution id/i)
+      await user.type(executionIdInput, 'exec-123')
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            executionIdPrefix: 'exec-123',
+          })
+        )
+      }, { timeout: 500 })
+    })
+
+    it('should filter by duration range', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      const minInput = screen.getByPlaceholderText(/min/i)
+      const maxInput = screen.getByPlaceholderText(/max/i)
+
+      await user.type(minInput, '1000')
+      await user.type(maxInput, '5000')
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            minDurationMs: 1000,
+            maxDurationMs: 5000,
+          })
+        )
+      })
+    })
+
+    it('should filter by trigger type', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      // Use exact match to avoid matching "Webhook Replay"
+      const webhookCheckbox = screen.getByLabelText('Webhook')
+      await user.click(webhookCheckbox)
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            triggerType: ['webhook'],
+          })
+        )
+      })
+    })
+
+    it('should combine basic and advanced filters', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      // Set basic status filter
+      const statusFilter = screen.getByLabelText(/status/i)
+      await user.selectOptions(statusFilter, 'failed')
+
+      // Set advanced filters
+      await user.click(screen.getByText(/advanced filters/i))
+      const errorSearchInput = screen.getByPlaceholderText(/search error messages/i)
+      await user.type(errorSearchInput, 'timeout')
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'failed',
+            errorSearch: 'timeout',
+          })
+        )
+      }, { timeout: 500 })
+    })
+
+    it('should clear all advanced filters when clear button is clicked', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 3,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getByText(/advanced filters/i))
+
+      // Add some filters
+      const completedCheckbox = screen.getByLabelText(/completed/i)
+      await user.click(completedCheckbox)
+
+      await waitFor(() => {
+        expect(screen.getByText(/clear all/i)).toBeInTheDocument()
+      })
+
+      // Clear all filters
+      await user.click(screen.getByText(/clear all/i))
+
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.not.objectContaining({
+            status: expect.anything(),
+            errorSearch: expect.anything(),
+          })
+        )
+      })
+    })
+
+    it('should reset page to 1 when advanced filters change', async () => {
+      const user = userEvent.setup()
+      ;(useExecutions as any).mockReturnValue({
+        executions: mockExecutions,
+        total: 100,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <Executions />
+        </MemoryRouter>
+      )
+
+      // Go to page 2
+      const nextButton = await screen.findByRole('button', { name: /next/i })
+      await user.click(nextButton)
+
+      // Apply advanced filter
+      await user.click(screen.getByText(/advanced filters/i))
+      const completedCheckbox = screen.getByLabelText(/completed/i)
+      await user.click(completedCheckbox)
+
+      // Should reset to page 1
+      await waitFor(() => {
+        expect(useExecutions).toHaveBeenCalledWith(
+          expect.objectContaining({
+            page: 1,
+            status: ['completed'],
+          })
+        )
+      })
+    })
+  })
+
   describe('Navigation', () => {
     it('should have links to execution detail pages', async () => {
       ;(useExecutions as any).mockReturnValue({

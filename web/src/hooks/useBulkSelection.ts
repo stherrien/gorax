@@ -39,9 +39,11 @@ export function useBulkSelection<T extends Identifiable>(): BulkSelectionReturn<
   const toggleAll = useCallback(
     (items: T[]): void => {
       setSelected((prev) => {
-        if (prev.size === items.length) {
+        // If all items are already selected OR some items are selected, deselect all
+        if (prev.size > 0) {
           return new Set()
         }
+        // If none are selected, select all
         return new Set(items.map((item) => item.id))
       })
     },
