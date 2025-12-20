@@ -14,10 +14,13 @@
   },
   "dependencies": {
     "@sentry/react": "^10.32.1",
+    "@tanstack/react-query": "^5.90.12",
     "@xyflow/react": "^12.0.0",
     "date-fns": "^4.1.0",
+    "lucide-react": "^0.562.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.26.0",
     "recharts": "^3.6.0",
     "zustand": "^4.5.4"
@@ -31,16 +34,17 @@
     "@typescript-eslint/eslint-plugin": "^7.15.0",
     "@typescript-eslint/parser": "^7.15.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "@vitest/ui": "^1.0.4",
+    "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.19",
+    "esbuild": "^0.27.2",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "happy-dom": "^12.10.3",
+    "happy-dom": "^20.0.11",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.2.2",
-    "vite": "^5.3.4",
-    "vitest": "^1.0.4"
+    "vite": "^7.3.0",
+    "vitest": "^4.0.16"
   }
 }
