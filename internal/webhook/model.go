@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -47,6 +48,49 @@ const (
 	EventStatusFailed    WebhookEventStatus = "failed"
 )
 
+// EventMetadata represents additional metadata captured for a webhook event
+type EventMetadata struct {
+	SourceIP      string    `json:"sourceIp"`
+	UserAgent     string    `json:"userAgent"`
+	ReceivedAt    time.Time `json:"receivedAt"`
+	ContentType   string    `json:"contentType"`
+	ContentLength int       `json:"contentLength"`
+}
+
+// NullableEventMetadata wraps EventMetadata to handle NULL values from database
+type NullableEventMetadata struct {
+	Metadata *EventMetadata
+	Valid    bool
+}
+
+// Scan implements sql.Scanner interface for NullableEventMetadata
+func (n *NullableEventMetadata) Scan(value interface{}) error {
+	if value == nil {
+		n.Valid = false
+		n.Metadata = nil
+		return nil
+	}
+
+	var data []byte
+	switch v := value.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return fmt.Errorf("unsupported type for EventMetadata: %T", value)
+	}
+
+	var metadata EventMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return fmt.Errorf("failed to unmarshal event metadata: %w", err)
+	}
+
+	n.Valid = true
+	n.Metadata = &metadata
+	return nil
+}
+
 // WebhookEvent represents a webhook event delivery log
 type WebhookEvent struct {
 	ID               string             `json:"id" db:"id"`
@@ -63,6 +107,7 @@ type WebhookEvent struct {
 	FilteredReason   *string            `json:"filteredReason,omitempty" db:"filtered_reason"`
 	ReplayCount      int                `json:"replayCount" db:"replay_count"`
 	SourceEventID    *string            `json:"sourceEventId,omitempty" db:"source_event_id"`
+	Metadata         *EventMetadata     `json:"metadata,omitempty" db:"metadata"`
 	CreatedAt        time.Time          `json:"createdAt" db:"created_at"`
 }
 
@@ -157,4 +202,72 @@ type ReplayResult struct {
 // BatchReplayResponse represents the response from batch replaying events
 type BatchReplayResponse struct {
 	Results map[string]*ReplayResult `json:"results"`
+}
+
+// ExtractMetadataFromRequest creates EventMetadata from HTTP request components
+func ExtractMetadataFromRequest(remoteAddr, userAgent, contentType string, contentLength int64) *EventMetadata {
+	return &EventMetadata{
+		SourceIP:      extractIPFromRemoteAddr(remoteAddr),
+		UserAgent:     userAgent,
+		ReceivedAt:    time.Now(),
+		ContentType:   contentType,
+		ContentLength: int(contentLength),
+	}
+}
+
+// extractIPFromRemoteAddr extracts the IP address from RemoteAddr (removes port)
+func extractIPFromRemoteAddr(remoteAddr string) string {
+	// Handle IPv6 addresses like "[2001:db8::1]:8080"
+	if len(remoteAddr) > 0 && remoteAddr[0] == '[' {
+		if closeBracket := findChar(remoteAddr, ']'); closeBracket > 0 {
+			return remoteAddr[1:closeBracket]
+		}
+	}
+
+	// Handle IPv4 addresses like "192.168.1.1:54321"
+	if colon := findChar(remoteAddr, ':'); colon > 0 {
+		return remoteAddr[:colon]
+	}
+
+	// Return as-is if no port found
+	return remoteAddr
+}
+
+// findChar returns the index of the first occurrence of char in s, or -1 if not found
+func findChar(s string, char rune) int {
+	for i, c := range s {
+		if c == char {
+			return i
+		}
+	}
+	return -1
+}
+
+// ToWorkflowContext converts WebhookEvent to a map suitable for workflow context
+func (e *WebhookEvent) ToWorkflowContext() map[string]interface{} {
+	context := map[string]interface{}{
+		"eventId":      e.ID,
+		"webhookId":    e.WebhookID,
+		"method":       e.RequestMethod,
+		"headers":      e.RequestHeaders,
+		"body":         e.RequestBody,
+		"status":       string(e.Status),
+		"createdAt":    e.CreatedAt.Format(time.RFC3339),
+	}
+
+	if e.ExecutionID != nil {
+		context["executionId"] = *e.ExecutionID
+	}
+
+	if e.Metadata != nil {
+		context["metadata"] = map[string]interface{}{
+			"sourceIp":      e.Metadata.SourceIP,
+			"userAgent":     e.Metadata.UserAgent,
+			"receivedAt":    e.Metadata.ReceivedAt.Format(time.RFC3339),
+			"contentType":   e.Metadata.ContentType,
+			"contentLength": e.Metadata.ContentLength,
+		}
+	}
+
+	return context
 }

@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     status VARCHAR(20) NOT NULL DEFAULT 'received',
     error_message TEXT,
     filtered_reason TEXT,
+    replay_count INTEGER NOT NULL DEFAULT 0,
+    source_event_id UUID REFERENCES webhook_events(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

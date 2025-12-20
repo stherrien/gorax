@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/webhook"
 	"github.com/gorax/gorax/internal/worker"
 	"github.com/gorax/gorax/internal/workflow"
 )
@@ -70,6 +71,15 @@ func main() {
 	// Initialize scheduler
 	scheduler := schedule.NewScheduler(scheduleService, executorAdapter, logger)
 
+	// Initialize webhook cleanup if enabled
+	var cleanupScheduler *webhook.CleanupScheduler
+	if cfg.Cleanup.Enabled {
+		webhookRepo := webhook.NewRepository(db)
+		retentionPeriod := time.Duration(cfg.Cleanup.RetentionDays) * 24 * time.Hour
+		cleanupService := webhook.NewCleanupService(webhookRepo, cfg.Cleanup.BatchSize, retentionPeriod)
+		cleanupScheduler = webhook.NewCleanupScheduler(cleanupService, cfg.Cleanup.Schedule, logger)
+	}
+
 	// Initialize worker
 	w, err := worker.New(cfg, logger)
 	if err != nil {
@@ -99,6 +109,20 @@ func main() {
 		}
 	}()
 
+	// Start cleanup scheduler if enabled
+	if cleanupScheduler != nil {
+		go func() {
+			slog.Info("starting cleanup scheduler",
+				"retention_days", cfg.Cleanup.RetentionDays,
+				"batch_size", cfg.Cleanup.BatchSize,
+				"schedule", cfg.Cleanup.Schedule,
+			)
+			if err := cleanupScheduler.Start(ctx); err != nil {
+				slog.Error("cleanup scheduler error", "error", err)
+			}
+		}()
+	}
+
 	// Start worker in goroutine
 	go func() {
 		slog.Info("starting workflow worker", "concurrency", cfg.Worker.Concurrency)
@@ -113,16 +137,21 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	slog.Info("shutting down worker and scheduler...")
+	slog.Info("shutting down worker, scheduler, and cleanup scheduler...")
 	cancel()
 
 	// Stop scheduler
 	scheduler.Stop()
 
+	// Stop cleanup scheduler if enabled
+	if cleanupScheduler != nil {
+		cleanupScheduler.Stop()
+	}
+
 	// Wait for worker to finish current jobs
 	w.Wait()
 
-	slog.Info("worker and scheduler stopped")
+	slog.Info("worker, scheduler, and cleanup scheduler stopped")
 }
 
 // workflowServiceAdapter adapts workflow.Service to schedule.WorkflowGetter interface
