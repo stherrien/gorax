@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 
 interface Props {
@@ -166,7 +166,7 @@ const SentryErrorBoundary = Sentry.withErrorBoundary(ErrorBoundary, {
           </h2>
 
           <p className="mt-2 text-sm text-gray-600 text-center">
-            {error?.message || 'An unexpected error occurred'}
+            {(error as Error | null)?.message || 'An unexpected error occurred'}
           </p>
 
           <div className="mt-6 flex flex-col gap-2">

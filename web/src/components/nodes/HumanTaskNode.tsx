@@ -1,5 +1,4 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 
 interface HumanTaskNodeData {
   label: string;
@@ -13,10 +12,16 @@ interface HumanTaskNodeData {
   };
 }
 
-export const HumanTaskNode: React.FC<NodeProps<HumanTaskNodeData>> = ({
+interface HumanTaskNodeProps {
+  id: string;
+  data: HumanTaskNodeData;
+  selected?: boolean;
+}
+
+export const HumanTaskNode = ({
   data,
   selected,
-}) => {
+}: HumanTaskNodeProps) => {
   const getTaskTypeIcon = () => {
     switch (data.task_type) {
       case 'approval':

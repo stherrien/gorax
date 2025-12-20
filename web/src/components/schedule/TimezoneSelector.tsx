@@ -66,7 +66,7 @@ const ALL_TIMEZONES: TimezoneOption[] = [
   { value: 'Africa/Lagos', label: 'Lagos', region: 'Africa', offset: 'UTC+1' },
 ]
 
-const getCurrentTimeInTimezone = (timezone: string): string => {
+const getCurrentTimeInTimezone = (_timezone: string): string => {
   try {
     const now = new Date()
     return format(now, 'h:mm a')

@@ -1,6 +1,6 @@
 import { Handle, Position } from '@xyflow/react'
 import { useState, useEffect } from 'react'
-import { workflowsApi } from '../../api/workflows'
+import { workflowAPI } from '../../api/workflows'
 
 interface SubWorkflowNodeData {
   label: string
@@ -23,8 +23,8 @@ export default function SubWorkflowNode({ data, selected }: SubWorkflowNodeProps
   useEffect(() => {
     // Fetch workflow name if we have an ID but no name
     if (data.workflowId && !data.workflowName) {
-      workflowsApi.get(data.workflowId)
-        .then(workflow => setWorkflowName(workflow.name))
+      workflowAPI.get(data.workflowId)
+        .then((workflow: { name: string }) => setWorkflowName(workflow.name))
         .catch(() => setWorkflowName('Unknown Workflow'))
     }
   }, [data.workflowId, data.workflowName])

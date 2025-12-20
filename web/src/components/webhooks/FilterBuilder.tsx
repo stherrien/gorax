@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { webhookAPI } from '../../api/webhooks'
 import type {
-  WebhookFilter,
   FilterOperator,
   WebhookFilterCreateInput,
   WebhookFilterUpdateInput,

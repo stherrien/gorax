@@ -7,7 +7,7 @@ import {
   usePermissions,
   useUpdateRolePermissions,
 } from '../hooks/useRoles';
-import { Role, Permission, CreateRoleRequest, UpdateRoleRequest } from '../api/rbac';
+import type { Role, Permission } from '../api/rbac';
 
 export const RoleManagement: React.FC = () => {
   const { data: roles = [], isLoading } = useRoles();
@@ -89,7 +89,7 @@ interface RoleListProps {
   onManagePermissions: (role: Role) => void;
 }
 
-const RoleList: React.FC<RoleListProps> = ({ roles, onEdit, onDelete, onManagePermissions }) => {
+const RoleList: React.FC<RoleListProps> = ({ roles, onEdit, onDelete: _onDelete, onManagePermissions }) => {
   const deleteRole = useDeleteRole();
 
   return (

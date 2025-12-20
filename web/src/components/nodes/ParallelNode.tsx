@@ -1,13 +1,14 @@
 import { Handle, Position } from '@xyflow/react'
 
-interface ParallelNodeData {
+export interface ParallelNodeData {
   label: string
   errorStrategy?: 'fail_fast' | 'wait_all'
   maxConcurrency?: number
   branchCount?: number
 }
 
-interface ParallelNodeProps {
+export interface ParallelNodeProps {
+  id: string
   data: ParallelNodeData
   selected?: boolean
 }

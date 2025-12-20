@@ -1,5 +1,4 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 
 interface JiraNodeData {
   action: 'create_issue' | 'update_issue' | 'add_comment' | 'transition_issue' | 'search_issues';
@@ -12,7 +11,13 @@ interface JiraNodeData {
   };
 }
 
-const JiraNode: React.FC<NodeProps<JiraNodeData>> = ({ data, selected }) => {
+interface JiraNodeProps {
+  id: string;
+  data: JiraNodeData;
+  selected?: boolean;
+}
+
+const JiraNode = ({ data, selected }: JiraNodeProps) => {
   const getActionLabel = () => {
     switch (data.action) {
       case 'create_issue':

@@ -32,16 +32,17 @@ export const CredentialManager: React.FC = () => {
     fetchCredentials()
   }, [fetchCredentials])
 
-  const handleCreate = async (data: CredentialCreateInput) => {
-    await createCredential(data)
+  const handleCreate = async (data: CredentialCreateInput | CredentialUpdateInput) => {
+    // When creating, the form always provides all required fields for CredentialCreateInput
+    await createCredential(data as CredentialCreateInput)
     if (!error) {
       setViewMode('list')
     }
   }
 
-  const handleUpdate = async (data: CredentialUpdateInput) => {
+  const handleUpdate = async (data: CredentialCreateInput | CredentialUpdateInput) => {
     if (editingCredential) {
-      await updateCredential(editingCredential.id, data)
+      await updateCredential(editingCredential.id, data as CredentialUpdateInput)
       if (!error) {
         setViewMode('list')
         setEditingCredential(null)

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 
 interface PagerDutyNodeData {
   action: 'create_incident' | 'acknowledge_incident' | 'resolve_incident' | 'add_note';
@@ -12,7 +11,13 @@ interface PagerDutyNodeData {
   };
 }
 
-const PagerDutyNode: React.FC<NodeProps<PagerDutyNodeData>> = ({ data, selected }) => {
+interface PagerDutyNodeProps {
+  id: string;
+  data: PagerDutyNodeData;
+  selected?: boolean;
+}
+
+const PagerDutyNode = ({ data, selected }: PagerDutyNodeProps) => {
   const getActionLabel = () => {
     switch (data.action) {
       case 'create_incident':

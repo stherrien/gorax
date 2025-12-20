@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import SubWorkflowNode from './SubWorkflowNode'
-import { workflowsApi } from '../../api/workflows'
+import { workflowAPI } from '../../api/workflows'
 
 // Mock the workflows API
 vi.mock('../../api/workflows', () => ({
-  workflowsApi: {
+  workflowAPI: {
     get: vi.fn(),
   },
 }))
@@ -57,7 +57,7 @@ describe('SubWorkflowNode', () => {
       definition: { nodes: [], edges: [] },
     }
 
-    vi.mocked(workflowsApi.get).mockResolvedValue(mockWorkflow)
+    vi.mocked(workflowAPI.get).mockResolvedValue(mockWorkflow)
 
     const data = {
       label: 'Execute Sub-Workflow',
@@ -67,7 +67,7 @@ describe('SubWorkflowNode', () => {
     render(<SubWorkflowNode data={data} />)
 
     await waitFor(() => {
-      expect(workflowsApi.get).toHaveBeenCalledWith('wf-123')
+      expect(workflowAPI.get).toHaveBeenCalledWith('wf-123')
     })
 
     await waitFor(() => {
@@ -76,7 +76,7 @@ describe('SubWorkflowNode', () => {
   })
 
   it('displays "Unknown Workflow" on fetch error', async () => {
-    vi.mocked(workflowsApi.get).mockRejectedValue(new Error('Not found'))
+    vi.mocked(workflowAPI.get).mockRejectedValue(new Error('Not found'))
 
     const data = {
       label: 'Execute Sub-Workflow',

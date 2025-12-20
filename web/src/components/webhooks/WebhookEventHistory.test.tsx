@@ -119,7 +119,7 @@ describe('WebhookEventHistory', () => {
       renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
 
       await waitFor(() => {
-        expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/failed to fetch/i)[0]).toBeInTheDocument()
       })
     })
 

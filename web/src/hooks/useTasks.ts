@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   tasksApi,
-  HumanTask,
   ListTasksParams,
   ApproveTaskRequest,
   RejectTaskRequest,
@@ -36,7 +35,10 @@ export function useTask(taskId: string | undefined) {
 export function usePendingTaskCount() {
   return useQuery({
     queryKey: ['tasks', 'pending-count'],
-    queryFn: () => tasksApi.getPendingCount(),
+    queryFn: async () => {
+      const result = await tasksApi.list({ status: 'pending' });
+      return result.count;
+    },
     staleTime: 60000, // 1 minute
     refetchInterval: 60000, // Refetch every minute
   });

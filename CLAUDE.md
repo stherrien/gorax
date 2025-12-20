@@ -1,5 +1,11 @@
 # gorax Development Guidelines
 
+## User Preferences
+
+- **Always show next items to work on** at the end of each response when completing tasks
+
+---
+
 ## Development Principles
 
 ### Test-Driven Development (TDD)
