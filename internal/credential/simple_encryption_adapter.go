@@ -17,6 +17,12 @@ func NewSimpleEncryptionAdapter(service *SimpleEncryptionService) *SimpleEncrypt
 	return &SimpleEncryptionAdapter{service: service}
 }
 
+// Encrypt implements EncryptionServiceInterface
+// Delegates to SimpleEncryptionService and returns the encrypted secret
+func (a *SimpleEncryptionAdapter) Encrypt(ctx context.Context, tenantID string, data *CredentialData) (*EncryptedSecret, error) {
+	return a.service.Encrypt(ctx, tenantID, data)
+}
+
 // Decrypt implements EncryptionServiceInterface
 // encryptedData format: nonce (12 bytes) + ciphertext + authTag (16 bytes)
 // encryptedKey format: nonce (12 bytes) + encrypted DEK
