@@ -337,4 +337,31 @@ describe('Schedules Page', () => {
 
     expect(screen.getByText('No schedules found')).toBeInTheDocument()
   })
+
+  it('should show edit button for schedules', async () => {
+    vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+      schedules: mockSchedules,
+      total: 1,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+
+    vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+      workflows: mockWorkflows,
+      total: 1,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+
+    renderWithRouter(<Schedules />)
+
+    const editButton = screen.getByRole('button', { name: /edit/i })
+    expect(editButton).toBeInTheDocument()
+
+    // Clicking edit button should not throw errors
+    fireEvent.click(editButton)
+    expect(editButton).toBeInTheDocument()
+  })
 })

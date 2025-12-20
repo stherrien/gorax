@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { webhookAPI, type WebhookEvent } from '../../api/webhooks'
 import { ReplayModal } from './ReplayModal'
+import { convertToCSV, downloadCSV, formatDateForCSV, truncateForCSV } from '../../utils/csvExport'
 
 interface WebhookEventHistoryProps {
   webhookId: string
@@ -88,8 +89,52 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
   }
 
   const handleExport = () => {
-    // Mock implementation for now
-    console.log('Export CSV clicked')
+    const eventsToExport = filteredAndSortedEvents.map((event) => ({
+      eventId: event.id,
+      timestamp: formatDateForCSV(event.createdAt),
+      method: event.requestMethod,
+      status: event.status,
+      responseCode: event.responseStatus ?? 'N/A',
+      processingTime: event.processingTimeMs ?? 'N/A',
+      executionId: event.executionId ?? 'N/A',
+      errorMessage: event.errorMessage ?? '',
+      replayCount: event.replayCount,
+      headers: truncateForCSV(JSON.stringify(event.requestHeaders), 200),
+      payload: truncateForCSV(JSON.stringify(event.requestBody), 500),
+    }))
+
+    const csv = convertToCSV(
+      eventsToExport,
+      [
+        'eventId',
+        'timestamp',
+        'method',
+        'status',
+        'responseCode',
+        'processingTime',
+        'executionId',
+        'errorMessage',
+        'replayCount',
+        'headers',
+        'payload',
+      ],
+      [
+        'Event ID',
+        'Timestamp',
+        'Method',
+        'Status',
+        'Response Code',
+        'Processing Time (ms)',
+        'Execution ID',
+        'Error Message',
+        'Replay Count',
+        'Headers',
+        'Payload',
+      ]
+    )
+
+    const filename = `webhook-events-${webhookId}-${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csv, filename)
   }
 
   const handleCheckboxChange = (eventId: string, checked: boolean) => {

@@ -7,6 +7,7 @@ import Executions from './pages/Executions'
 import ExecutionDetail from './pages/ExecutionDetail'
 import Schedules from './pages/Schedules'
 import CreateSchedule from './pages/CreateSchedule'
+import EditSchedule from './pages/EditSchedule'
 import WebhookList from './pages/WebhookList'
 import WebhookDetail from './pages/WebhookDetail'
 import CredentialManager from './pages/CredentialManager'
@@ -25,6 +26,7 @@ function App() {
         <Route path="executions/:id" element={<ExecutionDetail />} />
         <Route path="schedules" element={<Schedules />} />
         <Route path="schedules/new" element={<CreateSchedule />} />
+        <Route path="schedules/:id/edit" element={<EditSchedule />} />
         <Route path="credentials" element={<CredentialManager />} />
       </Route>
     </Routes>

@@ -766,9 +766,11 @@ describe('WebhookEventHistory', () => {
       })
 
       const exportButton = screen.getByRole('button', { name: /export csv/i })
+
+      // Just verify the button can be clicked without errors
       await user.click(exportButton)
 
-      // For now, just verify button was clicked (implementation can be mock)
+      // Button should still exist after click
       expect(exportButton).toBeInTheDocument()
     })
   })
