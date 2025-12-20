@@ -433,3 +433,91 @@ func (r *Repository) GetFiltersByWebhookID(ctx context.Context, webhookID string
 
 	return filters, nil
 }
+
+// GetFilterByID retrieves a single filter by ID
+func (r *Repository) GetFilterByID(ctx context.Context, filterID string) (*WebhookFilter, error) {
+	query := `SELECT * FROM webhook_filters WHERE id = $1`
+
+	var filter WebhookFilter
+	err := r.db.GetContext(ctx, &filter, query, filterID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &filter, nil
+}
+
+// CreateFilter creates a new webhook filter
+func (r *Repository) CreateFilter(ctx context.Context, filter *WebhookFilter) (*WebhookFilter, error) {
+	query := `
+		INSERT INTO webhook_filters (id, webhook_id, field_path, operator, value, logic_group, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+		RETURNING *`
+
+	var created WebhookFilter
+	err := r.db.GetContext(ctx, &created, query,
+		filter.ID,
+		filter.WebhookID,
+		filter.FieldPath,
+		filter.Operator,
+		filter.Value,
+		filter.LogicGroup,
+		filter.Enabled,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &created, nil
+}
+
+// UpdateFilter updates an existing webhook filter
+func (r *Repository) UpdateFilter(ctx context.Context, filter *WebhookFilter) (*WebhookFilter, error) {
+	query := `
+		UPDATE webhook_filters
+		SET field_path = $2, operator = $3, value = $4, logic_group = $5, enabled = $6, updated_at = NOW()
+		WHERE id = $1
+		RETURNING *`
+
+	var updated WebhookFilter
+	err := r.db.GetContext(ctx, &updated, query,
+		filter.ID,
+		filter.FieldPath,
+		filter.Operator,
+		filter.Value,
+		filter.LogicGroup,
+		filter.Enabled,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
+}
+
+// DeleteFilter deletes a webhook filter
+func (r *Repository) DeleteFilter(ctx context.Context, filterID string) error {
+	query := `DELETE FROM webhook_filters WHERE id = $1`
+	result, err := r.db.ExecContext(ctx, query, filterID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+// DeleteFiltersByWebhookID deletes all filters for a webhook
+func (r *Repository) DeleteFiltersByWebhookID(ctx context.Context, webhookID string) error {
+	query := `DELETE FROM webhook_filters WHERE webhook_id = $1`
+	_, err := r.db.ExecContext(ctx, query, webhookID)
+	return err
+}

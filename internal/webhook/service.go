@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -445,4 +446,170 @@ func (s *Service) MarkEventFiltered(ctx context.Context, eventID string, reason 
 		"reason", reason)
 
 	return nil
+}
+
+// ListFilters retrieves all filters for a webhook
+func (s *Service) ListFilters(ctx context.Context, tenantID, webhookID string) ([]*WebhookFilter, error) {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return nil, ErrNotFound
+	}
+
+	filters, err := s.repo.GetFiltersByWebhookID(ctx, webhookID)
+	if err != nil {
+		s.logger.Error("failed to list filters", "error", err, "webhook_id", webhookID)
+		return nil, fmt.Errorf("failed to list filters: %w", err)
+	}
+
+	return filters, nil
+}
+
+// GetFilter retrieves a single filter by ID
+func (s *Service) GetFilter(ctx context.Context, tenantID, webhookID, filterID string) (*WebhookFilter, error) {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return nil, ErrNotFound
+	}
+
+	filter, err := s.repo.GetFilterByID(ctx, filterID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+
+	// Verify filter belongs to webhook
+	if filter.WebhookID != webhookID {
+		return nil, ErrNotFound
+	}
+
+	return filter, nil
+}
+
+// CreateFilter creates a new webhook filter
+func (s *Service) CreateFilter(ctx context.Context, tenantID, webhookID string, filter *WebhookFilter) (*WebhookFilter, error) {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return nil, ErrNotFound
+	}
+
+	// Set webhook ID and generate filter ID
+	filter.WebhookID = webhookID
+	filter.ID = uuid.NewString()
+
+	created, err := s.repo.CreateFilter(ctx, filter)
+	if err != nil {
+		s.logger.Error("failed to create filter", "error", err, "webhook_id", webhookID)
+		return nil, fmt.Errorf("failed to create filter: %w", err)
+	}
+
+	s.logger.Info("filter created",
+		"filter_id", created.ID,
+		"webhook_id", webhookID,
+		"field_path", filter.FieldPath,
+		"operator", filter.Operator)
+
+	return created, nil
+}
+
+// UpdateFilter updates an existing webhook filter
+func (s *Service) UpdateFilter(ctx context.Context, tenantID, webhookID, filterID string, filter *WebhookFilter) (*WebhookFilter, error) {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return nil, ErrNotFound
+	}
+
+	// Verify filter exists and belongs to webhook
+	existing, err := s.repo.GetFilterByID(ctx, filterID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if existing.WebhookID != webhookID {
+		return nil, ErrNotFound
+	}
+
+	// Preserve ID and webhook ID
+	filter.ID = filterID
+	filter.WebhookID = webhookID
+
+	updated, err := s.repo.UpdateFilter(ctx, filter)
+	if err != nil {
+		s.logger.Error("failed to update filter", "error", err, "filter_id", filterID)
+		return nil, fmt.Errorf("failed to update filter: %w", err)
+	}
+
+	s.logger.Info("filter updated",
+		"filter_id", filterID,
+		"webhook_id", webhookID)
+
+	return updated, nil
+}
+
+// DeleteFilter deletes a webhook filter
+func (s *Service) DeleteFilter(ctx context.Context, tenantID, webhookID, filterID string) error {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return ErrNotFound
+	}
+
+	// Verify filter exists and belongs to webhook
+	existing, err := s.repo.GetFilterByID(ctx, filterID)
+	if err != nil {
+		return ErrNotFound
+	}
+	if existing.WebhookID != webhookID {
+		return ErrNotFound
+	}
+
+	err = s.repo.DeleteFilter(ctx, filterID)
+	if err != nil {
+		s.logger.Error("failed to delete filter", "error", err, "filter_id", filterID)
+		return fmt.Errorf("failed to delete filter: %w", err)
+	}
+
+	s.logger.Info("filter deleted",
+		"filter_id", filterID,
+		"webhook_id", webhookID)
+
+	return nil
+}
+
+// TestFilters tests a set of filters against a sample payload
+func (s *Service) TestFilters(ctx context.Context, tenantID, webhookID string, payload map[string]interface{}) (*FilterResult, error) {
+	// Verify webhook exists and belongs to tenant
+	wh, err := s.repo.GetByID(ctx, webhookID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if wh.TenantID != tenantID {
+		return nil, ErrNotFound
+	}
+
+	// Create filter evaluator and evaluate
+	evaluator := NewFilterEvaluator(s.repo)
+	result, err := evaluator.Evaluate(ctx, webhookID, payload)
+	if err != nil {
+		s.logger.Error("failed to test filters", "error", err, "webhook_id", webhookID)
+		return nil, fmt.Errorf("failed to test filters: %w", err)
+	}
+
+	return result, nil
 }

@@ -51,6 +51,7 @@ type App struct {
 	webhookHandler           *handlers.WebhookHandler
 	webhookManagementHandler *handlers.WebhookManagementHandler
 	webhookReplayHandler     *handlers.WebhookReplayHandler
+	webhookFilterHandler     *handlers.WebhookFilterHandler
 	websocketHandler         *handlers.WebSocketHandler
 	tenantAdminHandler       *handlers.TenantAdminHandler
 	scheduleHandler          *handlers.ScheduleHandler
@@ -130,6 +131,9 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	workflowExecutorForReplay := &workflowExecutorAdapter{workflowService: app.workflowService}
 	replayService := webhook.NewReplayService(webhookRepo, workflowExecutorForReplay, logger)
 	app.webhookReplayHandler = handlers.NewWebhookReplayHandler(replayService, logger)
+
+	// Initialize filter handler
+	app.webhookFilterHandler = handlers.NewWebhookFilterHandler(app.webhookService, logger)
 
 	app.websocketHandler = handlers.NewWebSocketHandler(app.wsHub, logger)
 	app.tenantAdminHandler = handlers.NewTenantAdminHandler(app.tenantService, logger)
@@ -296,6 +300,16 @@ func (a *App) setupRouter() {
 				r.Post("/{id}/test", a.webhookManagementHandler.TestWebhook)
 				r.Get("/{id}/events", a.webhookManagementHandler.GetEventHistory)
 				r.Post("/{webhookID}/events/replay", a.webhookReplayHandler.BatchReplayEvents)
+
+				// Filter routes
+				r.Route("/{id}/filters", func(r chi.Router) {
+					r.Get("/", a.webhookFilterHandler.List)
+					r.Post("/", a.webhookFilterHandler.Create)
+					r.Get("/{filterID}", a.webhookFilterHandler.Get)
+					r.Put("/{filterID}", a.webhookFilterHandler.Update)
+					r.Delete("/{filterID}", a.webhookFilterHandler.Delete)
+					r.Post("/test", a.webhookFilterHandler.Test)
+				})
 			})
 
 			// Webhook event replay routes
