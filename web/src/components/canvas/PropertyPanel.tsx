@@ -3,6 +3,7 @@ import type { Node } from '@xyflow/react'
 import LoopConfigPanel from './LoopConfigPanel'
 import ParallelConfigPanel from './ParallelConfigPanel'
 import SlackConfigPanel from './SlackConfigPanel'
+import PrioritySelector from '../webhooks/PrioritySelector'
 
 interface PropertyPanelProps {
   node: Node | null
@@ -326,6 +327,12 @@ function WebhookFields({ formData, onChange }: any) {
           <option value="PATCH">PATCH</option>
         </select>
       </div>
+
+      <PrioritySelector
+        value={formData.priority ?? 1}
+        onChange={(priority) => onChange('priority', priority)}
+        id="webhook-priority"
+      />
     </>
   )
 }

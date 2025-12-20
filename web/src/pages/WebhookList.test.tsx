@@ -843,4 +843,94 @@ describe('WebhookList', () => {
       expect(toggleSwitch).toBeDisabled()
     })
   })
+
+  describe('Priority Badge Display', () => {
+    it('should display priority badge for each webhook', () => {
+      const webhooksWithPriorities: Webhook[] = [
+        { ...mockWebhooks[0], priority: 0 },
+        { ...mockWebhooks[1], priority: 1 },
+        { ...mockWebhooks[2], priority: 2 },
+        { ...mockWebhooks[3], priority: 3 },
+      ]
+
+      ;(useWebhooks as any).mockReturnValue({
+        webhooks: webhooksWithPriorities,
+        total: webhooksWithPriorities.length,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <WebhookList />
+        </MemoryRouter>
+      )
+
+      expect(screen.getByText('Low')).toBeInTheDocument()
+      expect(screen.getByText('Normal')).toBeInTheDocument()
+      expect(screen.getByText('High')).toBeInTheDocument()
+      expect(screen.getByText('Critical')).toBeInTheDocument()
+    })
+
+    it('should display Low priority badge with gray styling', () => {
+      ;(useWebhooks as any).mockReturnValue({
+        webhooks: [{ ...mockWebhooks[0], priority: 0 }],
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <WebhookList />
+        </MemoryRouter>
+      )
+
+      const badge = screen.getByText('Low')
+      expect(badge).toHaveClass('bg-gray-500/20')
+      expect(badge).toHaveClass('text-gray-400')
+    })
+
+    it('should display High priority badge with yellow styling', () => {
+      ;(useWebhooks as any).mockReturnValue({
+        webhooks: [{ ...mockWebhooks[0], priority: 2 }],
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <WebhookList />
+        </MemoryRouter>
+      )
+
+      const badge = screen.getByText('High')
+      expect(badge).toHaveClass('bg-yellow-500/20')
+      expect(badge).toHaveClass('text-yellow-400')
+    })
+
+    it('should display Critical priority badge with red styling', () => {
+      ;(useWebhooks as any).mockReturnValue({
+        webhooks: [{ ...mockWebhooks[0], priority: 3 }],
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      render(
+        <MemoryRouter>
+          <WebhookList />
+        </MemoryRouter>
+      )
+
+      const badge = screen.getByText('Critical')
+      expect(badge).toHaveClass('bg-red-500/20')
+      expect(badge).toHaveClass('text-red-400')
+    })
+  })
 })
