@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { StepLogViewer } from './StepLogViewer'
 import { useExecutionTraceStore } from '../../stores/executionTraceStore'
 import type { StepInfo } from '../../lib/websocket'
@@ -178,9 +178,11 @@ describe('StepLogViewer', () => {
       const copyButton = screen.getByRole('button', { name: /copy/i })
       fireEvent.click(copyButton)
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        JSON.stringify(mockStepLog.output_data, null, 2)
-      )
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+          JSON.stringify(mockStepLog.output_data, null, 2)
+        )
+      })
     })
 
     it('should show success feedback after copying', async () => {

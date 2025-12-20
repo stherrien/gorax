@@ -43,6 +43,10 @@ export function SelectableTable<T extends Identifiable>({
   const handleRowClick = (id: string, event: React.MouseEvent) => {
     if (event.shiftKey && onRangeSelect && lastSelectedIdRef.current) {
       onRangeSelect(lastSelectedIdRef.current, id)
+    } else if (event.shiftKey && onRangeSelect && selectedIds.size > 0) {
+      // If shift is pressed but no lastSelectedId, use the first selected item
+      const firstSelectedId = Array.from(selectedIds)[0]
+      onRangeSelect(firstSelectedId, id)
     } else {
       onSelectionChange(id)
       lastSelectedIdRef.current = id
@@ -63,14 +67,25 @@ export function SelectableTable<T extends Identifiable>({
         <thead className="bg-gray-700">
           <tr>
             <th className="px-4 py-3 text-left w-12">
-              <input
-                ref={headerCheckboxRef}
-                type="checkbox"
-                checked={allSelected}
-                onChange={onSelectAll}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-gray-800 cursor-pointer"
-                aria-label="Select all"
-              />
+              {onSelectAll ? (
+                <input
+                  ref={headerCheckboxRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={onSelectAll}
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-gray-800 cursor-pointer"
+                  aria-label="Select all"
+                />
+              ) : (
+                <input
+                  ref={headerCheckboxRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  readOnly
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-gray-800 opacity-50 cursor-not-allowed"
+                  aria-label="Select all"
+                />
+              )}
             </th>
             {columns.map((column, index) => (
               <th
@@ -94,8 +109,11 @@ export function SelectableTable<T extends Identifiable>({
                 <input
                   type="checkbox"
                   checked={selectedIds.has(item.id)}
-                  onChange={(e) => handleRowClick(item.id, e as any)}
-                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => {}}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRowClick(item.id, e)
+                  }}
                   className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-gray-800 cursor-pointer"
                   aria-label={`Select ${item.id}`}
                 />

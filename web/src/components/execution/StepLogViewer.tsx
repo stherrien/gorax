@@ -156,7 +156,7 @@ function StepLogEntry({ step, index }: { step: StepInfo; index: number }) {
               <CopyButton data={step.output_data} />
             </div>
           </div>
-          <div className={`output-data ${wordWrap ? 'wrap' : 'nowrap'}`} role="code">
+          <div className={`output-data ${wordWrap ? 'wrap' : 'nowrap'}`}>
             <AnsiText text={JSON.stringify(step.output_data, null, 2)} />
           </div>
         </div>

@@ -34,9 +34,7 @@ export function ConfirmBulkDialog({
   const canConfirm = !destructive || confirmText === 'DELETE'
   const actionCapitalized = action.charAt(0).toUpperCase() + action.slice(1)
 
-  const defaultMessage = destructive
-    ? `Are you sure you want to ${action} ${count} ${count === 1 ? 'item' : 'items'}? This action cannot be undone.`
-    : `Are you sure you want to ${action} ${count} ${count === 1 ? 'item' : 'items'}?`
+  const defaultMessage = `Are you sure you want to ${action} ${count} ${count === 1 ? 'item' : 'items'}?`
 
   return (
     <div
@@ -56,6 +54,12 @@ export function ConfirmBulkDialog({
         <p className="text-gray-300 mb-6">
           {message || defaultMessage}
         </p>
+
+        {destructive && !message && (
+          <p className="text-yellow-500 text-sm mb-6 font-semibold">
+            This action cannot be undone.
+          </p>
+        )}
 
         {destructive && (
           <div className="mb-6">
