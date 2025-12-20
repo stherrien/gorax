@@ -18,11 +18,13 @@ import (
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/errortracking"
 	"github.com/gorax/gorax/internal/eventtypes"
 	"github.com/gorax/gorax/internal/executor"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/tenant"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
@@ -35,6 +37,9 @@ type App struct {
 	db       *sqlx.DB
 	redis    *redis.Client
 	router   *chi.Mux
+
+	// Error tracking
+	errorTracker *errortracking.Tracker
 
 	// Services
 	tenantService     *tenant.Service
@@ -92,6 +97,14 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
+
+	// Initialize error tracking (Sentry)
+	errorTracker, err := errortracking.Initialize(cfg.Observability)
+	if err != nil {
+		logger.Warn("failed to initialize Sentry", "error", err)
+		// Continue without error tracking rather than failing
+	}
+	app.errorTracker = errorTracker
 
 	// Initialize repositories
 	tenantRepo := tenant.NewRepository(db)
@@ -199,6 +212,9 @@ func (a *App) Router() http.Handler {
 
 // Close cleans up application resources
 func (a *App) Close() error {
+	if a.errorTracker != nil {
+		a.errorTracker.Close()
+	}
 	if a.db != nil {
 		a.db.Close()
 	}
@@ -215,6 +231,17 @@ func (a *App) setupRouter() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(apiMiddleware.StructuredLogger(a.logger))
+
+	// Add distributed tracing middleware if enabled
+	if a.config.Observability.TracingEnabled {
+		r.Use(tracing.HTTPMiddleware())
+	}
+
+	// Add Sentry middleware if error tracking is enabled
+	if a.errorTracker != nil {
+		r.Use(apiMiddleware.SentryMiddleware(a.errorTracker))
+	}
+
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 

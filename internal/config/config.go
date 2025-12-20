@@ -17,7 +17,9 @@ type Config struct {
 	Queue         QueueConfig
 	Credential    CredentialConfig
 	Cleanup       CleanupConfig
+	Retention     RetentionConfig
 	Observability ObservabilityConfig
+	Notification  NotificationConfig
 }
 
 // CredentialConfig holds credential vault configuration
@@ -112,6 +114,20 @@ type CleanupConfig struct {
 	Schedule string
 }
 
+// RetentionConfig holds execution retention policy configuration
+type RetentionConfig struct {
+	// Enabled indicates whether retention cleanup is enabled
+	Enabled bool
+	// DefaultRetentionDays is the default retention period in days (default: 90)
+	DefaultRetentionDays int
+	// BatchSize is the number of executions to delete per batch (default: 1000)
+	BatchSize int
+	// RunInterval is how often to run cleanup (default: 24h)
+	RunInterval string
+	// EnableAuditLog enables audit logging of cleanup operations
+	EnableAuditLog bool
+}
+
 // ObservabilityConfig holds observability configuration
 type ObservabilityConfig struct {
 	// Metrics configuration
@@ -129,6 +145,37 @@ type ObservabilityConfig struct {
 	SentryDSN         string
 	SentryEnvironment string
 	SentrySampleRate  float64
+}
+
+// NotificationConfig holds notification configuration
+type NotificationConfig struct {
+	// Enabled channels
+	EnableEmail bool
+	EnableSlack bool
+	EnableInApp bool
+
+	// Email settings
+	EmailProvider          string // smtp or ses
+	EmailFrom              string
+	SMTPHost               string
+	SMTPPort               int
+	SMTPUser               string
+	SMTPPass               string
+	SMTPTLS                bool
+	EmailMaxRetries        int
+	EmailRetryDelaySeconds int
+
+	// AWS SES settings
+	SESRegion string
+
+	// Slack settings
+	SlackWebhookURL        string
+	SlackMaxRetries        int
+	SlackRetryDelaySeconds int
+	SlackTimeoutSeconds    int
+
+	// In-app notification settings
+	InAppRetentionDays int
 }
 
 // Load reads configuration from environment variables
@@ -193,6 +240,13 @@ func Load() (*Config, error) {
 			BatchSize:     getEnvAsInt("CLEANUP_BATCH_SIZE", 1000),
 			Schedule:      getEnv("CLEANUP_SCHEDULE", "0 0 * * *"), // Daily at midnight
 		},
+		Retention: RetentionConfig{
+			Enabled:              getEnvAsBool("RETENTION_ENABLED", true),
+			DefaultRetentionDays: getEnvAsInt("RETENTION_DEFAULT_DAYS", 90),
+			BatchSize:            getEnvAsInt("RETENTION_BATCH_SIZE", 1000),
+			RunInterval:          getEnv("RETENTION_RUN_INTERVAL", "24h"),
+			EnableAuditLog:       getEnvAsBool("RETENTION_ENABLE_AUDIT_LOG", true),
+		},
 		Observability: ObservabilityConfig{
 			MetricsEnabled:     getEnvAsBool("METRICS_ENABLED", true),
 			MetricsPort:        getEnv("METRICS_PORT", "9090"),
@@ -204,6 +258,26 @@ func Load() (*Config, error) {
 			SentryDSN:          getEnv("SENTRY_DSN", ""),
 			SentryEnvironment:  getEnv("SENTRY_ENVIRONMENT", "development"),
 			SentrySampleRate:   getEnvAsFloat("SENTRY_SAMPLE_RATE", 1.0),
+		},
+		Notification: NotificationConfig{
+			EnableEmail:            getEnvAsBool("NOTIFICATION_ENABLE_EMAIL", false),
+			EnableSlack:            getEnvAsBool("NOTIFICATION_ENABLE_SLACK", false),
+			EnableInApp:            getEnvAsBool("NOTIFICATION_ENABLE_INAPP", true),
+			EmailProvider:          getEnv("NOTIFICATION_EMAIL_PROVIDER", "smtp"),
+			EmailFrom:              getEnv("NOTIFICATION_EMAIL_FROM", "noreply@example.com"),
+			SMTPHost:               getEnv("NOTIFICATION_SMTP_HOST", ""),
+			SMTPPort:               getEnvAsInt("NOTIFICATION_SMTP_PORT", 587),
+			SMTPUser:               getEnv("NOTIFICATION_SMTP_USER", ""),
+			SMTPPass:               getEnv("NOTIFICATION_SMTP_PASS", ""),
+			SMTPTLS:                getEnvAsBool("NOTIFICATION_SMTP_TLS", true),
+			EmailMaxRetries:        getEnvAsInt("NOTIFICATION_EMAIL_MAX_RETRIES", 3),
+			EmailRetryDelaySeconds: getEnvAsInt("NOTIFICATION_EMAIL_RETRY_DELAY_SECONDS", 1),
+			SESRegion:              getEnv("NOTIFICATION_SES_REGION", "us-east-1"),
+			SlackWebhookURL:        getEnv("NOTIFICATION_SLACK_WEBHOOK_URL", ""),
+			SlackMaxRetries:        getEnvAsInt("NOTIFICATION_SLACK_MAX_RETRIES", 3),
+			SlackRetryDelaySeconds: getEnvAsInt("NOTIFICATION_SLACK_RETRY_DELAY_SECONDS", 1),
+			SlackTimeoutSeconds:    getEnvAsInt("NOTIFICATION_SLACK_TIMEOUT_SECONDS", 30),
+			InAppRetentionDays:     getEnvAsInt("NOTIFICATION_INAPP_RETENTION_DAYS", 90),
 		},
 	}
 
