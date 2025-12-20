@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -142,10 +144,30 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
 	app.eventTypesHandler = handlers.NewEventTypesHandler(app.eventTypeService, logger)
 
-	// TODO: Initialize credential service and handler once service implementation is complete
-	// credentialRepo := credential.NewRepository(db)
-	// app.credentialService = credential.NewService(credentialRepo, kmsClient, logger)
-	// app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
+	// Initialize credential service
+	credentialRepo := credential.NewRepository(db)
+
+	// Decode master key from base64
+	masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode credential master key: %w", err)
+	}
+
+	// Create encryption service (SimpleEncryption for dev, KMS for production)
+	var encryptionService credential.EncryptionServiceInterface
+	if cfg.Credential.UseKMS {
+		// TODO: Initialize AWS KMS client when KMS support is needed
+		return nil, fmt.Errorf("KMS encryption not yet implemented")
+	} else {
+		simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create encryption service: %w", err)
+		}
+		encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
+	}
+
+	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
+	app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
 
 	// Initialize quota tracker
 	app.quotaTracker = quota.NewTracker(app.redis)
@@ -331,18 +353,17 @@ func (a *App) setupRouter() {
 			})
 
 			// Credential routes
-			// TODO: Uncomment once credential service is implemented
-			// r.Route("/credentials", func(r chi.Router) {
-			// 	r.Get("/", a.credentialHandler.List)
-			// 	r.Post("/", a.credentialHandler.Create)
-			// 	r.Get("/{credentialID}", a.credentialHandler.Get)
-			// 	r.Get("/{credentialID}/value", a.credentialHandler.GetValue) // Sensitive endpoint
-			// 	r.Put("/{credentialID}", a.credentialHandler.Update)
-			// 	r.Delete("/{credentialID}", a.credentialHandler.Delete)
-			// 	r.Post("/{credentialID}/rotate", a.credentialHandler.Rotate)
-			// 	r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
-			// 	r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
-			// })
+			r.Route("/credentials", func(r chi.Router) {
+				r.Get("/", a.credentialHandler.List)
+				r.Post("/", a.credentialHandler.Create)
+				r.Get("/{credentialID}", a.credentialHandler.Get)
+				r.Get("/{credentialID}/value", a.credentialHandler.GetValue) // Sensitive endpoint
+				r.Put("/{credentialID}", a.credentialHandler.Update)
+				r.Delete("/{credentialID}", a.credentialHandler.Delete)
+				r.Post("/{credentialID}/rotate", a.credentialHandler.Rotate)
+				r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
+				r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
+			})
 		})
 	})
 

@@ -8,13 +8,25 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	Kratos   KratosConfig
-	Worker   WorkerConfig
-	AWS      AWSConfig
-	Queue    QueueConfig
+	Server     ServerConfig
+	Database   DatabaseConfig
+	Redis      RedisConfig
+	Kratos     KratosConfig
+	Worker     WorkerConfig
+	AWS        AWSConfig
+	Queue      QueueConfig
+	Credential CredentialConfig
+}
+
+// CredentialConfig holds credential vault configuration
+type CredentialConfig struct {
+	// MasterKey is the 32-byte encryption key for credentials (base64 encoded)
+	// In production, this should come from a secure secret manager
+	MasterKey string
+	// UseKMS indicates whether to use AWS KMS for key management
+	UseKMS bool
+	// KMSKeyID is the AWS KMS key ID for production encryption
+	KMSKeyID string
 }
 
 // ServerConfig holds HTTP server configuration
@@ -135,6 +147,12 @@ func Load() (*Config, error) {
 			PollInterval:       getEnvAsInt("QUEUE_POLL_INTERVAL", 1),
 			ConcurrentWorkers:  getEnvAsInt("QUEUE_CONCURRENT_WORKERS", 10),
 			DeleteAfterProcess: getEnvAsBool("QUEUE_DELETE_AFTER_PROCESS", true),
+		},
+		Credential: CredentialConfig{
+			// Default development key (32 bytes base64 encoded) - DO NOT USE IN PRODUCTION
+			MasterKey: getEnv("CREDENTIAL_MASTER_KEY", "dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS0xMjM0NTY="),
+			UseKMS:    getEnvAsBool("CREDENTIAL_USE_KMS", false),
+			KMSKeyID:  getEnv("CREDENTIAL_KMS_KEY_ID", ""),
 		},
 	}
 
