@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWebhooks, useWebhookMutations } from '../hooks/useWebhooks'
 import { useWorkflows } from '../hooks/useWorkflows'
 import type { WebhookAuthType } from '../api/webhooks'
+import PriorityBadge from '../components/webhooks/PriorityBadge'
 
 const PAGE_SIZE = 20
 
@@ -175,6 +176,7 @@ export default function WebhookList() {
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Path</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Workflow</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Auth Type</th>
+              <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Priority</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Enabled</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">
                 Trigger Count
@@ -202,6 +204,9 @@ export default function WebhookList() {
                 </td>
                 <td className="px-6 py-4">
                   <AuthTypeBadge authType={webhook.authType} />
+                </td>
+                <td className="px-6 py-4">
+                  <PriorityBadge priority={webhook.priority} />
                 </td>
                 <td className="px-6 py-4">
                   <ToggleSwitch

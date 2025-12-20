@@ -452,6 +452,233 @@ func TestRepository_UpdateLastTriggeredAt(t *testing.T) {
 	}
 }
 
+func TestRepository_DeleteOldEvents(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := uuid.New().String()
+
+	// Create a webhook
+	webhook := createTestWebhook(t, repo, ctx, tenantID)
+
+	// Create events with different timestamps
+	now := time.Now()
+
+	// Old event (40 days ago)
+	oldEvent := &WebhookEvent{
+		TenantID:       tenantID,
+		WebhookID:      webhook.ID,
+		RequestMethod:  "POST",
+		RequestHeaders: map[string]string{"Content-Type": "application/json"},
+		RequestBody:    json.RawMessage(`{"test": "old"}`),
+		Status:         EventStatusProcessed,
+	}
+	err := repo.CreateEvent(ctx, oldEvent)
+	require.NoError(t, err)
+
+	// Manually update created_at to 40 days ago
+	_, err = db.ExecContext(ctx, "UPDATE webhook_events SET created_at = $1 WHERE id = $2", now.Add(-40*24*time.Hour), oldEvent.ID)
+	require.NoError(t, err)
+
+	// Recent event (10 days ago)
+	recentEvent := &WebhookEvent{
+		TenantID:       tenantID,
+		WebhookID:      webhook.ID,
+		RequestMethod:  "POST",
+		RequestHeaders: map[string]string{"Content-Type": "application/json"},
+		RequestBody:    json.RawMessage(`{"test": "recent"}`),
+		Status:         EventStatusProcessed,
+	}
+	err = repo.CreateEvent(ctx, recentEvent)
+	require.NoError(t, err)
+
+	// Manually update created_at to 10 days ago
+	_, err = db.ExecContext(ctx, "UPDATE webhook_events SET created_at = $1 WHERE id = $2", now.Add(-10*24*time.Hour), recentEvent.ID)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name            string
+		retentionPeriod time.Duration
+		batchSize       int
+		expectedDeleted int
+		wantErr         bool
+	}{
+		{
+			name:            "delete events older than 30 days",
+			retentionPeriod: 30 * 24 * time.Hour,
+			batchSize:       1000,
+			expectedDeleted: 1,
+			wantErr:         false,
+		},
+		{
+			name:            "delete with no old events",
+			retentionPeriod: 50 * 24 * time.Hour,
+			batchSize:       1000,
+			expectedDeleted: 0,
+			wantErr:         false,
+		},
+		{
+			name:            "delete with small batch size",
+			retentionPeriod: 5 * 24 * time.Hour,
+			batchSize:       1,
+			expectedDeleted: 1,
+			wantErr:         false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deleted, err := repo.DeleteOldEvents(ctx, tt.retentionPeriod, tt.batchSize)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedDeleted, deleted)
+			}
+		})
+	}
+}
+
+func TestRepository_DeleteOldEvents_MultipleBatches(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := uuid.New().String()
+
+	// Create a webhook
+	webhook := createTestWebhook(t, repo, ctx, tenantID)
+
+	// Create 5 old events
+	now := time.Now()
+	for i := 0; i < 5; i++ {
+		event := &WebhookEvent{
+			TenantID:       tenantID,
+			WebhookID:      webhook.ID,
+			RequestMethod:  "POST",
+			RequestHeaders: map[string]string{"Content-Type": "application/json"},
+			RequestBody:    json.RawMessage(`{"test": "old"}`),
+			Status:         EventStatusProcessed,
+		}
+		err := repo.CreateEvent(ctx, event)
+		require.NoError(t, err)
+
+		// Set to 40 days ago
+		_, err = db.ExecContext(ctx, "UPDATE webhook_events SET created_at = $1 WHERE id = $2", now.Add(-40*24*time.Hour), event.ID)
+		require.NoError(t, err)
+	}
+
+	// Delete with batch size of 2
+	deleted1, err := repo.DeleteOldEvents(ctx, 30*24*time.Hour, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, deleted1)
+
+	// Delete next batch
+	deleted2, err := repo.DeleteOldEvents(ctx, 30*24*time.Hour, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, deleted2)
+
+	// Delete final batch
+	deleted3, err := repo.DeleteOldEvents(ctx, 30*24*time.Hour, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, deleted3)
+
+	// Verify no more old events
+	deleted4, err := repo.DeleteOldEvents(ctx, 30*24*time.Hour, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, deleted4)
+}
+
+// TestRepository_CreateEventWithMetadata tests creating an event with metadata
+func TestRepository_CreateEventWithMetadata(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := uuid.New().String()
+
+	// Create a webhook
+	webhook := createTestWebhook(t, repo, ctx, tenantID)
+
+	// Create metadata
+	receivedAt := time.Now().UTC()
+	metadata := &EventMetadata{
+		SourceIP:      "192.168.1.100",
+		UserAgent:     "GitHub-Hookshot/abc123",
+		ReceivedAt:    receivedAt,
+		ContentType:   "application/json",
+		ContentLength: 256,
+	}
+
+	// Create event with metadata
+	event := &WebhookEvent{
+		TenantID:       tenantID,
+		WebhookID:      webhook.ID,
+		RequestMethod:  "POST",
+		RequestHeaders: map[string]string{"Content-Type": "application/json"},
+		RequestBody:    json.RawMessage(`{"test": "data"}`),
+		Status:         EventStatusReceived,
+		Metadata:       metadata,
+	}
+
+	err := repo.CreateEvent(ctx, event)
+	require.NoError(t, err)
+	assert.NotEmpty(t, event.ID)
+
+	// Retrieve the event and verify metadata was stored
+	retrievedEvent, err := repo.GetEventByID(ctx, tenantID, event.ID)
+	require.NoError(t, err)
+	require.NotNil(t, retrievedEvent)
+
+	// Verify metadata was preserved
+	require.NotNil(t, retrievedEvent.Metadata, "Metadata should not be nil")
+	assert.Equal(t, metadata.SourceIP, retrievedEvent.Metadata.SourceIP)
+	assert.Equal(t, metadata.UserAgent, retrievedEvent.Metadata.UserAgent)
+	assert.Equal(t, metadata.ContentType, retrievedEvent.Metadata.ContentType)
+	assert.Equal(t, metadata.ContentLength, retrievedEvent.Metadata.ContentLength)
+	assert.WithinDuration(t, metadata.ReceivedAt, retrievedEvent.Metadata.ReceivedAt, time.Second)
+}
+
+// TestRepository_CreateEventWithoutMetadata tests that events work without metadata (backward compatibility)
+func TestRepository_CreateEventWithoutMetadata(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	tenantID := uuid.New().String()
+
+	// Create a webhook
+	webhook := createTestWebhook(t, repo, ctx, tenantID)
+
+	// Create event without metadata
+	event := &WebhookEvent{
+		TenantID:       tenantID,
+		WebhookID:      webhook.ID,
+		RequestMethod:  "POST",
+		RequestHeaders: map[string]string{"Content-Type": "application/json"},
+		RequestBody:    json.RawMessage(`{"test": "data"}`),
+		Status:         EventStatusReceived,
+		Metadata:       nil, // No metadata
+	}
+
+	err := repo.CreateEvent(ctx, event)
+	require.NoError(t, err)
+	assert.NotEmpty(t, event.ID)
+
+	// Retrieve the event and verify it works without metadata
+	retrievedEvent, err := repo.GetEventByID(ctx, tenantID, event.ID)
+	require.NoError(t, err)
+	require.NotNil(t, retrievedEvent)
+
+	// Metadata should be nil (backward compatibility)
+	assert.Nil(t, retrievedEvent.Metadata, "Metadata should be nil when not provided")
+}
+
 // Helper functions
 func stringPtr(s string) *string {
 	return &s

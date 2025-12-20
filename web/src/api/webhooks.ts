@@ -49,6 +49,14 @@ export interface WebhookUpdateInput {
   priority?: number
 }
 
+export interface EventMetadata {
+  sourceIp: string
+  userAgent: string
+  receivedAt: string
+  contentType: string
+  contentLength: number
+}
+
 export interface WebhookEvent {
   id: string
   webhookId: string
@@ -61,6 +69,7 @@ export interface WebhookEvent {
   status: 'received' | 'processed' | 'filtered' | 'failed'
   errorMessage?: string
   replayCount: number
+  metadata?: EventMetadata
   createdAt: string
 }
 

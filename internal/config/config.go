@@ -16,6 +16,7 @@ type Config struct {
 	AWS        AWSConfig
 	Queue      QueueConfig
 	Credential CredentialConfig
+	Cleanup    CleanupConfig
 }
 
 // CredentialConfig holds credential vault configuration
@@ -98,6 +99,18 @@ type QueueConfig struct {
 	DeleteAfterProcess bool
 }
 
+// CleanupConfig holds webhook event cleanup configuration
+type CleanupConfig struct {
+	// Enabled indicates whether cleanup is enabled
+	Enabled bool
+	// RetentionDays is the number of days to retain webhook events (default: 30)
+	RetentionDays int
+	// BatchSize is the number of events to delete per batch (default: 1000)
+	BatchSize int
+	// Schedule is the cron schedule for cleanup (default: "0 0 * * *" - daily at midnight)
+	Schedule string
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -153,6 +166,12 @@ func Load() (*Config, error) {
 			MasterKey: getEnv("CREDENTIAL_MASTER_KEY", "dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleS0xMjM0NTY="),
 			UseKMS:    getEnvAsBool("CREDENTIAL_USE_KMS", false),
 			KMSKeyID:  getEnv("CREDENTIAL_KMS_KEY_ID", ""),
+		},
+		Cleanup: CleanupConfig{
+			Enabled:       getEnvAsBool("CLEANUP_ENABLED", true),
+			RetentionDays: getEnvAsInt("CLEANUP_RETENTION_DAYS", 30),
+			BatchSize:     getEnvAsInt("CLEANUP_BATCH_SIZE", 1000),
+			Schedule:      getEnv("CLEANUP_SCHEDULE", "0 0 * * *"), // Daily at midnight
 		},
 	}
 

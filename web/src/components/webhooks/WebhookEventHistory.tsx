@@ -99,6 +99,11 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
       executionId: event.executionId ?? 'N/A',
       errorMessage: event.errorMessage ?? '',
       replayCount: event.replayCount,
+      sourceIp: event.metadata?.sourceIp ?? 'N/A',
+      userAgent: truncateForCSV(event.metadata?.userAgent ?? 'N/A', 100),
+      contentType: event.metadata?.contentType ?? 'N/A',
+      contentLength: event.metadata?.contentLength ?? 'N/A',
+      receivedAt: event.metadata?.receivedAt ? formatDateForCSV(event.metadata.receivedAt) : 'N/A',
       headers: truncateForCSV(JSON.stringify(event.requestHeaders), 200),
       payload: truncateForCSV(JSON.stringify(event.requestBody), 500),
     }))
@@ -115,6 +120,11 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
         'executionId',
         'errorMessage',
         'replayCount',
+        'sourceIp',
+        'userAgent',
+        'contentType',
+        'contentLength',
+        'receivedAt',
         'headers',
         'payload',
       ],
@@ -128,6 +138,11 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
         'Execution ID',
         'Error Message',
         'Replay Count',
+        'Source IP',
+        'User Agent',
+        'Content Type',
+        'Content Length',
+        'Received At',
         'Headers',
         'Payload',
       ]
@@ -636,6 +651,41 @@ function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                   />
                 </svg>
               </Link>
+            </div>
+          )}
+
+          {/* Request Metadata */}
+          {event.metadata && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Request Details</h3>
+              <div className="p-4 bg-gray-900 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Source IP</p>
+                    <p className="text-sm text-gray-300">{event.metadata.sourceIp}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Received At</p>
+                    <p className="text-sm text-gray-300">
+                      {new Date(event.metadata.receivedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">User Agent</p>
+                    <p className="text-sm text-gray-300 break-all">
+                      {event.metadata.userAgent || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Content Type</p>
+                    <p className="text-sm text-gray-300">{event.metadata.contentType || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Content Length</p>
+                    <p className="text-sm text-gray-300">{event.metadata.contentLength} bytes</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
