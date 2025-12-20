@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
@@ -160,31 +162,46 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize credential service
 	credentialRepo := credential.NewRepository(db)
 
-	// Decode master key from base64
-	masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode credential master key: %w", err)
-	}
-
-	// Create encryption service (SimpleEncryption for dev, KMS for production)
-	// NOTE: KMS support is planned but not yet implemented
-	// When implementing KMS support:
-	// 1. Create a KMS client using AWS SDK v2: kms.NewFromConfig()
-	// 2. Implement KMSEncryptionService that satisfies EncryptionServiceInterface
-	// 3. Use KMS Encrypt/Decrypt operations with the configured key ID
-	// 4. Handle key rotation and versioning
-	// 5. Add proper error handling and retry logic
-	// For now, we use SimpleEncryption which is suitable for development and single-server deployments
+	// Create encryption service (KMS for production, SimpleEncryption for dev)
 	var encryptionService credential.EncryptionServiceInterface
 	if cfg.Credential.UseKMS {
-		return nil, fmt.Errorf("KMS encryption is not yet implemented - please set USE_KMS=false and provide a CREDENTIAL_MASTER_KEY")
-	}
+		// Production: Use AWS KMS for envelope encryption
+		if cfg.Credential.KMSKeyID == "" {
+			return nil, fmt.Errorf("CREDENTIAL_KMS_KEY_ID is required when USE_KMS is true")
+		}
 
-	simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create encryption service: %w", err)
+		// Load AWS config with region override if KMSRegion is set
+		awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(), awsConfig.WithRegion(cfg.Credential.KMSRegion))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load AWS config for KMS: %w", err)
+		}
+
+		// Create KMS client
+		kmsClient := kms.NewFromConfig(awsCfg)
+
+		// Create KMS encryption service
+		kmsEncryptionService, err := credential.NewKMSEncryptionService(kmsClient, cfg.Credential.KMSKeyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create KMS encryption service: %w", err)
+		}
+
+		encryptionService = credential.NewKMSEncryptionAdapter(kmsEncryptionService)
+		logger.Info("Credential encryption initialized", "mode", "KMS", "key_id", cfg.Credential.KMSKeyID, "region", cfg.Credential.KMSRegion)
+	} else {
+		// Development: Use simple encryption with master key
+		masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode credential master key: %w", err)
+		}
+
+		simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create simple encryption service: %w", err)
+		}
+
+		encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
+		logger.Warn("Credential encryption initialized", "mode", "simple", "warning", "Use KMS in production")
 	}
-	encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
 
 	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
 	app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
@@ -232,6 +249,15 @@ func (a *App) setupRouter() {
 	r.Use(middleware.RealIP)
 	r.Use(apiMiddleware.StructuredLogger(a.logger))
 
+	// Security headers middleware
+	securityHeadersConfig := apiMiddleware.SecurityHeadersConfig{
+		EnableHSTS:    a.config.SecurityHeader.EnableHSTS,
+		HSTSMaxAge:    a.config.SecurityHeader.HSTSMaxAge,
+		CSPDirectives: a.config.SecurityHeader.CSPDirectives,
+		FrameOptions:  a.config.SecurityHeader.FrameOptions,
+	}
+	r.Use(apiMiddleware.SecurityHeaders(securityHeadersConfig))
+
 	// Add distributed tracing middleware if enabled
 	if a.config.Observability.TracingEnabled {
 		r.Use(tracing.HTTPMiddleware())
@@ -245,19 +271,23 @@ func (a *App) setupRouter() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 
-	// CORS configuration
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Tenant-ID"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	// CORS middleware with environment-aware validation
+	corsMiddleware, err := apiMiddleware.NewCORSMiddleware(a.config.CORS, a.config.Server.Env)
+	if err != nil {
+		a.logger.Error("failed to create CORS middleware", "error", err)
+		// Fall back to restrictive CORS in case of configuration error
+	} else {
+		r.Use(corsMiddleware)
+	}
 
 	// Health check endpoints (no auth required)
 	r.Get("/health", a.healthHandler.Health)
 	r.Get("/ready", a.healthHandler.Ready)
+
+	// Swagger API documentation (no auth required)
+	r.Get("/api/docs/*", httpSwagger.Handler(
+		httpSwagger.URL("/docs/api/swagger.json"),
+	))
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {

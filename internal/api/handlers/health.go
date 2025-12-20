@@ -32,6 +32,12 @@ type HealthResponse struct {
 }
 
 // Health returns basic health status
+// @Summary Health check
+// @Description Returns basic health status of the API
+// @Tags Health
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	resp := HealthResponse{
 		Status:    "ok",
@@ -43,6 +49,13 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 // Ready returns readiness status including dependency checks
+// @Summary Readiness check
+// @Description Returns readiness status including database and Redis health checks
+// @Tags Health
+// @Produce json
+// @Success 200 {object} HealthResponse "All dependencies healthy"
+// @Failure 503 {object} HealthResponse "One or more dependencies unhealthy"
+// @Router /ready [get]
 func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

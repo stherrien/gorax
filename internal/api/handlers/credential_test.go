@@ -242,7 +242,7 @@ func TestList_Success(t *testing.T) {
 		},
 	}
 
-	mockService.On("List", mock.Anything, "tenant-123", credential.CredentialListFilter{}, 0, 0).
+	mockService.On("List", mock.Anything, "tenant-123", credential.CredentialListFilter{}, 20, 0).
 		Return(credentials, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/credentials", nil)
@@ -680,7 +680,7 @@ func TestGetAccessLog_Success(t *testing.T) {
 		},
 	}
 
-	mockService.On("GetAccessLog", mock.Anything, "tenant-123", "cred-123", 0, 0).
+	mockService.On("GetAccessLog", mock.Anything, "tenant-123", "cred-123", 20, 0).
 		Return(logs, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/credentials/cred-123/access-log", nil)

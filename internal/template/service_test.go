@@ -378,6 +378,3 @@ func TestService_ValidateDefinition(t *testing.T) {
 		})
 	}
 }
-
-// Helper error for testing
-var errTest = errors.New("test error")

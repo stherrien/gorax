@@ -382,9 +382,7 @@ func TestExportSchedules(t *testing.T) {
 			// Parse the query IDs to match what the handler will parse
 			var ids []string
 			if tt.queryIDs != "" {
-				for _, id := range strings.Split(tt.queryIDs, ",") {
-					ids = append(ids, id)
-				}
+				ids = strings.Split(tt.queryIDs, ",")
 			}
 
 			mockService.On("ExportSchedules", mock.Anything, tt.tenantID, ids).
