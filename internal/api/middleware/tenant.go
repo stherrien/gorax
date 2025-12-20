@@ -32,7 +32,11 @@ func TenantContext(tenantService *tenant.Service) func(next http.Handler) http.H
 
 			// Priority 2: X-Tenant-ID header (for admin/multi-tenant users)
 			if headerTenantID := r.Header.Get("X-Tenant-ID"); headerTenantID != "" {
-				// TODO: Verify user has access to this tenant
+				// Verify user has access to this tenant
+				if !VerifyTenantAccess(user, headerTenantID) {
+					http.Error(w, "access denied: user does not have access to this tenant", http.StatusForbidden)
+					return
+				}
 				tenantID = headerTenantID
 			}
 
@@ -73,4 +77,22 @@ func GetTenantID(r *http.Request) string {
 		return t.ID
 	}
 	return ""
+}
+
+// VerifyTenantAccess checks if a user has access to a specific tenant
+// Returns true if:
+// - The tenant ID matches the user's tenant ID
+// - The user is an admin (admins have access to all tenants)
+func VerifyTenantAccess(user *User, tenantID string) bool {
+	if user == nil {
+		return false
+	}
+
+	// Admins have access to all tenants
+	if IsAdmin(user) {
+		return true
+	}
+
+	// Users can access their own tenant
+	return user.TenantID == tenantID
 }

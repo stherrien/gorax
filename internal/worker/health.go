@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/gorax/gorax/internal/buildinfo"
 )
 
 // HealthServer provides health check endpoints for the worker
@@ -125,7 +127,7 @@ func (hs *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
 		Status:    "healthy",
 		Timestamp: time.Now(),
-		Version:   "1.0.0", // TODO: Get from build info
+		Version:   buildinfo.GetVersion(),
 		WorkerInfo: WorkerInfo{
 			Concurrency:      hs.worker.concurrency,
 			ActiveExecutions: hs.worker.getActiveExecutions(),
@@ -135,12 +137,12 @@ func (hs *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Connections: ConnectionsHealth{
 			Database: hs.checkDatabase(ctx),
 			Redis:    hs.checkRedis(ctx),
-			Queue:    "ok", // TODO: Check queue connection
+			Queue:    hs.checkQueue(ctx),
 		},
 	}
 
 	// If any connection is unhealthy, set overall status to unhealthy
-	if response.Connections.Database != "ok" || response.Connections.Redis != "ok" {
+	if response.Connections.Database != "ok" || response.Connections.Redis != "ok" || response.Connections.Queue != "ok" {
 		response.Status = "unhealthy"
 		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
@@ -164,5 +166,25 @@ func (hs *HealthServer) checkRedis(ctx context.Context) string {
 	if err := hs.worker.redis.Ping(ctx).Err(); err != nil {
 		return "error: " + err.Error()
 	}
+	return "ok"
+}
+
+// checkQueue checks queue connectivity and health
+func (hs *HealthServer) checkQueue(ctx context.Context) string {
+	// If queue is not enabled, report as ok (not applicable)
+	if !hs.worker.queueEnabled {
+		return "ok"
+	}
+
+	// If queue is enabled but client is nil, report error
+	if hs.worker.sqsClient == nil {
+		return "error: queue client not initialized"
+	}
+
+	// Check SQS queue health by attempting to get queue attributes
+	if err := hs.worker.sqsClient.HealthCheck(ctx); err != nil {
+		return "error: " + err.Error()
+	}
+
 	return "ok"
 }

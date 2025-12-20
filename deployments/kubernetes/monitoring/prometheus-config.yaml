@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'gorax-production'
+        environment: 'production'
+
+    # Alertmanager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+
+    # Load alerting rules
+    rule_files:
+      - '/etc/prometheus/rules/*.yml'
+
+    # Scrape configurations
+    scrape_configs:
+      # Gorax API servers
+      - job_name: 'gorax-api'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - gorax
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: gorax-api
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: instance
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+
+      # Gorax Worker servers
+      - job_name: 'gorax-worker'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - gorax
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: gorax-worker
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: instance
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+
+      # PostgreSQL exporter
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres-exporter:9187']
+            labels:
+              service: 'postgresql'
+
+      # Redis exporter
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis-exporter:9121']
+            labels:
+              service: 'redis'

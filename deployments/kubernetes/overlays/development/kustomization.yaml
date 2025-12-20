@@ -1,0 +1,101 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: gorax-dev
+
+namePrefix: dev-
+nameSuffix: ""
+
+commonLabels:
+  environment: development
+
+resources:
+  - ../../base
+
+replicas:
+  - name: gorax-api
+    count: 1
+  - name: gorax-worker
+    count: 1
+
+images:
+  - name: gorax/api
+    newTag: dev
+  - name: gorax/worker
+    newTag: dev
+
+configMapGenerator:
+  - name: gorax-config
+    behavior: merge
+    literals:
+      - log-level=debug
+      - cors-allowed-origins=http://localhost:3000,http://localhost:5173
+      - worker-concurrency=5
+      - feature-webhook-replay=true
+      - feature-workflow-versioning=true
+      - feature-advanced-filtering=true
+      - tracing-sample-rate=1.0
+
+patches:
+  # Reduce resource requests for development
+  - target:
+      kind: Deployment
+      name: gorax-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "128Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "100m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "250m"
+
+  - target:
+      kind: Deployment
+      name: gorax-worker
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "200m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+
+  # Disable HPA in development
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+
+  # Update ingress for development domain
+  - target:
+      kind: Ingress
+      name: gorax-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - api.dev.gorax.io
+          - webhooks.dev.gorax.io
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.dev.gorax.io
+      - op: replace
+        path: /spec/rules/1/host
+        value: webhooks.dev.gorax.io
