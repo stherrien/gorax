@@ -1,0 +1,942 @@
+basePath: /api/v1
+definitions:
+  github_com_gorax_gorax_internal_humantask.ApproveTaskRequest:
+    properties:
+      comment:
+        type: string
+      data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_humantask.RejectTaskRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      reason:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_humantask.SubmitTaskRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_humantask.TaskResponse:
+    properties:
+      assignees:
+        items:
+          type: integer
+        type: array
+      assignees_list:
+        items:
+          type: string
+        type: array
+      completed_at:
+        type: string
+      completed_by:
+        type: string
+      config:
+        items:
+          type: integer
+        type: array
+      config_data:
+        additionalProperties: true
+        type: object
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      execution_id:
+        type: string
+      id:
+        type: string
+      response_data:
+        items:
+          type: integer
+        type: array
+      response_map:
+        additionalProperties: true
+        type: object
+      status:
+        type: string
+      step_id:
+        type: string
+      task_type:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_workflow.CreateWorkflowInput:
+    properties:
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - definition
+    - name
+    type: object
+  github_com_gorax_gorax_internal_workflow.DryRunInput:
+    properties:
+      test_data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_workflow.UpdateWorkflowInput:
+    properties:
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  internal_api_handlers.CreateWebhookRequest:
+    properties:
+      authType:
+        enum:
+        - none
+        - signature
+        - basic
+        - api_key
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      priority:
+        maximum: 3
+        minimum: 0
+        type: integer
+      workflowId:
+        type: string
+    required:
+    - name
+    - path
+    - workflowId
+    type: object
+  internal_api_handlers.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@gorax.io
+    name: Gorax Support
+    url: https://github.com/gorax/gorax
+  description: |-
+    REST API for Gorax - a powerful workflow automation platform with webhooks, scheduling, and real-time execution monitoring.
+
+    ## Authentication
+    All API endpoints (except /health, /ready, and webhook triggers) require authentication.
+    In development mode, use the X-User-ID header. In production, use Ory Kratos session cookies.
+
+    ## Multi-tenancy
+    All authenticated endpoints require a valid X-Tenant-ID header to identify the tenant context.
+
+    ## Rate Limiting
+    API requests are rate-limited based on tenant quotas. Check response headers for limit information.
+
+    ## Error Handling
+    Errors follow a consistent format with appropriate HTTP status codes and error messages.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Gorax Workflow Automation API
+  version: "1.0"
+paths:
+  /api/v1/tasks:
+    get:
+      consumes:
+      - application/json
+      description: List human tasks with optional filters
+      parameters:
+      - description: Task status
+        in: query
+        name: status
+        type: string
+      - description: Task type
+        in: query
+        name: task_type
+        type: string
+      - description: Assignee user ID or role
+        in: query
+        name: assignee
+        type: string
+      - description: Execution ID
+        in: query
+        name: execution_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List human tasks
+      tags:
+      - tasks
+  /api/v1/tasks/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a human task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a human task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approve a human task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Approve request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.ApproveTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Approve a task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Reject a human task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reject request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.RejectTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reject a task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: Submit data for an input task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submit request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.SubmitTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit an input task
+      tags:
+      - tasks
+  /health:
+    get:
+      description: Returns basic health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+      summary: Health check
+      tags:
+      - Health
+  /ready:
+    get:
+      description: Returns readiness status including database and Redis health checks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All dependencies healthy
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+        "503":
+          description: One or more dependencies unhealthy
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+      summary: Readiness check
+      tags:
+      - Health
+  /webhooks:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of webhooks for the authenticated tenant
+      parameters:
+      - default: 20
+        description: Maximum number of results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of webhooks
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Creates a new webhook endpoint for a workflow
+      parameters:
+      - description: Webhook creation request
+        in: body
+        name: webhook
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created webhook
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Create webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}/regenerate-secret:
+    post:
+      consumes:
+      - application/json
+      description: Regenerates the secret key for webhook signature verification
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook with new secret
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Regenerate webhook secret
+      tags:
+      - Webhooks
+  /workflows:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of workflows for the authenticated tenant
+      parameters:
+      - default: 20
+        description: Maximum number of results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workflows
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List workflows
+      tags:
+      - Workflows
+    post:
+      consumes:
+      - application/json
+      description: Creates a new workflow with the provided configuration
+      parameters:
+      - description: Workflow creation input
+        in: body
+        name: workflow
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.CreateWorkflowInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created workflow
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Create workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a workflow by ID
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Workflow deleted successfully
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Delete workflow
+      tags:
+      - Workflows
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a workflow by ID
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workflow details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get workflow
+      tags:
+      - Workflows
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Workflow update input
+        in: body
+        name: workflow
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.UpdateWorkflowInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated workflow
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Update workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}/dry-run:
+    post:
+      consumes:
+      - application/json
+      description: Validates a workflow without executing it, useful for testing
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Dry-run input with test data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.DryRunInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dry-run result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Dry-run workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}/execute:
+    post:
+      consumes:
+      - application/json
+      description: Triggers a manual execution of a workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Optional trigger data
+        in: body
+        name: triggerData
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Execution started
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Execute workflow
+      tags:
+      - Workflows
+securityDefinitions:
+  SessionCookie:
+    description: Ory Kratos session cookie (production mode)
+    in: cookie
+    name: ory_kratos_session
+    type: apiKey
+  TenantID:
+    description: Tenant identifier for multi-tenant isolation
+    in: header
+    name: X-Tenant-ID
+    type: apiKey
+  UserID:
+    description: User identifier (development mode only)
+    in: header
+    name: X-User-ID
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Health check and readiness endpoints
+  name: Health
+- description: Workflow management and execution
+  name: Workflows
+- description: Webhook configuration and management
+  name: Webhooks
+- description: Workflow execution history and monitoring
+  name: Executions
+- description: Scheduled workflow triggers
+  name: Schedules
+- description: Secure credential management
+  name: Credentials
+- description: Tenant administration (admin only)
+  name: Tenants
+- description: Execution metrics and analytics
+  name: Metrics
+- description: Real-time execution updates
+  name: WebSocket
+- description: Event type registry for webhooks
+  name: Event Types
