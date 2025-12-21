@@ -11,6 +11,7 @@ import EditSchedule from './pages/EditSchedule'
 import WebhookList from './pages/WebhookList'
 import WebhookDetail from './pages/WebhookDetail'
 import { CredentialManager } from './pages/CredentialManager'
+import AIWorkflowBuilder from './pages/AIWorkflowBuilder'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="schedules/new" element={<CreateSchedule />} />
         <Route path="schedules/:id/edit" element={<EditSchedule />} />
         <Route path="credentials" element={<CredentialManager />} />
+        <Route path="ai/builder" element={<AIWorkflowBuilder />} />
       </Route>
     </Routes>
   )

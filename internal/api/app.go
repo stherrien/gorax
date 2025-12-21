@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	"github.com/gorax/gorax/internal/aibuilder"
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
@@ -25,6 +27,7 @@ import (
 	"github.com/gorax/gorax/internal/executor"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/suggestions"
 	"github.com/gorax/gorax/internal/tenant"
 	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
@@ -69,6 +72,8 @@ type App struct {
 	credentialHandler        *handlers.CredentialHandler
 	metricsHandler           *handlers.MetricsHandler
 	eventTypesHandler        *handlers.EventTypesHandler
+	suggestionsHandler       *handlers.SuggestionsHandler
+	aiBuilderHandler         *handlers.AIBuilderHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -212,6 +217,32 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize usage service and handler
 	usageService := handlers.NewUsageService(app.quotaTracker, app.tenantService, logger)
 	app.usageHandler = handlers.NewUsageHandler(usageService)
+
+	// Initialize suggestions service and handler
+	suggestionsRepo := suggestions.NewPostgresRepository(db)
+	patternAnalyzer := suggestions.NewPatternAnalyzer(nil) // Uses default patterns
+	suggestionsService := suggestions.NewSuggestionService(suggestions.SuggestionServiceConfig{
+		Repository:         suggestionsRepo,
+		PatternAnalyzer:    patternAnalyzer,
+		LLMAnalyzer:        nil, // LLM analyzer can be configured separately
+		UseLLMForUnmatched: false,
+		Logger:             logger,
+	})
+	app.suggestionsHandler = handlers.NewSuggestionsHandler(suggestionsService, logger)
+
+	// Initialize AI builder service and handler
+	aibuilderRepo := aibuilder.NewPostgresRepository(db)
+	nodeRegistry := aibuilder.NewNodeRegistry()
+	// Note: AI builder requires LLM configuration to function fully
+	// For now, create with nil generator - will return error if used without config
+	aibuilderService := aibuilder.NewAIBuilderService(
+		aibuilder.NewContextRepositoryAdapter(aibuilderRepo),
+		nil, // Generator requires LLM provider - configure via config
+		&workflowCreatorAdapter{workflowService: app.workflowService},
+	)
+	_ = nodeRegistry // Node registry available for LLM context
+	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
+	logger.Info("AI Builder initialized", "llm_configured", false, "note", "Configure LLM provider for full functionality")
 
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
@@ -428,6 +459,31 @@ func (a *App) setupRouter() {
 				r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
 				r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
 			})
+
+			// Suggestions routes (Smart error analysis)
+			r.Route("/suggestions", func(r chi.Router) {
+				r.Get("/{suggestionID}", a.suggestionsHandler.Get)
+				r.Post("/{suggestionID}/apply", a.suggestionsHandler.Apply)
+				r.Post("/{suggestionID}/dismiss", a.suggestionsHandler.Dismiss)
+			})
+
+			// Execution suggestions (nested under executions for context)
+			r.Route("/executions/{executionID}/suggestions", func(r chi.Router) {
+				r.Get("/", a.suggestionsHandler.List)
+				r.Post("/analyze", a.suggestionsHandler.Analyze)
+			})
+
+			// AI Workflow Builder routes
+			r.Route("/ai/workflows", func(r chi.Router) {
+				r.Post("/generate", a.aiBuilderHandler.Generate)
+				r.Post("/refine", a.aiBuilderHandler.Refine)
+				r.Route("/conversations", func(r chi.Router) {
+					r.Get("/", a.aiBuilderHandler.ListConversations)
+					r.Get("/{id}", a.aiBuilderHandler.GetConversation)
+					r.Post("/{id}/apply", a.aiBuilderHandler.Apply)
+					r.Post("/{id}/abandon", a.aiBuilderHandler.Abandon)
+				})
+			})
 		})
 	})
 
@@ -459,4 +515,81 @@ func (w *workflowExecutorAdapter) Execute(ctx context.Context, tenantID, workflo
 		return "", err
 	}
 	return execution.ID, nil
+}
+
+// workflowCreatorAdapter adapts workflow.Service to aibuilder.WorkflowCreator interface
+type workflowCreatorAdapter struct {
+	workflowService *workflow.Service
+}
+
+func (w *workflowCreatorAdapter) CreateWorkflow(ctx context.Context, tenantID, userID string, generated *aibuilder.GeneratedWorkflow) (string, error) {
+	// Convert generated workflow definition to JSON
+	var definitionJSON json.RawMessage
+	var err error
+	if generated.Definition != nil {
+		// Build the definition structure
+		def := workflow.WorkflowDefinition{
+			Nodes: make([]workflow.Node, len(generated.Definition.Nodes)),
+			Edges: make([]workflow.Edge, len(generated.Definition.Edges)),
+		}
+
+		// Convert nodes
+		for i, gn := range generated.Definition.Nodes {
+			var position workflow.Position
+			if gn.Position != nil {
+				position = workflow.Position{X: gn.Position.X, Y: gn.Position.Y}
+			}
+
+			// Marshal config to json.RawMessage
+			var configJSON json.RawMessage
+			if gn.Config != nil {
+				configJSON, err = json.Marshal(gn.Config)
+				if err != nil {
+					return "", fmt.Errorf("failed to marshal node config: %w", err)
+				}
+			}
+
+			def.Nodes[i] = workflow.Node{
+				ID:       gn.ID,
+				Type:     gn.Type,
+				Position: position,
+				Data: workflow.NodeData{
+					Name:   gn.Name,
+					Config: configJSON,
+				},
+			}
+		}
+
+		// Convert edges
+		if generated.Definition.Edges != nil {
+			for i, ge := range generated.Definition.Edges {
+				def.Edges[i] = workflow.Edge{
+					ID:       ge.ID,
+					Source:   ge.Source,
+					Target:   ge.Target,
+					SourceID: ge.SourceHandle,
+					TargetID: ge.TargetHandle,
+				}
+			}
+		}
+
+		definitionJSON, err = json.Marshal(def)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal workflow definition: %w", err)
+		}
+	}
+
+	// Create workflow using the service's CreateWorkflowInput
+	input := workflow.CreateWorkflowInput{
+		Name:        generated.Name,
+		Description: generated.Description,
+		Definition:  definitionJSON,
+	}
+
+	// Create the workflow
+	created, err := w.workflowService.Create(ctx, tenantID, userID, input)
+	if err != nil {
+		return "", err
+	}
+	return created.ID, nil
 }
