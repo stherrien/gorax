@@ -103,16 +103,9 @@ func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if worker can accept more work
-	// Safe conversion: concurrency is always a small positive config value
-	concurrency := hs.worker.concurrency
-	if concurrency < 0 {
-		concurrency = 0
-	}
-	const maxInt32 = 1<<31 - 1 // 2147483647
-	if concurrency > maxInt32 {
-		concurrency = maxInt32
-	}
-	if hs.worker.getActiveExecutions() >= int32(concurrency) { // #nosec G115 -- bounds checked above
+	// Convert concurrency to int32 safely (concurrency is always a small positive config value)
+	concurrencyInt32 := safeIntToInt32(hs.worker.concurrency)
+	if hs.worker.getActiveExecutions() >= concurrencyInt32 {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "at_capacity",
@@ -196,4 +189,17 @@ func (hs *HealthServer) checkQueue(ctx context.Context) string {
 	}
 
 	return "ok"
+}
+
+// safeIntToInt32 safely converts int to int32 with bounds checking
+// Returns 0 for negative values, maxInt32 for values exceeding int32 range
+func safeIntToInt32(val int) int32 {
+	const maxInt32 = 1<<31 - 1 // 2147483647
+	if val < 0 {
+		return 0
+	}
+	if val > maxInt32 {
+		return maxInt32
+	}
+	return int32(val)
 }

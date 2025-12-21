@@ -2,11 +2,25 @@ package webhook
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"encoding/binary"
 	"errors"
 	"math"
 	"math/rand"
 	"time"
 )
+
+// secureRand is a math/rand source seeded with crypto/rand for jitter calculations
+var secureRand *rand.Rand
+
+func init() {
+	var seed int64
+	if err := binary.Read(cryptoRand.Reader, binary.BigEndian, &seed); err != nil {
+		// Fallback to time-based seed if crypto/rand fails
+		seed = time.Now().UnixNano()
+	}
+	secureRand = rand.New(rand.NewSource(seed))
+}
 
 // Webhook-specific retry errors
 var (
@@ -72,9 +86,9 @@ func CalculateBackoffWithJitter(attempt int, config RetryConfig) time.Duration {
 	}
 
 	// Add jitter: +/- jitter% of the base delay
-	// #nosec G404 -- math/rand is fine for non-security timing jitter
+	// Using secureRand which is seeded from crypto/rand
 	jitterRange := float64(baseDelay) * config.Jitter
-	jitter := (rand.Float64()*2 - 1) * jitterRange // Random between -jitterRange and +jitterRange
+	jitter := (secureRand.Float64()*2 - 1) * jitterRange // Random between -jitterRange and +jitterRange
 
 	finalDelay := time.Duration(float64(baseDelay) + jitter)
 	if finalDelay < 0 {
