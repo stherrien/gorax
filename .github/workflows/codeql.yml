@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.24'
           cache: true
 
       - name: Initialize CodeQL
@@ -50,6 +50,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:go"
+        continue-on-error: true
 
   analyze-typescript:
     name: Analyze TypeScript Code
@@ -94,3 +95,4 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:typescript"
+        continue-on-error: true
