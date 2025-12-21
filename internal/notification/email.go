@@ -193,9 +193,10 @@ func (s *EmailSender) sendSMTPOnce(email Email) error {
 
 // sendWithTLS sends email using explicit TLS
 func (s *EmailSender) sendWithTLS(addr string, auth smtp.Auth, recipients []string, msg []byte) error {
-	// Connect to server
+	// Connect to server with TLS 1.2 minimum
 	conn, err := tls.Dial("tcp", addr, &tls.Config{
 		ServerName: s.config.SMTPHost,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)

@@ -72,6 +72,7 @@ func CalculateBackoffWithJitter(attempt int, config RetryConfig) time.Duration {
 	}
 
 	// Add jitter: +/- jitter% of the base delay
+	// #nosec G404 -- math/rand is fine for non-security timing jitter
 	jitterRange := float64(baseDelay) * config.Jitter
 	jitter := (rand.Float64()*2 - 1) * jitterRange // Random between -jitterRange and +jitterRange
 

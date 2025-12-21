@@ -498,7 +498,9 @@ func (h *AuthHandler) KratosWebhook(w http.ResponseWriter, r *http.Request) {
 	secret := r.Header.Get("X-Webhook-Secret")
 	expectedSecret := os.Getenv("KRATOS_WEBHOOK_SECRET")
 	if expectedSecret == "" {
-		expectedSecret = "YOUR_WEBHOOK_SECRET" // Default for development
+		h.logger.Error("KRATOS_WEBHOOK_SECRET not configured")
+		http.Error(w, "server configuration error", http.StatusInternalServerError)
+		return
 	}
 
 	if secret != expectedSecret {

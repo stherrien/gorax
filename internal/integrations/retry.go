@@ -65,8 +65,16 @@ func WithRetry(ctx context.Context, config RetryConfig, fn RetryableFunc) error 
 
 // calculateDelay calculates the delay for exponential backoff
 func calculateDelay(attempt int, config RetryConfig) time.Duration {
+	// Ensure attempt is non-negative to prevent overflow
+	if attempt < 0 {
+		attempt = 0
+	}
+	// Cap attempt to prevent excessive delay (2^30 is already huge)
+	if attempt > 30 {
+		attempt = 30
+	}
 	// Exponential backoff: baseDelay * 2^attempt
-	delay := config.BaseDelay * time.Duration(1<<uint(attempt))
+	delay := config.BaseDelay * time.Duration(1<<attempt)
 
 	// Cap at max delay
 	if delay > config.MaxDelay {
