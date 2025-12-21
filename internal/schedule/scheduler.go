@@ -42,7 +42,7 @@ func NewScheduler(provider ScheduleProvider, executor WorkflowExecutor, logger *
 		executor:      executor,
 		logger:        logger,
 		checkInterval: 30 * time.Second, // Check every 30 seconds
-		batchSize:     100,               // Process up to 100 schedules per check
+		batchSize:     100,              // Process up to 100 schedules per check
 		stopCh:        make(chan struct{}),
 	}
 }

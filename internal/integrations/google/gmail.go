@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
 )
 
 const (

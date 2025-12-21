@@ -141,7 +141,7 @@ func TestApplyTemplateInput_Validate(t *testing.T) {
 			name: "invalid name too long",
 			input: ApplyTemplateInput{
 				WorkflowID: "550e8400-e29b-41d4-a716-446655440000",
-				Name: stringPtr("This is an extremely long schedule name that exceeds the maximum allowed length of 255 characters and should fail validation because it is way too long for a schedule name and nobody should ever need a schedule name this long anyway but we need to test it!"),
+				Name:       stringPtr("This is an extremely long schedule name that exceeds the maximum allowed length of 255 characters and should fail validation because it is way too long for a schedule name and nobody should ever need a schedule name this long anyway but we need to test it!"),
 			},
 			wantErr: true,
 			errMsg:  "name must be 255 characters or less",
@@ -150,7 +150,7 @@ func TestApplyTemplateInput_Validate(t *testing.T) {
 			name: "invalid timezone too long",
 			input: ApplyTemplateInput{
 				WorkflowID: "550e8400-e29b-41d4-a716-446655440000",
-				Timezone: stringPtr("This_Is_An_Invalid_Timezone_That_Exceeds_The_Maximum_Allowed_Length_Of_100_Characters_And_Should_Fail"),
+				Timezone:   stringPtr("This_Is_An_Invalid_Timezone_That_Exceeds_The_Maximum_Allowed_Length_Of_100_Characters_And_Should_Fail"),
 			},
 			wantErr: true,
 			errMsg:  "timezone must be 100 characters or less",

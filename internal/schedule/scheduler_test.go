@@ -115,14 +115,14 @@ func TestSchedulerExecutesDueSchedules(t *testing.T) {
 
 	now := time.Now()
 	dueSchedule := &Schedule{
-		ID:          "schedule-1",
-		TenantID:    "tenant-1",
-		WorkflowID:  "workflow-1",
-		Name:        "Test Schedule",
-		Enabled:     true,
-		NextRunAt:   &now,
+		ID:             "schedule-1",
+		TenantID:       "tenant-1",
+		WorkflowID:     "workflow-1",
+		Name:           "Test Schedule",
+		Enabled:        true,
+		NextRunAt:      &now,
 		CronExpression: "0 12 * * *",
-		Timezone:    "UTC",
+		Timezone:       "UTC",
 	}
 
 	mockService := &MockService{
@@ -183,14 +183,14 @@ func TestSchedulerIgnoresDisabledSchedules(t *testing.T) {
 
 	now := time.Now()
 	disabledSchedule := &Schedule{
-		ID:          "schedule-disabled",
-		TenantID:    "tenant-1",
-		WorkflowID:  "workflow-1",
-		Name:        "Disabled Schedule",
-		Enabled:     false,
-		NextRunAt:   &now,
+		ID:             "schedule-disabled",
+		TenantID:       "tenant-1",
+		WorkflowID:     "workflow-1",
+		Name:           "Disabled Schedule",
+		Enabled:        false,
+		NextRunAt:      &now,
 		CronExpression: "0 12 * * *",
-		Timezone:    "UTC",
+		Timezone:       "UTC",
 	}
 
 	mockService := &MockService{

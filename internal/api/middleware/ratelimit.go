@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/gorax/gorax/internal/ratelimit"
 )
 
 // RateLimitConfig holds configuration for rate limiting
 type RateLimitConfig struct {
-	RequestsPerMinute  int64 // Max requests per minute
-	RequestsPerHour    int64 // Max requests per hour
-	RequestsPerDay     int64 // Max requests per day
-	EnabledForPaths    []string
-	ExcludedPaths      []string
+	RequestsPerMinute int64 // Max requests per minute
+	RequestsPerHour   int64 // Max requests per hour
+	RequestsPerDay    int64 // Max requests per day
+	EnabledForPaths   []string
+	ExcludedPaths     []string
 }
 
 // DefaultRateLimitConfig returns sensible defaults

@@ -109,12 +109,12 @@ func TestParseSafeInt(t *testing.T) {
 
 func TestParsePaginationLimit(t *testing.T) {
 	tests := []struct {
-		name          string
-		limitStr      string
-		defaultLimit  int
-		maxLimit      int
-		wantLimit     int
-		wantValid     bool
+		name         string
+		limitStr     string
+		defaultLimit int
+		maxLimit     int
+		wantLimit    int
+		wantValid    bool
 	}{
 		{
 			name:         "valid limit within bounds",

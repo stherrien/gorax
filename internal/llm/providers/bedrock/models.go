@@ -21,14 +21,14 @@ type claudeMessage struct {
 }
 
 type claudeResponse struct {
-	ID           string         `json:"id"`
-	Type         string         `json:"type"`
-	Role         string         `json:"role"`
+	ID           string          `json:"id"`
+	Type         string          `json:"type"`
+	Role         string          `json:"role"`
 	Content      []claudeContent `json:"content"`
-	Model        string         `json:"model"`
-	StopReason   string         `json:"stop_reason"`
-	StopSequence *string        `json:"stop_sequence,omitempty"`
-	Usage        claudeUsage    `json:"usage"`
+	Model        string          `json:"model"`
+	StopReason   string          `json:"stop_reason"`
+	StopSequence *string         `json:"stop_sequence,omitempty"`
+	Usage        claudeUsage     `json:"usage"`
 }
 
 type claudeContent struct {

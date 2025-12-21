@@ -18,9 +18,9 @@ var (
 
 // QueryConfig represents configuration for SQL query actions
 type QueryConfig struct {
-	Query      string                 `json:"query"`
-	Parameters []interface{}          `json:"parameters,omitempty"`
-	Timeout    int                    `json:"timeout,omitempty"` // seconds
+	Query      string        `json:"query"`
+	Parameters []interface{} `json:"parameters,omitempty"`
+	Timeout    int           `json:"timeout,omitempty"` // seconds
 }
 
 // Validate checks if query config is valid
@@ -33,9 +33,9 @@ func (c *QueryConfig) Validate() error {
 
 // StatementConfig represents configuration for SQL statement actions (INSERT/UPDATE/DELETE)
 type StatementConfig struct {
-	Statement  string                 `json:"statement"`
-	Parameters []interface{}          `json:"parameters,omitempty"`
-	Timeout    int                    `json:"timeout,omitempty"` // seconds
+	Statement  string        `json:"statement"`
+	Parameters []interface{} `json:"parameters,omitempty"`
+	Timeout    int           `json:"timeout,omitempty"` // seconds
 }
 
 // Validate checks if statement config is valid
@@ -73,22 +73,22 @@ func (c *TransactionConfig) Validate() error {
 
 // QueryResult represents the result of a query
 type QueryResult struct {
-	Rows         []map[string]interface{} `json:"rows"`
-	RowCount     int                      `json:"row_count"`
-	ColumnNames  []string                 `json:"column_names,omitempty"`
+	Rows        []map[string]interface{} `json:"rows"`
+	RowCount    int                      `json:"row_count"`
+	ColumnNames []string                 `json:"column_names,omitempty"`
 }
 
 // StatementResult represents the result of a statement execution
 type StatementResult struct {
-	RowsAffected int64  `json:"rows_affected"`
-	LastInsertID int64  `json:"last_insert_id,omitempty"`
+	RowsAffected int64 `json:"rows_affected"`
+	LastInsertID int64 `json:"last_insert_id,omitempty"`
 }
 
 // TransactionResult represents the result of a transaction
 type TransactionResult struct {
-	Committed      bool              `json:"committed"`
-	StatementsRun  int               `json:"statements_run"`
-	TotalAffected  int64             `json:"total_affected"`
+	Committed     bool  `json:"committed"`
+	StatementsRun int   `json:"statements_run"`
+	TotalAffected int64 `json:"total_affected"`
 }
 
 // MongoFindConfig represents configuration for MongoDB find operations
@@ -134,7 +134,7 @@ type MongoUpdateConfig struct {
 	Filter     map[string]interface{} `json:"filter"`
 	Update     map[string]interface{} `json:"update"`
 	Upsert     bool                   `json:"upsert,omitempty"`
-	Multi      bool                   `json:"multi,omitempty"` // Update multiple documents
+	Multi      bool                   `json:"multi,omitempty"`   // Update multiple documents
 	Timeout    int                    `json:"timeout,omitempty"` // seconds
 }
 
@@ -156,7 +156,7 @@ func (c *MongoUpdateConfig) Validate() error {
 type MongoDeleteConfig struct {
 	Collection string                 `json:"collection"`
 	Filter     map[string]interface{} `json:"filter"`
-	Multi      bool                   `json:"multi,omitempty"` // Delete multiple documents
+	Multi      bool                   `json:"multi,omitempty"`   // Delete multiple documents
 	Timeout    int                    `json:"timeout,omitempty"` // seconds
 }
 
@@ -197,8 +197,8 @@ type MongoFindResult struct {
 
 // MongoInsertResult represents the result of a MongoDB insert operation
 type MongoInsertResult struct {
-	InsertedCount int                    `json:"inserted_count"`
-	InsertedIDs   []interface{}          `json:"inserted_ids,omitempty"`
+	InsertedCount int           `json:"inserted_count"`
+	InsertedIDs   []interface{} `json:"inserted_ids,omitempty"`
 }
 
 // MongoUpdateResult represents the result of a MongoDB update operation

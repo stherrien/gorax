@@ -11,11 +11,11 @@ import (
 
 // ConditionalBranchResult represents the result of evaluating a conditional node
 type ConditionalBranchResult struct {
-	Condition      string
-	Result         bool
-	TakenBranch    string // "true" or "false"
-	NextNodes      []string
-	StopExecution  bool
+	Condition     string
+	Result        bool
+	TakenBranch   string // "true" or "false"
+	NextNodes     []string
+	StopExecution bool
 }
 
 // executeConditionalAction executes a conditional (if/else) action
@@ -109,8 +109,8 @@ func (e *Executor) findConditionalBranch(sourceNodeID string, branchLabel string
 // Instead of simple topological sort, this builds a plan that can handle branching
 func (e *Executor) buildConditionalExecutionPlan(nodes []workflow.Node, edges []workflow.Edge) (*ExecutionPlan, error) {
 	plan := &ExecutionPlan{
-		AllNodes:     buildNodeMap(nodes),
-		Edges:        edges,
+		AllNodes:         buildNodeMap(nodes),
+		Edges:            edges,
 		ConditionalNodes: make(map[string]bool),
 	}
 

@@ -9,9 +9,10 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorax/gorax/internal/suggestions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/suggestions"
 )
 
 // MockSuggestionService implements suggestions.Service for testing

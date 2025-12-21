@@ -311,9 +311,9 @@ func TestWebhookRetryState_ShouldRetry(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		attempts   int
-		lastError  error
+		name        string
+		attempts    int
+		lastError   error
 		shouldRetry bool
 	}{
 		{"first attempt", 0, ErrWebhookTimeout, true},

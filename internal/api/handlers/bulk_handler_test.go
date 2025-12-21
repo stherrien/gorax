@@ -249,9 +249,9 @@ func TestBulkDeleteExecutions(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:     "partial failure",
-			tenantID: "tenant1",
-			ids:      []string{"exec1", "exec2"},
+			name:        "partial failure",
+			tenantID:    "tenant1",
+			ids:         []string{"exec1", "exec2"},
 			mockSuccess: []string{"exec1"},
 			mockFailed: []BulkOperationError{
 				{ID: "exec2", Error: "execution not found"},
@@ -307,9 +307,9 @@ func TestBulkRetryExecutions(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:     "partial failure",
-			tenantID: "tenant1",
-			ids:      []string{"exec1", "exec2"},
+			name:        "partial failure",
+			tenantID:    "tenant1",
+			ids:         []string{"exec1", "exec2"},
 			mockSuccess: []string{"exec1"},
 			mockFailed: []BulkOperationError{
 				{ID: "exec2", Error: "execution not in failed state"},

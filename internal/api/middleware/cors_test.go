@@ -5,9 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorax/gorax/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/config"
 )
 
 func TestValidateCORSConfig(t *testing.T) {
@@ -142,18 +143,18 @@ func TestCORSMiddleware(t *testing.T) {
 	})
 
 	tests := []struct {
-		name           string
-		cfg            config.CORSConfig
-		env            string
-		requestOrigin  string
-		requestMethod  string
-		isPreflight    bool
-		expectOrigin   string
-		expectMethods  string
-		expectHeaders  string
-		expectMaxAge   string
-		expectCreds    string
-		expectStatus   int
+		name          string
+		cfg           config.CORSConfig
+		env           string
+		requestOrigin string
+		requestMethod string
+		isPreflight   bool
+		expectOrigin  string
+		expectMethods string
+		expectHeaders string
+		expectMaxAge  string
+		expectCreds   string
+		expectStatus  int
 	}{
 		{
 			name: "simple request with allowed origin",

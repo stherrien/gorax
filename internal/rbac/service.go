@@ -63,7 +63,7 @@ func (s *Service) CreateRole(ctx context.Context, tenantID, userID string, req *
 
 	// Audit log
 	s.auditLog(ctx, tenantID, userID, AuditActionRoleCreated, "role", role.ID, map[string]interface{}{
-		"role_name":       role.Name,
+		"role_name":        role.Name,
 		"permission_count": len(req.PermissionIDs),
 	})
 
@@ -204,7 +204,7 @@ func (s *Service) UpdateRolePermissions(ctx context.Context, roleID, tenantID, u
 
 	// Audit log
 	s.auditLog(ctx, tenantID, userID, AuditActionPermissionGranted, "role", roleID, map[string]interface{}{
-		"role_name":       role.Name,
+		"role_name":        role.Name,
 		"permission_count": len(permissionIDs),
 	})
 

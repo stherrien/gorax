@@ -76,12 +76,12 @@ func TestKMSEncryptionService_Encrypt(t *testing.T) {
 	keyID := "alias/test-key"
 
 	tests := []struct {
-		name            string
-		data            *CredentialData
-		setupMock       func(*MockKMSClientForEncryption)
-		wantErr         bool
-		errContains     string
-		validateResult  func(*testing.T, *EncryptedSecret)
+		name           string
+		data           *CredentialData
+		setupMock      func(*MockKMSClientForEncryption)
+		wantErr        bool
+		errContains    string
+		validateResult func(*testing.T, *EncryptedSecret)
 	}{
 		{
 			name: "successful encryption",

@@ -10,16 +10,16 @@ import (
 
 // MockRepository implements Repository for testing
 type MockRepository struct {
-	users                map[string]*User
-	usersByKratosID      map[string]*User
-	usersByEmail         map[string]*User
-	createFunc           func(ctx context.Context, user *User) error
-	getByIDFunc          func(ctx context.Context, id string) (*User, error)
-	getByKratosIDFunc    func(ctx context.Context, kratosID string) (*User, error)
-	getByEmailFunc       func(ctx context.Context, email string) (*User, error)
-	listByTenantFunc     func(ctx context.Context, tenantID string) ([]*User, error)
-	updateFunc           func(ctx context.Context, id string, input UpdateUserInput) (*User, error)
-	deleteFunc           func(ctx context.Context, id string) error
+	users             map[string]*User
+	usersByKratosID   map[string]*User
+	usersByEmail      map[string]*User
+	createFunc        func(ctx context.Context, user *User) error
+	getByIDFunc       func(ctx context.Context, id string) (*User, error)
+	getByKratosIDFunc func(ctx context.Context, kratosID string) (*User, error)
+	getByEmailFunc    func(ctx context.Context, email string) (*User, error)
+	listByTenantFunc  func(ctx context.Context, tenantID string) ([]*User, error)
+	updateFunc        func(ctx context.Context, id string, input UpdateUserInput) (*User, error)
+	deleteFunc        func(ctx context.Context, id string) error
 }
 
 func (m *MockRepository) Create(ctx context.Context, user *User) error {

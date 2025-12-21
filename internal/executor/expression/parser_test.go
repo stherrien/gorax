@@ -8,37 +8,37 @@ func TestParser_Parse(t *testing.T) {
 	parser := NewParser()
 
 	tests := []struct {
-		name        string
-		expr        string
+		name         string
+		expr         string
 		wantTemplate bool
-		wantContent string
-		wantErr     bool
+		wantContent  string
+		wantErr      bool
 	}{
 		{
-			name:        "template syntax",
-			expr:        "{{steps.step1.status}} == \"success\"",
+			name:         "template syntax",
+			expr:         "{{steps.step1.status}} == \"success\"",
 			wantTemplate: true,
-			wantContent: "steps.step1.status}} == \"success",
-			wantErr:     false,
+			wantContent:  "steps.step1.status}} == \"success",
+			wantErr:      false,
 		},
 		{
-			name:        "raw expression",
-			expr:        "steps.step1.output.count > 10",
+			name:         "raw expression",
+			expr:         "steps.step1.output.count > 10",
 			wantTemplate: false,
-			wantContent: "steps.step1.output.count > 10",
-			wantErr:     false,
+			wantContent:  "steps.step1.output.count > 10",
+			wantErr:      false,
 		},
 		{
-			name:        "empty expression",
-			expr:        "",
-			wantErr:     true,
+			name:    "empty expression",
+			expr:    "",
+			wantErr: true,
 		},
 		{
-			name:        "complex condition",
-			expr:        "{{steps.http.status}} == 200 && {{trigger.body.type}} == \"webhook\"",
+			name:         "complex condition",
+			expr:         "{{steps.http.status}} == 200 && {{trigger.body.type}} == \"webhook\"",
 			wantTemplate: true,
-			wantContent: "steps.http.status}} == 200 && {{trigger.body.type}} == \"webhook",
-			wantErr:     false,
+			wantContent:  "steps.http.status}} == 200 && {{trigger.body.type}} == \"webhook",
+			wantErr:      false,
 		},
 	}
 
@@ -67,23 +67,23 @@ func TestParser_ExtractPaths(t *testing.T) {
 		wantPaths []string
 	}{
 		{
-			name: "single path",
-			expr: "{{steps.step1.output}}",
+			name:      "single path",
+			expr:      "{{steps.step1.output}}",
 			wantPaths: []string{"steps.step1.output"},
 		},
 		{
-			name: "multiple paths",
-			expr: "{{steps.step1.status}} == \"success\" && {{trigger.body.count}} > 10",
+			name:      "multiple paths",
+			expr:      "{{steps.step1.status}} == \"success\" && {{trigger.body.count}} > 10",
 			wantPaths: []string{"steps.step1.status", "trigger.body.count"},
 		},
 		{
-			name: "path with array index",
-			expr: "{{steps.step1.output[0].name}}",
+			name:      "path with array index",
+			expr:      "{{steps.step1.output[0].name}}",
 			wantPaths: []string{"steps.step1.output[0].name"},
 		},
 		{
-			name: "env variable",
-			expr: "{{env.tenant_id}} == \"test\"",
+			name:      "env variable",
+			expr:      "{{env.tenant_id}} == \"test\"",
 			wantPaths: []string{"env.tenant_id"},
 		},
 	}

@@ -216,14 +216,14 @@ func TestMongoFindAction_Execute(t *testing.T) {
 // TestMongoInsertAction_Execute tests the MongoDB insert action
 func TestMongoInsertAction_Execute(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         MongoInsertConfig
-		context        map[string]interface{}
-		mockCredential *credential.DecryptedValue
+		name            string
+		config          MongoInsertConfig
+		context         map[string]interface{}
+		mockCredential  *credential.DecryptedValue
 		mockInsertedIDs []interface{}
-		wantErr        bool
-		errorContains  string
-		validate       func(t *testing.T, output *actions.ActionOutput)
+		wantErr         bool
+		errorContains   string
+		validate        func(t *testing.T, output *actions.ActionOutput)
 	}{
 		{
 			name: "successful insert one document",

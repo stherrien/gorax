@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/gorax/gorax/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/config"
 )
 
 func TestInitialize(t *testing.T) {
@@ -182,9 +183,9 @@ func TestTracker_SetUser(t *testing.T) {
 	}
 
 	user := User{
-		ID:       "user-123",
-		Email:    "test@example.com",
-		Username: "testuser",
+		ID:        "user-123",
+		Email:     "test@example.com",
+		Username:  "testuser",
 		IPAddress: "192.168.1.1",
 	}
 

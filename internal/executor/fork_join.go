@@ -28,10 +28,10 @@ type ForkResult struct {
 
 // JoinResult represents the result of a join execution
 type JoinResult struct {
-	CompletedBranches int                      `json:"completed_branches"`
-	BranchOutputs     map[string]interface{}   `json:"branch_outputs"`
-	TimedOut          bool                     `json:"timed_out"`
-	Metadata          map[string]interface{}   `json:"metadata,omitempty"`
+	CompletedBranches int                    `json:"completed_branches"`
+	BranchOutputs     map[string]interface{} `json:"branch_outputs"`
+	TimedOut          bool                   `json:"timed_out"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // forkExecutor handles fork execution logic

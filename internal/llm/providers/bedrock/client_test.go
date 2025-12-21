@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/llm"
 )
 
 // mockBedrockClient implements the BedrockAPI interface for testing

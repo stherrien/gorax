@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/gorax/gorax/internal/llm"
 )
 
 // AIUsageLog represents a single AI usage log entry
@@ -48,14 +49,14 @@ func (l *AIUsageLog) Validate() error {
 
 // AIUsageSummary represents aggregated AI usage statistics
 type AIUsageSummary struct {
-	TotalRequests         int64            `json:"total_requests"`
-	TotalPromptTokens     int64            `json:"total_prompt_tokens"`
-	TotalCompletionTokens int64            `json:"total_completion_tokens"`
-	TotalTokens           int64            `json:"total_tokens"`
-	TotalCostCents        int64            `json:"total_cost_cents"`
-	ByModel               []ModelUsage     `json:"by_model"`
-	From                  time.Time        `json:"from"`
-	To                    time.Time        `json:"to"`
+	TotalRequests         int64        `json:"total_requests"`
+	TotalPromptTokens     int64        `json:"total_prompt_tokens"`
+	TotalCompletionTokens int64        `json:"total_completion_tokens"`
+	TotalTokens           int64        `json:"total_tokens"`
+	TotalCostCents        int64        `json:"total_cost_cents"`
+	ByModel               []ModelUsage `json:"by_model"`
+	From                  time.Time    `json:"from"`
+	To                    time.Time    `json:"to"`
 }
 
 // ModelUsage represents usage for a specific model

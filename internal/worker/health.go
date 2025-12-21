@@ -28,10 +28,10 @@ type HealthResponse struct {
 
 // WorkerInfo contains worker statistics
 type WorkerInfo struct {
-	Concurrency       int   `json:"concurrency"`
-	ActiveExecutions  int32 `json:"active_executions"`
-	ProcessedTotal    int64 `json:"processed_total"`
-	FailedTotal       int64 `json:"failed_total"`
+	Concurrency      int   `json:"concurrency"`
+	ActiveExecutions int32 `json:"active_executions"`
+	ProcessedTotal   int64 `json:"processed_total"`
+	FailedTotal      int64 `json:"failed_total"`
 }
 
 // ConnectionsHealth contains connection status

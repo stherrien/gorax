@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	defaultBaseURL     = "https://api.anthropic.com"
-	providerName       = "anthropic"
-	anthropicVersion   = "2023-06-01"
-	defaultMaxTokens   = 4096
+	defaultBaseURL   = "https://api.anthropic.com"
+	providerName     = "anthropic"
+	anthropicVersion = "2023-06-01"
+	defaultMaxTokens = 4096
 )
 
 // Client is an Anthropic API client

@@ -501,7 +501,7 @@ func DefaultNodeRegistry() *NodeRegistry {
 			"text":    "You have a new task assigned",
 		},
 		LLMDescription: "Use this to send direct messages to Slack users. Specify user ID (not username) and message text.",
-		IsActive: true,
+		IsActive:       true,
 	})
 
 	return registry

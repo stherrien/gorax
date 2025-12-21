@@ -6,9 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/llm"
 )
 
 // MockLLMProvider implements llm.Provider for testing

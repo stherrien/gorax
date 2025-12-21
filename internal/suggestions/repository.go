@@ -27,20 +27,20 @@ func NewPostgresRepository(db *sqlx.DB) *PostgresRepository {
 
 // suggestionRow is the database representation of a suggestion
 type suggestionRow struct {
-	ID          string    `db:"id"`
-	TenantID    string    `db:"tenant_id"`
-	ExecutionID string    `db:"execution_id"`
-	NodeID      string    `db:"node_id"`
-	Category    string    `db:"category"`
-	Type        string    `db:"type"`
-	Confidence  string    `db:"confidence"`
-	Title       string    `db:"title"`
-	Description string    `db:"description"`
-	Details     *string   `db:"details"`
-	Fix         []byte    `db:"fix"`
-	Source      string    `db:"source"`
-	Status      string    `db:"status"`
-	CreatedAt   time.Time `db:"created_at"`
+	ID          string     `db:"id"`
+	TenantID    string     `db:"tenant_id"`
+	ExecutionID string     `db:"execution_id"`
+	NodeID      string     `db:"node_id"`
+	Category    string     `db:"category"`
+	Type        string     `db:"type"`
+	Confidence  string     `db:"confidence"`
+	Title       string     `db:"title"`
+	Description string     `db:"description"`
+	Details     *string    `db:"details"`
+	Fix         []byte     `db:"fix"`
+	Source      string     `db:"source"`
+	Status      string     `db:"status"`
+	CreatedAt   time.Time  `db:"created_at"`
 	AppliedAt   *time.Time `db:"applied_at"`
 	DismissedAt *time.Time `db:"dismissed_at"`
 }

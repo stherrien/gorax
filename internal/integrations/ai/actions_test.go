@@ -3,8 +3,9 @@ package ai
 import (
 	"testing"
 
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gorax/gorax/internal/llm"
 )
 
 func TestSummarizationConfig_Validate(t *testing.T) {

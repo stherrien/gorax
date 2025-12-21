@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
 )
 
 const (
@@ -26,8 +27,8 @@ type DriveUploadAction struct {
 // DriveUploadConfig defines the configuration for uploading a file
 type DriveUploadConfig struct {
 	FileName    string `json:"file_name"`
-	Content     string `json:"content"`          // Base64 encoded content
-	MimeType    string `json:"mime_type"`        // e.g., "text/plain"
+	Content     string `json:"content"`             // Base64 encoded content
+	MimeType    string `json:"mime_type"`           // e.g., "text/plain"
 	ParentID    string `json:"parent_id,omitempty"` // Folder ID
 	Description string `json:"description,omitempty"`
 }
@@ -255,19 +256,19 @@ type DriveListAction struct {
 
 // DriveListConfig defines the configuration for listing files
 type DriveListConfig struct {
-	Query      string `json:"query,omitempty"`       // e.g., "name contains 'report'"
-	PageSize   int64  `json:"page_size,omitempty"`   // Default 100
-	OrderBy    string `json:"order_by,omitempty"`    // e.g., "createdTime desc"
-	FolderID   string `json:"folder_id,omitempty"`   // List files in specific folder
+	Query    string `json:"query,omitempty"`     // e.g., "name contains 'report'"
+	PageSize int64  `json:"page_size,omitempty"` // Default 100
+	OrderBy  string `json:"order_by,omitempty"`  // e.g., "createdTime desc"
+	FolderID string `json:"folder_id,omitempty"` // List files in specific folder
 }
 
 // DriveFileInfo represents file metadata
 type DriveFileInfo struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	MimeType    string `json:"mime_type"`
-	WebViewLink string `json:"web_view_link"`
-	CreatedTime string `json:"created_time"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	MimeType     string `json:"mime_type"`
+	WebViewLink  string `json:"web_view_link"`
+	CreatedTime  string `json:"created_time"`
 	ModifiedTime string `json:"modified_time"`
 }
 

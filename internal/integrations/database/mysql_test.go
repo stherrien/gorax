@@ -30,7 +30,7 @@ func TestMySQLQueryAction_Execute(t *testing.T) {
 		{
 			name: "successful query execution",
 			config: QueryConfig{
-				Query: "SELECT id, name, email FROM users WHERE active = ?",
+				Query:      "SELECT id, name, email FROM users WHERE active = ?",
 				Parameters: []interface{}{true},
 			},
 			context: map[string]interface{}{
@@ -65,7 +65,7 @@ func TestMySQLQueryAction_Execute(t *testing.T) {
 		{
 			name: "query with LIMIT",
 			config: QueryConfig{
-				Query: "SELECT * FROM users LIMIT ?",
+				Query:      "SELECT * FROM users LIMIT ?",
 				Parameters: []interface{}{10},
 			},
 			context: map[string]interface{}{
@@ -90,7 +90,7 @@ func TestMySQLQueryAction_Execute(t *testing.T) {
 		{
 			name: "query with datetime columns",
 			config: QueryConfig{
-				Query: "SELECT id, created_at, updated_at FROM users WHERE id = ?",
+				Query:      "SELECT id, created_at, updated_at FROM users WHERE id = ?",
 				Parameters: []interface{}{1},
 			},
 			context: map[string]interface{}{
@@ -207,7 +207,7 @@ func TestMySQLStatementAction_Execute(t *testing.T) {
 		{
 			name: "successful INSERT with AUTO_INCREMENT",
 			config: StatementConfig{
-				Statement: "INSERT INTO users (name, email) VALUES (?, ?)",
+				Statement:  "INSERT INTO users (name, email) VALUES (?, ?)",
 				Parameters: []interface{}{"John Doe", "john@example.com"},
 			},
 			context: map[string]interface{}{
@@ -237,7 +237,7 @@ func TestMySQLStatementAction_Execute(t *testing.T) {
 		{
 			name: "successful UPDATE with multiple rows",
 			config: StatementConfig{
-				Statement: "UPDATE users SET active = ? WHERE created_at < ?",
+				Statement:  "UPDATE users SET active = ? WHERE created_at < ?",
 				Parameters: []interface{}{false, "2020-01-01"},
 			},
 			context: map[string]interface{}{
@@ -266,7 +266,7 @@ func TestMySQLStatementAction_Execute(t *testing.T) {
 		{
 			name: "INSERT with ON DUPLICATE KEY UPDATE",
 			config: StatementConfig{
-				Statement: "INSERT INTO users (id, name, email) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), email = VALUES(email)",
+				Statement:  "INSERT INTO users (id, name, email) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), email = VALUES(email)",
 				Parameters: []interface{}{1, "Updated Name", "updated@example.com"},
 			},
 			context: map[string]interface{}{
@@ -364,11 +364,11 @@ func TestMySQLTransactionAction_Execute(t *testing.T) {
 			config: TransactionConfig{
 				Statements: []TransactionStatement{
 					{
-						Statement: "INSERT INTO orders (user_id, total) VALUES (?, ?)",
+						Statement:  "INSERT INTO orders (user_id, total) VALUES (?, ?)",
 						Parameters: []interface{}{1, 100.50},
 					},
 					{
-						Statement: "UPDATE users SET total_spent = total_spent + ? WHERE id = ?",
+						Statement:  "UPDATE users SET total_spent = total_spent + ? WHERE id = ?",
 						Parameters: []interface{}{100.50, 1},
 					},
 				},
@@ -408,7 +408,7 @@ func TestMySQLTransactionAction_Execute(t *testing.T) {
 			config: TransactionConfig{
 				Statements: []TransactionStatement{
 					{
-						Statement: "INSERT INTO orders (user_id, total) VALUES (?, ?)",
+						Statement:  "INSERT INTO orders (user_id, total) VALUES (?, ?)",
 						Parameters: []interface{}{999, 50.0}, // Non-existent user
 					},
 				},
@@ -439,7 +439,7 @@ func TestMySQLTransactionAction_Execute(t *testing.T) {
 			config: TransactionConfig{
 				Statements: []TransactionStatement{
 					{
-						Statement: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+						Statement:  "UPDATE accounts SET balance = balance - ? WHERE id = ?",
 						Parameters: []interface{}{100.0, 1},
 					},
 				},

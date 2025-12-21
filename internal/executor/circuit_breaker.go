@@ -81,9 +81,9 @@ type CircuitBreaker struct {
 	halfOpenReqs  int
 
 	// Sliding window for tracking recent requests
-	window        []bool // true = success, false = failure
-	windowIndex   int
-	windowFilled  bool
+	window       []bool // true = success, false = failure
+	windowIndex  int
+	windowFilled bool
 }
 
 // NewCircuitBreaker creates a new circuit breaker
