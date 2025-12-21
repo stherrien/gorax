@@ -77,9 +77,11 @@ describe('ScheduleTimeline', () => {
   it('should group schedules by hour', () => {
     renderWithRouter(<ScheduleTimeline schedules={mockSchedules} />)
 
-    // Should show hour markers
-    expect(screen.getByText(/14:00/)).toBeInTheDocument()
-    expect(screen.getByText(/16:00/)).toBeInTheDocument()
+    // Should show hour markers (may appear multiple times - in header and schedule item)
+    const time14Elements = screen.getAllByText(/14:00/)
+    expect(time14Elements.length).toBeGreaterThanOrEqual(1)
+    const time16Elements = screen.getAllByText(/16:00/)
+    expect(time16Elements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('should handle empty schedules', () => {
