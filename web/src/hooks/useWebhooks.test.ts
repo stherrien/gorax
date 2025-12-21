@@ -54,7 +54,7 @@ describe('useWebhooks', () => {
 
   describe('useWebhooks - list hook', () => {
     it('should load webhooks on mount', async () => {
-      ;(webhookAPI.list as any).mockResolvedValueOnce({
+      (webhookAPI.list as any).mockResolvedValueOnce({
         webhooks: [mockWebhook],
         total: 1,
       })
@@ -74,7 +74,7 @@ describe('useWebhooks', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(webhookAPI.list as any).mockResolvedValueOnce({
+      (webhookAPI.list as any).mockResolvedValueOnce({
         webhooks: [],
         total: 0,
       })
@@ -131,7 +131,7 @@ describe('useWebhooks', () => {
     })
 
     it('should support refetch', async () => {
-      ;(webhookAPI.list as any).mockResolvedValue({
+      (webhookAPI.list as any).mockResolvedValue({
         webhooks: [mockWebhook],
         total: 1,
       })
@@ -153,7 +153,7 @@ describe('useWebhooks', () => {
     })
 
     it('should show loading state during refetch', async () => {
-      ;(webhookAPI.list as any).mockResolvedValue({
+      (webhookAPI.list as any).mockResolvedValue({
         webhooks: [mockWebhook],
         total: 1,
       })
@@ -174,7 +174,7 @@ describe('useWebhooks', () => {
     })
 
     it('should pass filter params to API', async () => {
-      ;(webhookAPI.list as any).mockResolvedValueOnce({
+      (webhookAPI.list as any).mockResolvedValueOnce({
         webhooks: [],
         total: 0,
       })
@@ -187,7 +187,7 @@ describe('useWebhooks', () => {
     })
 
     it('should filter by enabled status', async () => {
-      ;(webhookAPI.list as any).mockResolvedValueOnce({
+      (webhookAPI.list as any).mockResolvedValueOnce({
         webhooks: [],
         total: 0,
       })
@@ -224,7 +224,7 @@ describe('useWebhooks', () => {
     })
 
     it('should pass pagination params', async () => {
-      ;(webhookAPI.list as any).mockResolvedValueOnce({
+      (webhookAPI.list as any).mockResolvedValueOnce({
         webhooks: [],
         total: 0,
       })
@@ -239,7 +239,7 @@ describe('useWebhooks', () => {
 
   describe('useWebhook - single webhook hook', () => {
     it('should load webhook by ID on mount', async () => {
-      ;(webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
+      (webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
 
       const { result } = renderHook(() => useWebhook('wh-123'))
 
@@ -314,7 +314,7 @@ describe('useWebhooks', () => {
     })
 
     it('should refetch webhook', async () => {
-      ;(webhookAPI.get as any).mockResolvedValue(mockWebhook)
+      (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
       const { result } = renderHook(() => useWebhook('wh-123'))
 
@@ -330,7 +330,7 @@ describe('useWebhooks', () => {
     })
 
     it('should show loading state during refetch', async () => {
-      ;(webhookAPI.get as any).mockResolvedValue(mockWebhook)
+      (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
       const { result } = renderHook(() => useWebhook('wh-123'))
 
@@ -380,7 +380,7 @@ describe('useWebhooks', () => {
     })
 
     it('should handle transition from null to valid ID', async () => {
-      ;(webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
+      (webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
 
       const { result, rerender } = renderHook(
         ({ id }) => useWebhook(id),
@@ -403,7 +403,7 @@ describe('useWebhooks', () => {
 
   describe('useWebhookEvents - webhook event history', () => {
     it('should load webhook events on mount', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [mockWebhookEvent],
         total: 1,
       })
@@ -433,7 +433,7 @@ describe('useWebhooks', () => {
     })
 
     it('should handle empty events list', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [],
         total: 0,
       })
@@ -449,7 +449,7 @@ describe('useWebhooks', () => {
     })
 
     it('should handle pagination params', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [],
         total: 0,
       })
@@ -502,7 +502,7 @@ describe('useWebhooks', () => {
     })
 
     it('should support refetch', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValue({
+      (webhookAPI.getEvents as any).mockResolvedValue({
         events: [mockWebhookEvent],
         total: 1,
       })
@@ -523,7 +523,7 @@ describe('useWebhooks', () => {
     })
 
     it('should show loading state during refetch', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValue({
+      (webhookAPI.getEvents as any).mockResolvedValue({
         events: [mockWebhookEvent],
         total: 1,
       })
@@ -606,7 +606,7 @@ describe('useWebhooks', () => {
     })
 
     it('should handle transition from null to valid webhook ID', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [mockWebhookEvent],
         total: 1,
       })
@@ -731,7 +731,7 @@ describe('useWebhooks', () => {
     })
 
     it('should delete webhook', async () => {
-      ;(webhookAPI.delete as any).mockResolvedValueOnce(undefined)
+      (webhookAPI.delete as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useWebhookMutations())
 
@@ -879,7 +879,7 @@ describe('useWebhooks', () => {
     })
 
     it('should maintain independent loading states for all mutations', async () => {
-      ;(webhookAPI.create as any).mockImplementation(
+      (webhookAPI.create as any).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(mockWebhook), 50))
       )
       ;(webhookAPI.update as any).mockImplementation(

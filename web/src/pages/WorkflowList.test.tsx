@@ -57,7 +57,7 @@ describe('WorkflowList Integration', () => {
 
   describe('Load workflows', () => {
     it('should display list of workflows from API', async () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: mockWorkflows,
         total: 2,
         loading: false,
@@ -78,7 +78,7 @@ describe('WorkflowList Integration', () => {
     })
 
     it('should show loading state while fetching', () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: [],
         total: 0,
         loading: true,
@@ -116,7 +116,7 @@ describe('WorkflowList Integration', () => {
     })
 
     it('should show empty state when no workflows exist', () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: [],
         total: 0,
         loading: false,
@@ -136,7 +136,7 @@ describe('WorkflowList Integration', () => {
 
   describe('Workflow status badges', () => {
     it('should display correct status badge for active workflow', async () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: [mockWorkflows[0]], // active workflow
         total: 1,
         loading: false,
@@ -156,7 +156,7 @@ describe('WorkflowList Integration', () => {
     })
 
     it('should display correct status badge for draft workflow', async () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: [mockWorkflows[1]], // draft workflow
         total: 1,
         loading: false,
@@ -253,7 +253,7 @@ describe('WorkflowList Integration', () => {
 
   describe('Navigation', () => {
     it('should have link to create new workflow', () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: mockWorkflows,
         total: 2,
         loading: false,
@@ -272,7 +272,7 @@ describe('WorkflowList Integration', () => {
     })
 
     it('should have links to edit each workflow', async () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: mockWorkflows,
         total: 2,
         loading: false,
@@ -333,7 +333,7 @@ describe('WorkflowList Integration', () => {
     })
 
     it('should only show run button for active workflows', async () => {
-      ;(useWorkflows as any).mockReturnValue({
+      (useWorkflows as any).mockReturnValue({
         workflows: mockWorkflows, // one active, one draft
         total: 2,
         loading: false,

@@ -273,7 +273,7 @@ describe('CredentialManager', () => {
   })
 
   it('displays loading state', () => {
-    ;(useCredentialStore as any).mockReturnValue({
+    (useCredentialStore as any).mockReturnValue({
       ...mockStore,
       loading: true,
       credentials: [],
@@ -285,7 +285,7 @@ describe('CredentialManager', () => {
   })
 
   it('displays error state', () => {
-    ;(useCredentialStore as any).mockReturnValue({
+    (useCredentialStore as any).mockReturnValue({
       ...mockStore,
       error: 'Failed to fetch credentials',
     })
@@ -296,7 +296,7 @@ describe('CredentialManager', () => {
   })
 
   it('clears error when dismissed', () => {
-    ;(useCredentialStore as any).mockReturnValue({
+    (useCredentialStore as any).mockReturnValue({
       ...mockStore,
       error: 'Failed to fetch credentials',
     })
@@ -310,7 +310,7 @@ describe('CredentialManager', () => {
   })
 
   it('displays empty state when no credentials', () => {
-    ;(useCredentialStore as any).mockReturnValue({
+    (useCredentialStore as any).mockReturnValue({
       ...mockStore,
       credentials: [],
     })

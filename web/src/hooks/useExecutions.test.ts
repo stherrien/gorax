@@ -44,7 +44,7 @@ describe('useExecutions', () => {
 
   describe('useExecutions - list hook', () => {
     it('should load executions on mount', async () => {
-      ;(executionAPI.list as any).mockResolvedValueOnce({
+      (executionAPI.list as any).mockResolvedValueOnce({
         executions: [mockExecution],
         total: 1,
       })
@@ -64,7 +64,7 @@ describe('useExecutions', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(executionAPI.list as any).mockResolvedValueOnce({
+      (executionAPI.list as any).mockResolvedValueOnce({
         executions: [],
         total: 0,
       })
@@ -94,7 +94,7 @@ describe('useExecutions', () => {
     })
 
     it('should support refetch', async () => {
-      ;(executionAPI.list as any).mockResolvedValue({
+      (executionAPI.list as any).mockResolvedValue({
         executions: [mockExecution],
         total: 1,
       })
@@ -116,7 +116,7 @@ describe('useExecutions', () => {
     })
 
     it('should pass filter params to API', async () => {
-      ;(executionAPI.list as any).mockResolvedValueOnce({
+      (executionAPI.list as any).mockResolvedValueOnce({
         executions: [],
         total: 0,
       })
@@ -134,7 +134,7 @@ describe('useExecutions', () => {
 
   describe('useExecution - single execution hook', () => {
     it('should load execution by ID on mount', async () => {
-      ;(executionAPI.get as any).mockResolvedValueOnce(mockExecution)
+      (executionAPI.get as any).mockResolvedValueOnce(mockExecution)
 
       const { result } = renderHook(() => useExecution('exec-123'))
 
@@ -171,7 +171,7 @@ describe('useExecutions', () => {
     })
 
     it('should refetch execution', async () => {
-      ;(executionAPI.get as any).mockResolvedValue(mockExecution)
+      (executionAPI.get as any).mockResolvedValue(mockExecution)
 
       const { result } = renderHook(() => useExecution('exec-123'))
 
@@ -198,7 +198,7 @@ describe('useExecutions', () => {
     }
 
     it('should load dashboard stats on mount', async () => {
-      ;(executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
+      (executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
 
       const { result } = renderHook(() => useDashboardStats())
 
@@ -227,7 +227,7 @@ describe('useExecutions', () => {
     })
 
     it('should support refetch', async () => {
-      ;(executionAPI.getDashboardStats as any).mockResolvedValue(mockStats)
+      (executionAPI.getDashboardStats as any).mockResolvedValue(mockStats)
 
       const { result } = renderHook(() => useDashboardStats())
 
@@ -243,7 +243,7 @@ describe('useExecutions', () => {
     })
 
     it('should pass date range params to API', async () => {
-      ;(executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
+      (executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
 
       renderHook(() =>
         useDashboardStats({ startDate: '2025-01-01', endDate: '2025-01-31' })
@@ -260,7 +260,7 @@ describe('useExecutions', () => {
 
   describe('useRecentExecutions', () => {
     it('should load recent executions on mount', async () => {
-      ;(executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
+      (executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
         executions: [mockExecution],
       })
 
@@ -277,7 +277,7 @@ describe('useExecutions', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
+      (executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
         executions: [],
       })
 
@@ -305,7 +305,7 @@ describe('useExecutions', () => {
     })
 
     it('should support custom limit', async () => {
-      ;(executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
+      (executionAPI.getRecentExecutions as any).mockResolvedValueOnce({
         executions: [mockExecution],
       })
 
@@ -317,7 +317,7 @@ describe('useExecutions', () => {
     })
 
     it('should support refetch', async () => {
-      ;(executionAPI.getRecentExecutions as any).mockResolvedValue({
+      (executionAPI.getRecentExecutions as any).mockResolvedValue({
         executions: [mockExecution],
       })
 

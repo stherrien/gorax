@@ -68,7 +68,7 @@ describe('Executions List Integration', () => {
 
   describe('Load executions list', () => {
     it('should display list of executions from API', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -90,7 +90,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should show loading state while fetching', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: [],
         total: 0,
         loading: true,
@@ -128,7 +128,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should show empty state when no executions', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: [],
         total: 0,
         loading: false,
@@ -148,7 +148,7 @@ describe('Executions List Integration', () => {
 
   describe('Display execution information', () => {
     it('should display workflow names', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -170,7 +170,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should display status badges', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -195,7 +195,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should display trigger types', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -217,7 +217,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should display execution times', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -239,7 +239,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should display step progress', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -263,7 +263,7 @@ describe('Executions List Integration', () => {
 
   describe('Filtering', () => {
     it('should have status filter dropdown', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -312,7 +312,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should have workflow filter dropdown', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -330,7 +330,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should have search input for workflow name', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -350,7 +350,7 @@ describe('Executions List Integration', () => {
 
   describe('Advanced Filters Integration', () => {
     it('should display advanced filters component', () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -657,7 +657,7 @@ describe('Executions List Integration', () => {
 
   describe('Navigation', () => {
     it('should have links to execution detail pages', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 3,
         loading: false,
@@ -708,7 +708,7 @@ describe('Executions List Integration', () => {
 
   describe('Pagination', () => {
     it('should display total count', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 100,
         loading: false,
@@ -728,7 +728,7 @@ describe('Executions List Integration', () => {
     })
 
     it('should have pagination controls when total > page size', async () => {
-      ;(useExecutions as any).mockReturnValue({
+      (useExecutions as any).mockReturnValue({
         executions: mockExecutions,
         total: 100,
         loading: false,

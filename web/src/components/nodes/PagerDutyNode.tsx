@@ -35,11 +35,12 @@ const PagerDutyNode = ({ data, selected }: PagerDutyNodeProps) => {
 
   const getConfigSummary = () => {
     switch (data.action) {
-      case 'create_incident':
+      case 'create_incident': {
         const urgency = data.config.urgency ? ` (${data.config.urgency})` : '';
         return data.config.service
           ? `Service: ${data.config.service}${urgency}`
           : 'No service set';
+      }
       case 'acknowledge_incident':
       case 'resolve_incident':
       case 'add_note':
