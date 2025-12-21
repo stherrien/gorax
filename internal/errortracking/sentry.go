@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+
 	"github.com/gorax/gorax/internal/config"
 )
 

@@ -33,11 +33,11 @@ func TestNewTracker(t *testing.T) {
 
 func TestTracker_IncrementWorkflowExecutions(t *testing.T) {
 	tests := []struct {
-		name      string
-		tenantID  string
-		period    Period
-		wantErr   bool
-		errType   error
+		name     string
+		tenantID string
+		period   Period
+		wantErr  bool
+		errType  error
 	}{
 		{
 			name:     "increment daily executions",
@@ -171,7 +171,7 @@ func TestTracker_GetUsageByDateRange(t *testing.T) {
 	dates := []time.Time{
 		now.AddDate(0, 0, -2), // 2 days ago
 		now.AddDate(0, 0, -1), // yesterday
-		now,                    // today
+		now,                   // today
 	}
 
 	// Manually set counters for different dates

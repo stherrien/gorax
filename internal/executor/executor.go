@@ -92,11 +92,11 @@ type ExecutionContext struct {
 	TriggerType       string
 	TriggerData       map[string]interface{}
 	StepOutputs       map[string]interface{}
-	CredentialValues  []string   // Decrypted credential values for masking
-	UserID            string     // User who triggered the execution
-	Depth             int        // Execution depth for sub-workflow tracking
-	WorkflowChain     []string   // Chain of workflow IDs to detect circular dependencies
-	ParentExecutionID string     // Parent execution ID for sub-workflows
+	CredentialValues  []string // Decrypted credential values for masking
+	UserID            string   // User who triggered the execution
+	Depth             int      // Execution depth for sub-workflow tracking
+	WorkflowChain     []string // Chain of workflow IDs to detect circular dependencies
+	ParentExecutionID string   // Parent execution ID for sub-workflows
 }
 
 // GetUserID returns the user ID from the execution context

@@ -119,13 +119,13 @@ func (c *BuildConstraints) IsTypeAllowed(nodeType string) bool {
 
 // BuildResult contains the result of a workflow generation request
 type BuildResult struct {
-	ConversationID string             `json:"conversation_id"`
-	Workflow       *GeneratedWorkflow `json:"workflow,omitempty"`
-	Explanation    string             `json:"explanation"`
-	Warnings       []string           `json:"warnings,omitempty"`
-	Suggestions    []string           `json:"suggestions,omitempty"`
-	PromptTokens   int                `json:"prompt_tokens,omitempty"`
-	CompletionTokens int              `json:"completion_tokens,omitempty"`
+	ConversationID   string             `json:"conversation_id"`
+	Workflow         *GeneratedWorkflow `json:"workflow,omitempty"`
+	Explanation      string             `json:"explanation"`
+	Warnings         []string           `json:"warnings,omitempty"`
+	Suggestions      []string           `json:"suggestions,omitempty"`
+	PromptTokens     int                `json:"prompt_tokens,omitempty"`
+	CompletionTokens int                `json:"completion_tokens,omitempty"`
 }
 
 // HasWarnings returns true if there are any warnings
@@ -264,14 +264,14 @@ func (e *GeneratedEdge) Validate() error {
 
 // Conversation represents a multi-turn conversation for workflow building
 type Conversation struct {
-	ID              string                 `json:"id" db:"id"`
-	TenantID        string                 `json:"tenant_id" db:"tenant_id"`
-	UserID          string                 `json:"user_id" db:"user_id"`
-	Status          ConversationStatus     `json:"status" db:"status"`
-	CurrentWorkflow *GeneratedWorkflow     `json:"current_workflow,omitempty" db:"-"`
-	Messages        []ConversationMessage  `json:"messages" db:"-"`
-	CreatedAt       time.Time              `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time              `json:"updated_at" db:"updated_at"`
+	ID              string                `json:"id" db:"id"`
+	TenantID        string                `json:"tenant_id" db:"tenant_id"`
+	UserID          string                `json:"user_id" db:"user_id"`
+	Status          ConversationStatus    `json:"status" db:"status"`
+	CurrentWorkflow *GeneratedWorkflow    `json:"current_workflow,omitempty" db:"-"`
+	Messages        []ConversationMessage `json:"messages" db:"-"`
+	CreatedAt       time.Time             `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time             `json:"updated_at" db:"updated_at"`
 }
 
 // NewConversation creates a new conversation

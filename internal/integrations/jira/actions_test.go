@@ -16,8 +16,8 @@ func TestCreateIssueAction_Execute(t *testing.T) {
 		if r.URL.Path == "/rest/api/3/issue" {
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"id":  "10001",
-				"key": "TEST-1",
+				"id":   "10001",
+				"key":  "TEST-1",
 				"self": "https://example.atlassian.net/rest/api/3/issue/10001",
 			})
 			return

@@ -13,14 +13,14 @@ import (
 type ErrorCategory string
 
 const (
-	ErrorCategoryNetwork  ErrorCategory = "network"
-	ErrorCategoryAuth     ErrorCategory = "auth"
-	ErrorCategoryData     ErrorCategory = "data"
+	ErrorCategoryNetwork   ErrorCategory = "network"
+	ErrorCategoryAuth      ErrorCategory = "auth"
+	ErrorCategoryData      ErrorCategory = "data"
 	ErrorCategoryRateLimit ErrorCategory = "rate_limit"
-	ErrorCategoryTimeout  ErrorCategory = "timeout"
-	ErrorCategoryConfig   ErrorCategory = "config"
-	ErrorCategoryExternal ErrorCategory = "external_service"
-	ErrorCategoryUnknown  ErrorCategory = "unknown"
+	ErrorCategoryTimeout   ErrorCategory = "timeout"
+	ErrorCategoryConfig    ErrorCategory = "config"
+	ErrorCategoryExternal  ErrorCategory = "external_service"
+	ErrorCategoryUnknown   ErrorCategory = "unknown"
 )
 
 // SuggestionType indicates the type of fix suggested

@@ -67,7 +67,7 @@ func TestBuildRequest_Validate(t *testing.T) {
 			request: BuildRequest{
 				Description: "Send email when webhook triggers",
 				Context: &BuildContext{
-					AvailableCredentials: []string{"slack", "email"},
+					AvailableCredentials:  []string{"slack", "email"},
 					AvailableIntegrations: []string{"slack", "email"},
 				},
 			},

@@ -52,7 +52,7 @@ func TestClient_Authenticate(t *testing.T) {
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"accountId": "123456",
+			"accountId":    "123456",
 			"emailAddress": "user@example.com",
 		})
 	}))
@@ -96,8 +96,8 @@ func TestClient_CreateIssue(t *testing.T) {
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id":  "10001",
-			"key": "TEST-1",
+			"id":   "10001",
+			"key":  "TEST-1",
 			"self": "https://example.atlassian.net/rest/api/3/issue/10001",
 		})
 	}))

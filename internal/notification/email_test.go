@@ -384,7 +384,7 @@ func TestTemplateRendering(t *testing.T) {
 func TestTemplateRenderingError(t *testing.T) {
 	// Use invalid template syntax to trigger a parse error
 	template := EmailTemplate{
-		Subject:  "Welcome {{.Name}",  // Missing closing braces
+		Subject:  "Welcome {{.Name}", // Missing closing braces
 		HTMLBody: "<h1>Hello</h1>",
 		TextBody: "Hello",
 	}

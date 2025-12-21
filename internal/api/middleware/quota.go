@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/gorax/gorax/internal/tenant"
 )
 
@@ -215,8 +216,8 @@ func (qc *QuotaChecker) handleQuotaExceeded(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusTooManyRequests)
 
 	response := map[string]interface{}{
-		"error":   "quota_exceeded",
-		"message": err.Error(),
+		"error":       "quota_exceeded",
+		"message":     err.Error(),
 		"retry_after": 3600,
 	}
 	json.NewEncoder(w).Encode(response)

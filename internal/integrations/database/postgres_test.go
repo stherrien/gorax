@@ -76,7 +76,7 @@ func TestPostgresQueryAction_Execute(t *testing.T) {
 		{
 			name: "successful query execution",
 			config: QueryConfig{
-				Query: "SELECT id, name, email FROM users WHERE active = $1",
+				Query:      "SELECT id, name, email FROM users WHERE active = $1",
 				Parameters: []interface{}{true},
 			},
 			context: map[string]interface{}{
@@ -112,7 +112,7 @@ func TestPostgresQueryAction_Execute(t *testing.T) {
 		{
 			name: "query with no results",
 			config: QueryConfig{
-				Query: "SELECT * FROM users WHERE id = $1",
+				Query:      "SELECT * FROM users WHERE id = $1",
 				Parameters: []interface{}{999},
 			},
 			context: map[string]interface{}{
@@ -197,7 +197,7 @@ func TestPostgresQueryAction_Execute(t *testing.T) {
 		{
 			name: "parameterized query prevents SQL injection",
 			config: QueryConfig{
-				Query: "SELECT * FROM users WHERE email = $1",
+				Query:      "SELECT * FROM users WHERE email = $1",
 				Parameters: []interface{}{"user@example.com' OR '1'='1"},
 			},
 			context: map[string]interface{}{
@@ -297,7 +297,7 @@ func TestPostgresStatementAction_Execute(t *testing.T) {
 		{
 			name: "successful INSERT statement",
 			config: StatementConfig{
-				Statement: "INSERT INTO users (name, email) VALUES ($1, $2)",
+				Statement:  "INSERT INTO users (name, email) VALUES ($1, $2)",
 				Parameters: []interface{}{"John Doe", "john@example.com"},
 			},
 			context: map[string]interface{}{
@@ -327,7 +327,7 @@ func TestPostgresStatementAction_Execute(t *testing.T) {
 		{
 			name: "successful UPDATE statement",
 			config: StatementConfig{
-				Statement: "UPDATE users SET active = $1 WHERE id = $2",
+				Statement:  "UPDATE users SET active = $1 WHERE id = $2",
 				Parameters: []interface{}{false, 5},
 			},
 			context: map[string]interface{}{
@@ -356,7 +356,7 @@ func TestPostgresStatementAction_Execute(t *testing.T) {
 		{
 			name: "successful DELETE statement",
 			config: StatementConfig{
-				Statement: "DELETE FROM users WHERE email = $1",
+				Statement:  "DELETE FROM users WHERE email = $1",
 				Parameters: []interface{}{"delete@example.com"},
 			},
 			context: map[string]interface{}{
@@ -468,11 +468,11 @@ func TestPostgresTransactionAction_Execute(t *testing.T) {
 			config: TransactionConfig{
 				Statements: []TransactionStatement{
 					{
-						Statement: "INSERT INTO users (name, email) VALUES ($1, $2)",
+						Statement:  "INSERT INTO users (name, email) VALUES ($1, $2)",
 						Parameters: []interface{}{"John Doe", "john@example.com"},
 					},
 					{
-						Statement: "UPDATE accounts SET balance = balance + $1 WHERE user_email = $2",
+						Statement:  "UPDATE accounts SET balance = balance + $1 WHERE user_email = $2",
 						Parameters: []interface{}{100.0, "john@example.com"},
 					},
 				},
@@ -512,11 +512,11 @@ func TestPostgresTransactionAction_Execute(t *testing.T) {
 			config: TransactionConfig{
 				Statements: []TransactionStatement{
 					{
-						Statement: "INSERT INTO users (name) VALUES ($1)",
+						Statement:  "INSERT INTO users (name) VALUES ($1)",
 						Parameters: []interface{}{"John"},
 					},
 					{
-						Statement: "INSERT INTO invalid_table (name) VALUES ($1)",
+						Statement:  "INSERT INTO invalid_table (name) VALUES ($1)",
 						Parameters: []interface{}{"Jane"},
 					},
 				},

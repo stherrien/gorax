@@ -20,16 +20,16 @@ import (
 
 	"github.com/gorax/gorax/internal/aibuilder"
 	"github.com/gorax/gorax/internal/api/handlers"
-	"github.com/gorax/gorax/internal/llm"
-	"github.com/gorax/gorax/internal/llm/providers/anthropic"
-	"github.com/gorax/gorax/internal/llm/providers/bedrock"
-	"github.com/gorax/gorax/internal/llm/providers/openai"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
 	"github.com/gorax/gorax/internal/errortracking"
 	"github.com/gorax/gorax/internal/eventtypes"
 	"github.com/gorax/gorax/internal/executor"
+	"github.com/gorax/gorax/internal/llm"
+	"github.com/gorax/gorax/internal/llm/providers/anthropic"
+	"github.com/gorax/gorax/internal/llm/providers/bedrock"
+	"github.com/gorax/gorax/internal/llm/providers/openai"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/suggestions"
@@ -65,11 +65,11 @@ func registerLLMProviders() {
 
 // App holds application dependencies
 type App struct {
-	config   *config.Config
-	logger   *slog.Logger
-	db       *sqlx.DB
-	redis    *redis.Client
-	router   *chi.Mux
+	config *config.Config
+	logger *slog.Logger
+	db     *sqlx.DB
+	redis  *redis.Client
+	router *chi.Mux
 
 	// Error tracking
 	errorTracker *errortracking.Tracker

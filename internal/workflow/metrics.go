@@ -27,11 +27,11 @@ type DurationStats struct {
 
 // TopFailure represents a workflow with high failure count
 type TopFailure struct {
-	WorkflowID    string     `json:"workflowId" db:"workflow_id"`
-	WorkflowName  string     `json:"workflowName" db:"workflow_name"`
-	FailureCount  int        `json:"failureCount" db:"failure_count"`
-	LastFailedAt  *time.Time `json:"lastFailedAt" db:"last_failed_at"`
-	ErrorPreview  *string    `json:"errorPreview,omitempty" db:"error_preview"`
+	WorkflowID   string     `json:"workflowId" db:"workflow_id"`
+	WorkflowName string     `json:"workflowName" db:"workflow_name"`
+	FailureCount int        `json:"failureCount" db:"failure_count"`
+	LastFailedAt *time.Time `json:"lastFailedAt" db:"last_failed_at"`
+	ErrorPreview *string    `json:"errorPreview,omitempty" db:"error_preview"`
 }
 
 // TriggerTypeBreakdown represents execution count by trigger type

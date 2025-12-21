@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorax/gorax/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/gorax/gorax/internal/config"
 )
 
 func TestHTTPMiddleware_Disabled(t *testing.T) {

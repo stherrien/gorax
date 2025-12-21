@@ -412,12 +412,12 @@ func TestPatternMatch_FixTemplates(t *testing.T) {
 	matcher := NewPatternMatcher(DefaultPatterns())
 
 	tests := []struct {
-		name           string
-		errMsg         string
-		httpCode       int
-		expectFixType  string
-		expectRetry    bool
-		expectConfig   bool
+		name          string
+		errMsg        string
+		httpCode      int
+		expectFixType string
+		expectRetry   bool
+		expectConfig  bool
 	}{
 		{
 			name:          "connection refused should have retry fix",

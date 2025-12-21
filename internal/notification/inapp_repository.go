@@ -24,18 +24,18 @@ const (
 
 // InAppNotification represents an in-app notification
 type InAppNotification struct {
-	ID       uuid.UUID        `db:"id" json:"id"`
-	TenantID uuid.UUID        `db:"tenant_id" json:"tenant_id"`
-	UserID   string           `db:"user_id" json:"user_id"`
-	Title    string           `db:"title" json:"title"`
-	Message  string           `db:"message" json:"message"`
-	Type     NotificationType `db:"type" json:"type"`
-	Link     string           `db:"link" json:"link,omitempty"`
-	Metadata map[string]interface{} `db:"metadata" json:"metadata,omitempty"`
-	IsRead   bool             `db:"is_read" json:"is_read"`
-	ReadAt   *time.Time       `db:"read_at" json:"read_at,omitempty"`
-	CreatedAt time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time       `db:"updated_at" json:"updated_at"`
+	ID        uuid.UUID              `db:"id" json:"id"`
+	TenantID  uuid.UUID              `db:"tenant_id" json:"tenant_id"`
+	UserID    string                 `db:"user_id" json:"user_id"`
+	Title     string                 `db:"title" json:"title"`
+	Message   string                 `db:"message" json:"message"`
+	Type      NotificationType       `db:"type" json:"type"`
+	Link      string                 `db:"link" json:"link,omitempty"`
+	Metadata  map[string]interface{} `db:"metadata" json:"metadata,omitempty"`
+	IsRead    bool                   `db:"is_read" json:"is_read"`
+	ReadAt    *time.Time             `db:"read_at" json:"read_at,omitempty"`
+	CreatedAt time.Time              `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time              `db:"updated_at" json:"updated_at"`
 }
 
 // InAppRepository handles in-app notification persistence

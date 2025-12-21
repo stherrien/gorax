@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gorax/gorax/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/gorax/gorax/internal/config"
 )
 
 func TestNewTracerProvider_Disabled(t *testing.T) {

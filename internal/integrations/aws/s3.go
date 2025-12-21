@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"github.com/gorax/gorax/internal/integrations"
 )
 
@@ -175,11 +176,11 @@ func (a *GetObjectAction) Execute(ctx context.Context, config map[string]interfa
 	}
 
 	return map[string]interface{}{
-		"body":          string(body),
-		"content_type":  aws.ToString(result.ContentType),
+		"body":           string(body),
+		"content_type":   aws.ToString(result.ContentType),
 		"content_length": result.ContentLength,
-		"last_modified": result.LastModified,
-		"etag":          aws.ToString(result.ETag),
+		"last_modified":  result.LastModified,
+		"etag":           aws.ToString(result.ETag),
 	}, nil
 }
 

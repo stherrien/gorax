@@ -68,9 +68,9 @@ func NewPostgresQueryActionWrapper(credService credential.Service) integrations.
 func (w *postgresQueryActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	// Convert config to QueryConfig
 	queryConfig := QueryConfig{
-		Query: getStringFromMap(config, "query"),
+		Query:      getStringFromMap(config, "query"),
 		Parameters: getInterfaceSliceFromMap(config, "parameters"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(queryConfig, input)
@@ -80,7 +80,7 @@ func (w *postgresQueryActionWrapper) Execute(ctx context.Context, config map[str
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -112,9 +112,9 @@ func NewPostgresStatementActionWrapper(credService credential.Service) integrati
 
 func (w *postgresStatementActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	stmtConfig := StatementConfig{
-		Statement: getStringFromMap(config, "statement"),
+		Statement:  getStringFromMap(config, "statement"),
 		Parameters: getInterfaceSliceFromMap(config, "parameters"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(stmtConfig, input)
@@ -124,7 +124,7 @@ func (w *postgresStatementActionWrapper) Execute(ctx context.Context, config map
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -157,7 +157,7 @@ func NewPostgresTransactionActionWrapper(credService credential.Service) integra
 func (w *postgresTransactionActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	txConfig := TransactionConfig{
 		Statements: parseTransactionStatements(config),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(txConfig, input)
@@ -167,7 +167,7 @@ func (w *postgresTransactionActionWrapper) Execute(ctx context.Context, config m
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -201,9 +201,9 @@ func NewMySQLQueryActionWrapper(credService credential.Service) integrations.Act
 
 func (w *mysqlQueryActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	queryConfig := QueryConfig{
-		Query: getStringFromMap(config, "query"),
+		Query:      getStringFromMap(config, "query"),
 		Parameters: getInterfaceSliceFromMap(config, "parameters"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(queryConfig, input)
@@ -213,7 +213,7 @@ func (w *mysqlQueryActionWrapper) Execute(ctx context.Context, config map[string
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -245,9 +245,9 @@ func NewMySQLStatementActionWrapper(credService credential.Service) integrations
 
 func (w *mysqlStatementActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	stmtConfig := StatementConfig{
-		Statement: getStringFromMap(config, "statement"),
+		Statement:  getStringFromMap(config, "statement"),
 		Parameters: getInterfaceSliceFromMap(config, "parameters"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(stmtConfig, input)
@@ -257,7 +257,7 @@ func (w *mysqlStatementActionWrapper) Execute(ctx context.Context, config map[st
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -290,7 +290,7 @@ func NewMySQLTransactionActionWrapper(credService credential.Service) integratio
 func (w *mysqlTransactionActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	txConfig := TransactionConfig{
 		Statements: parseTransactionStatements(config),
-		Timeout: getIntFromMap(config, "timeout"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(txConfig, input)
@@ -300,7 +300,7 @@ func (w *mysqlTransactionActionWrapper) Execute(ctx context.Context, config map[
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -335,12 +335,12 @@ func NewMongoFindActionWrapper(credService credential.Service) integrations.Acti
 func (w *mongoFindActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	findConfig := MongoFindConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Filter: getMapFromMap(config, "filter"),
+		Filter:     getMapFromMap(config, "filter"),
 		Projection: getMapFromMap(config, "projection"),
-		Sort: getMapFromMap(config, "sort"),
-		Limit: int64(getIntFromMap(config, "limit")),
-		Skip: int64(getIntFromMap(config, "skip")),
-		Timeout: getIntFromMap(config, "timeout"),
+		Sort:       getMapFromMap(config, "sort"),
+		Limit:      int64(getIntFromMap(config, "limit")),
+		Skip:       int64(getIntFromMap(config, "skip")),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(findConfig, input)
@@ -350,7 +350,7 @@ func (w *mongoFindActionWrapper) Execute(ctx context.Context, config map[string]
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -383,8 +383,8 @@ func NewMongoInsertActionWrapper(credService credential.Service) integrations.Ac
 func (w *mongoInsertActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	insertConfig := MongoInsertConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Documents: parseDocuments(config),
-		Timeout: getIntFromMap(config, "timeout"),
+		Documents:  parseDocuments(config),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(insertConfig, input)
@@ -394,7 +394,7 @@ func (w *mongoInsertActionWrapper) Execute(ctx context.Context, config map[strin
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -402,7 +402,7 @@ func (w *mongoInsertActionWrapper) Execute(ctx context.Context, config map[strin
 func (w *mongoInsertActionWrapper) Validate(config map[string]interface{}) error {
 	insertConfig := MongoInsertConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Documents: parseDocuments(config),
+		Documents:  parseDocuments(config),
 	}
 	return insertConfig.Validate()
 }
@@ -428,11 +428,11 @@ func NewMongoUpdateActionWrapper(credService credential.Service) integrations.Ac
 func (w *mongoUpdateActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	updateConfig := MongoUpdateConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Filter: getMapFromMap(config, "filter"),
-		Update: getMapFromMap(config, "update"),
-		Upsert: getBoolFromMap(config, "upsert"),
-		Multi: getBoolFromMap(config, "multi"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Filter:     getMapFromMap(config, "filter"),
+		Update:     getMapFromMap(config, "update"),
+		Upsert:     getBoolFromMap(config, "upsert"),
+		Multi:      getBoolFromMap(config, "multi"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(updateConfig, input)
@@ -442,7 +442,7 @@ func (w *mongoUpdateActionWrapper) Execute(ctx context.Context, config map[strin
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -450,8 +450,8 @@ func (w *mongoUpdateActionWrapper) Execute(ctx context.Context, config map[strin
 func (w *mongoUpdateActionWrapper) Validate(config map[string]interface{}) error {
 	updateConfig := MongoUpdateConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Filter: getMapFromMap(config, "filter"),
-		Update: getMapFromMap(config, "update"),
+		Filter:     getMapFromMap(config, "filter"),
+		Update:     getMapFromMap(config, "update"),
 	}
 	return updateConfig.Validate()
 }
@@ -477,9 +477,9 @@ func NewMongoDeleteActionWrapper(credService credential.Service) integrations.Ac
 func (w *mongoDeleteActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	deleteConfig := MongoDeleteConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Filter: getMapFromMap(config, "filter"),
-		Multi: getBoolFromMap(config, "multi"),
-		Timeout: getIntFromMap(config, "timeout"),
+		Filter:     getMapFromMap(config, "filter"),
+		Multi:      getBoolFromMap(config, "multi"),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(deleteConfig, input)
@@ -489,7 +489,7 @@ func (w *mongoDeleteActionWrapper) Execute(ctx context.Context, config map[strin
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -497,7 +497,7 @@ func (w *mongoDeleteActionWrapper) Execute(ctx context.Context, config map[strin
 func (w *mongoDeleteActionWrapper) Validate(config map[string]interface{}) error {
 	deleteConfig := MongoDeleteConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Filter: getMapFromMap(config, "filter"),
+		Filter:     getMapFromMap(config, "filter"),
 	}
 	return deleteConfig.Validate()
 }
@@ -523,8 +523,8 @@ func NewMongoAggregateActionWrapper(credService credential.Service) integrations
 func (w *mongoAggregateActionWrapper) Execute(ctx context.Context, config map[string]interface{}, input map[string]interface{}) (map[string]interface{}, error) {
 	aggConfig := MongoAggregateConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Pipeline: parsePipeline(config),
-		Timeout: getIntFromMap(config, "timeout"),
+		Pipeline:   parsePipeline(config),
+		Timeout:    getIntFromMap(config, "timeout"),
 	}
 
 	actionInput := actions.NewActionInput(aggConfig, input)
@@ -534,7 +534,7 @@ func (w *mongoAggregateActionWrapper) Execute(ctx context.Context, config map[st
 	}
 
 	return map[string]interface{}{
-		"data": output.Data,
+		"data":     output.Data,
 		"metadata": output.Metadata,
 	}, nil
 }
@@ -542,7 +542,7 @@ func (w *mongoAggregateActionWrapper) Execute(ctx context.Context, config map[st
 func (w *mongoAggregateActionWrapper) Validate(config map[string]interface{}) error {
 	aggConfig := MongoAggregateConfig{
 		Collection: getStringFromMap(config, "collection"),
-		Pipeline: parsePipeline(config),
+		Pipeline:   parsePipeline(config),
 	}
 	return aggConfig.Validate()
 }
@@ -614,7 +614,7 @@ func parseTransactionStatements(config map[string]interface{}) []TransactionStat
 			for _, s := range stmtsSlice {
 				if stmtMap, ok := s.(map[string]interface{}); ok {
 					stmt := TransactionStatement{
-						Statement: getStringFromMap(stmtMap, "statement"),
+						Statement:  getStringFromMap(stmtMap, "statement"),
 						Parameters: getInterfaceSliceFromMap(stmtMap, "parameters"),
 					}
 					statements = append(statements, stmt)

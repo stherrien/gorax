@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	_ "github.com/lib/pq"
 )
 
 // These tests require a test database. They will be skipped if TEST_DATABASE_URL is not set.

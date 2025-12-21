@@ -89,9 +89,9 @@ func TestSendMessageAction_Validate(t *testing.T) {
 		{
 			name: "valid config with delay",
 			config: map[string]interface{}{
-				"queue_url":      "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue",
-				"message_body":   "test message",
-				"delay_seconds":  10,
+				"queue_url":        "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue",
+				"message_body":     "test message",
+				"delay_seconds":    10,
 				"message_group_id": "group1",
 			},
 			wantErr: false,
@@ -163,9 +163,9 @@ func TestReceiveMessageAction_Validate(t *testing.T) {
 		{
 			name: "valid config with max messages",
 			config: map[string]interface{}{
-				"queue_url":           "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue",
-				"max_messages":        5,
-				"wait_time_seconds":   10,
+				"queue_url":          "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue",
+				"max_messages":       5,
+				"wait_time_seconds":  10,
 				"visibility_timeout": 30,
 			},
 			wantErr: false,

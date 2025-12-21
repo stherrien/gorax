@@ -110,7 +110,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	registrationURL := fmt.Sprintf("%s/self-service/registration?flow=%s", h.kratosConfig.PublicURL, flowID)
 
 	payload := map[string]interface{}{
-		"method": "password",
+		"method":   "password",
 		"password": req.Password,
 		"traits": map[string]interface{}{
 			"email":     req.Email,

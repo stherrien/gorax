@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/workflow"
 )
 
 // TestExecuteForkAction tests fork node execution
@@ -210,7 +211,7 @@ func TestExecuteJoinAction_TimeoutContinue(t *testing.T) {
 	// Test join with timeout and continue strategy
 	config := workflow.JoinConfig{
 		JoinStrategy: "wait_all",
-		TimeoutMs:    50, // Very short timeout
+		TimeoutMs:    50,         // Very short timeout
 		OnTimeout:    "continue", // Continue with partial results
 	}
 

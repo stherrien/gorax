@@ -24,11 +24,11 @@ import (
 
 // AppWithAuth holds application dependencies including authentication
 type AppWithAuth struct {
-	config   *config.Config
-	logger   *slog.Logger
-	db       *sqlx.DB
-	redis    *redis.Client
-	router   *chi.Mux
+	config *config.Config
+	logger *slog.Logger
+	db     *sqlx.DB
+	redis  *redis.Client
+	router *chi.Mux
 
 	// Services
 	tenantService   *tenant.Service

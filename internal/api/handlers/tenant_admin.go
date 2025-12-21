@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/gorax/gorax/internal/tenant"
 	"github.com/gorax/gorax/internal/validation"
 )
@@ -244,8 +245,8 @@ func (h *TenantAdminHandler) GetTenantUsage(w http.ResponseWriter, r *http.Reque
 		"usage":     stats,
 		"quotas":    quotas,
 		"utilization": map[string]interface{}{
-			"workflows_percentage":            calculatePercentage(stats.WorkflowCount, quotas.MaxWorkflows),
-			"executions_today_percentage":     calculatePercentage(stats.ExecutionsToday, quotas.MaxExecutionsPerDay),
+			"workflows_percentage":             calculatePercentage(stats.WorkflowCount, quotas.MaxWorkflows),
+			"executions_today_percentage":      calculatePercentage(stats.ExecutionsToday, quotas.MaxExecutionsPerDay),
 			"concurrent_executions_percentage": calculatePercentage(stats.ConcurrentExecutions, quotas.MaxConcurrentExecutions),
 		},
 	}

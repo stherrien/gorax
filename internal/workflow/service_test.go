@@ -439,9 +439,9 @@ func TestGetExecutionStats_Success(t *testing.T) {
 	tenantID := "tenant-123"
 
 	tests := []struct {
-		name         string
-		filter       ExecutionFilter
-		mockCounts   map[string]int
+		name          string
+		filter        ExecutionFilter
+		mockCounts    map[string]int
 		expectedStats ExecutionStats
 	}{
 		{

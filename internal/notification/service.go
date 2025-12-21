@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+
 	"github.com/gorax/gorax/internal/humantask"
 )
 
@@ -34,9 +35,9 @@ func getCompletedByString(task *humantask.HumanTask) string {
 // Config holds notification service configuration
 type Config struct {
 	// Enabled channels
-	EnableEmail  bool
-	EnableSlack  bool
-	EnableInApp  bool
+	EnableEmail bool
+	EnableSlack bool
+	EnableInApp bool
 
 	// Email configuration
 	Email EmailConfig
@@ -50,11 +51,11 @@ type Config struct {
 
 // Service implements notification delivery across multiple channels
 type Service struct {
-	logger       *slog.Logger
-	config       Config
-	emailSender  *EmailSender
+	logger        *slog.Logger
+	config        Config
+	emailSender   *EmailSender
 	slackNotifier *SlackNotifier
-	inAppService *InAppService
+	inAppService  *InAppService
 }
 
 // NewService creates a new notification service

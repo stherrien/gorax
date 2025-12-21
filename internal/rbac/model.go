@@ -55,9 +55,9 @@ const (
 
 // Audit action types
 const (
-	AuditActionRoleCreated      = "role_created"
-	AuditActionRoleUpdated      = "role_updated"
-	AuditActionRoleDeleted      = "role_deleted"
+	AuditActionRoleCreated       = "role_created"
+	AuditActionRoleUpdated       = "role_updated"
+	AuditActionRoleDeleted       = "role_deleted"
 	AuditActionPermissionGranted = "permission_granted"
 	AuditActionPermissionRevoked = "permission_revoked"
 	AuditActionUserRoleAssigned  = "user_role_assigned"

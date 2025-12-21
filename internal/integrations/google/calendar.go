@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
 )
 
 const (
@@ -34,12 +35,12 @@ type CalendarCreateConfig struct {
 
 // CalendarEventResult represents a calendar event
 type CalendarEventResult struct {
-	EventID     string   `json:"event_id"`
-	Summary     string   `json:"summary"`
-	StartTime   string   `json:"start_time"`
-	EndTime     string   `json:"end_time"`
-	HtmlLink    string   `json:"html_link"`
-	Attendees   []string `json:"attendees,omitempty"`
+	EventID   string   `json:"event_id"`
+	Summary   string   `json:"summary"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+	HtmlLink  string   `json:"html_link"`
+	Attendees []string `json:"attendees,omitempty"`
 }
 
 // Validate validates the Calendar create configuration
@@ -168,9 +169,9 @@ type CalendarListAction struct {
 
 // CalendarListConfig defines the configuration for listing events
 type CalendarListConfig struct {
-	CalendarID string `json:"calendar_id"` // Usually "primary"
-	TimeMin    string `json:"time_min,omitempty"` // RFC3339 format
-	TimeMax    string `json:"time_max,omitempty"` // RFC3339 format
+	CalendarID string `json:"calendar_id"`           // Usually "primary"
+	TimeMin    string `json:"time_min,omitempty"`    // RFC3339 format
+	TimeMax    string `json:"time_max,omitempty"`    // RFC3339 format
 	MaxResults int64  `json:"max_results,omitempty"` // Default 10
 }
 

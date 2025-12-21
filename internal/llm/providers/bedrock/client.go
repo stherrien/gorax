@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	providerName          = "bedrock"
-	anthropicVersion      = "bedrock-2023-05-31"
-	defaultMaxTokens      = 4096
+	providerName     = "bedrock"
+	anthropicVersion = "bedrock-2023-05-31"
+	defaultMaxTokens = 4096
 )
 
 // BedrockAPI defines the interface for Bedrock operations (for testing)

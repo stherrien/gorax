@@ -201,10 +201,10 @@ func (c *SQSClient) ReceiveMessages(ctx context.Context, maxMessages int32, wait
 		}
 
 		messages = append(messages, Message{
-			ID:              *msg.MessageId,
-			Body:            *msg.Body,
-			ReceiptHandle:   *msg.ReceiptHandle,
-			Attributes:      attributes,
+			ID:                      *msg.MessageId,
+			Body:                    *msg.Body,
+			ReceiptHandle:           *msg.ReceiptHandle,
+			Attributes:              attributes,
 			ApproximateReceiveCount: getApproximateReceiveCount(msg.Attributes),
 		})
 	}
@@ -359,9 +359,9 @@ type BatchMessage struct {
 
 // QueueAttributes represents queue metrics
 type QueueAttributes struct {
-	ApproximateNumberOfMessages            int
-	ApproximateNumberOfMessagesNotVisible  int
-	ApproximateNumberOfMessagesDelayed     int
+	ApproximateNumberOfMessages           int
+	ApproximateNumberOfMessagesNotVisible int
+	ApproximateNumberOfMessagesDelayed    int
 }
 
 // HealthCheck checks if the SQS queue is accessible and healthy

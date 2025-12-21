@@ -45,22 +45,22 @@ func TestCreate_DuplicateName(t *testing.T) {
 
 	definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 	template1 := &Template{
-		TenantID:    &tenantID,
-		Name:        "Duplicate Name",
-		Category:    "security",
-		Definition:  definition,
-		CreatedBy:   "user-123",
+		TenantID:   &tenantID,
+		Name:       "Duplicate Name",
+		Category:   "security",
+		Definition: definition,
+		CreatedBy:  "user-123",
 	}
 
 	err := repo.Create(ctx, tenantID, template1)
 	require.NoError(t, err)
 
 	template2 := &Template{
-		TenantID:    &tenantID,
-		Name:        "Duplicate Name",
-		Category:    "monitoring",
-		Definition:  definition,
-		CreatedBy:   "user-123",
+		TenantID:   &tenantID,
+		Name:       "Duplicate Name",
+		Category:   "monitoring",
+		Definition: definition,
+		CreatedBy:  "user-123",
 	}
 
 	err = repo.Create(ctx, tenantID, template2)
@@ -76,11 +76,11 @@ func TestGetByID(t *testing.T) {
 
 	definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 	template := &Template{
-		TenantID:    &tenantID,
-		Name:        "Test Template",
-		Category:    "security",
-		Definition:  definition,
-		CreatedBy:   "user-123",
+		TenantID:   &tenantID,
+		Name:       "Test Template",
+		Category:   "security",
+		Definition: definition,
+		CreatedBy:  "user-123",
 	}
 
 	err := repo.Create(ctx, tenantID, template)
@@ -114,20 +114,20 @@ func TestList_NoFilter(t *testing.T) {
 
 	templates := []*Template{
 		{
-			TenantID:    &tenantID,
-			Name:        "Template 1",
-			Category:    "security",
-			Definition:  definition,
-			Tags:        []string{"security", "scan"},
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Template 1",
+			Category:   "security",
+			Definition: definition,
+			Tags:       []string{"security", "scan"},
+			CreatedBy:  "user-123",
 		},
 		{
-			TenantID:    &tenantID,
-			Name:        "Template 2",
-			Category:    "monitoring",
-			Definition:  definition,
-			Tags:        []string{"monitoring", "alert"},
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Template 2",
+			Category:   "monitoring",
+			Definition: definition,
+			Tags:       []string{"monitoring", "alert"},
+			CreatedBy:  "user-123",
 		},
 	}
 
@@ -151,18 +151,18 @@ func TestList_WithCategoryFilter(t *testing.T) {
 
 	templates := []*Template{
 		{
-			TenantID:    &tenantID,
-			Name:        "Security Template",
-			Category:    "security",
-			Definition:  definition,
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Security Template",
+			Category:   "security",
+			Definition: definition,
+			CreatedBy:  "user-123",
 		},
 		{
-			TenantID:    &tenantID,
-			Name:        "Monitoring Template",
-			Category:    "monitoring",
-			Definition:  definition,
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Monitoring Template",
+			Category:   "monitoring",
+			Definition: definition,
+			CreatedBy:  "user-123",
 		},
 	}
 
@@ -188,28 +188,28 @@ func TestList_WithTagsFilter(t *testing.T) {
 
 	templates := []*Template{
 		{
-			TenantID:    &tenantID,
-			Name:        "Template 1",
-			Category:    "security",
-			Definition:  definition,
-			Tags:        []string{"security", "scan"},
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Template 1",
+			Category:   "security",
+			Definition: definition,
+			Tags:       []string{"security", "scan"},
+			CreatedBy:  "user-123",
 		},
 		{
-			TenantID:    &tenantID,
-			Name:        "Template 2",
-			Category:    "security",
-			Definition:  definition,
-			Tags:        []string{"security", "compliance"},
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Template 2",
+			Category:   "security",
+			Definition: definition,
+			Tags:       []string{"security", "compliance"},
+			CreatedBy:  "user-123",
 		},
 		{
-			TenantID:    &tenantID,
-			Name:        "Template 3",
-			Category:    "monitoring",
-			Definition:  definition,
-			Tags:        []string{"monitoring"},
-			CreatedBy:   "user-123",
+			TenantID:   &tenantID,
+			Name:       "Template 3",
+			Category:   "monitoring",
+			Definition: definition,
+			Tags:       []string{"monitoring"},
+			CreatedBy:  "user-123",
 		},
 	}
 
@@ -274,24 +274,24 @@ func TestList_PublicTemplates(t *testing.T) {
 	definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 
 	publicTemplate := &Template{
-		TenantID:    &otherTenantID,
-		Name:        "Public Template",
-		Category:    "integration",
-		Definition:  definition,
-		IsPublic:    true,
-		CreatedBy:   "user-456",
+		TenantID:   &otherTenantID,
+		Name:       "Public Template",
+		Category:   "integration",
+		Definition: definition,
+		IsPublic:   true,
+		CreatedBy:  "user-456",
 	}
 
 	err := repo.Create(ctx, otherTenantID, publicTemplate)
 	require.NoError(t, err)
 
 	privateTemplate := &Template{
-		TenantID:    &tenantID,
-		Name:        "Private Template",
-		Category:    "security",
-		Definition:  definition,
-		IsPublic:    false,
-		CreatedBy:   "user-123",
+		TenantID:   &tenantID,
+		Name:       "Private Template",
+		Category:   "security",
+		Definition: definition,
+		IsPublic:   false,
+		CreatedBy:  "user-123",
 	}
 
 	err = repo.Create(ctx, tenantID, privateTemplate)
@@ -343,11 +343,11 @@ func TestDelete(t *testing.T) {
 
 	definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 	template := &Template{
-		TenantID:    &tenantID,
-		Name:        "To Delete",
-		Category:    "security",
-		Definition:  definition,
-		CreatedBy:   "user-123",
+		TenantID:   &tenantID,
+		Name:       "To Delete",
+		Category:   "security",
+		Definition: definition,
+		CreatedBy:  "user-123",
 	}
 
 	err := repo.Create(ctx, tenantID, template)

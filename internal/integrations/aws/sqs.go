@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+
 	"github.com/gorax/gorax/internal/integrations"
 )
 
@@ -49,12 +50,12 @@ func NewSQSClient(accessKey, secretKey, region string) (*SQSClient, error) {
 
 // SendMessageConfig represents configuration for SendMessage action
 type SendMessageConfig struct {
-	QueueURL         string            `json:"queue_url"`
-	MessageBody      string            `json:"message_body"`
-	DelaySeconds     int32             `json:"delay_seconds,omitempty"`
-	MessageGroupID   string            `json:"message_group_id,omitempty"`
-	DeduplicationID  string            `json:"deduplication_id,omitempty"`
-	Attributes       map[string]string `json:"attributes,omitempty"`
+	QueueURL        string            `json:"queue_url"`
+	MessageBody     string            `json:"message_body"`
+	DelaySeconds    int32             `json:"delay_seconds,omitempty"`
+	MessageGroupID  string            `json:"message_group_id,omitempty"`
+	DeduplicationID string            `json:"deduplication_id,omitempty"`
+	Attributes      map[string]string `json:"attributes,omitempty"`
 }
 
 // Validate validates SendMessageConfig
@@ -225,7 +226,7 @@ func (a *ReceiveMessageAction) Execute(ctx context.Context, config map[string]in
 	}
 
 	receiveInput := &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(msgConfig.QueueURL),
+		QueueUrl:              aws.String(msgConfig.QueueURL),
 		MessageAttributeNames: []string{"All"},
 	}
 

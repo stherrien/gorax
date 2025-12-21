@@ -3,9 +3,10 @@ package aws
 import (
 	"testing"
 
-	"github.com/gorax/gorax/internal/integrations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/integrations"
 )
 
 func TestRegisterAWSActions(t *testing.T) {

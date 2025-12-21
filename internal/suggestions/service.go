@@ -189,11 +189,11 @@ func (s *SuggestionService) GetPendingSuggestions(ctx context.Context, tenantID,
 
 // GetSuggestionStats returns statistics about suggestions for an execution
 type SuggestionStats struct {
-	Total     int            `json:"total"`
-	Pending   int            `json:"pending"`
-	Applied   int            `json:"applied"`
-	Dismissed int            `json:"dismissed"`
-	BySource  map[string]int `json:"by_source"`
+	Total        int            `json:"total"`
+	Pending      int            `json:"pending"`
+	Applied      int            `json:"applied"`
+	Dismissed    int            `json:"dismissed"`
+	BySource     map[string]int `json:"by_source"`
 	ByConfidence map[string]int `json:"by_confidence"`
 }
 

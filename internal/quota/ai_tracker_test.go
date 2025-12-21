@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/llm"
 )
 
 func TestAITracker_TrackUsage(t *testing.T) {
@@ -124,17 +125,17 @@ func TestAITracker_TrackUsage(t *testing.T) {
 				"anthropic",
 				"claude-3-sonnet-20240229",
 				"summarization",
-				"exec-789",        // execution_id
-				"workflow-abc",    // workflow_id
-				200,               // prompt_tokens
-				80,                // completion_tokens
-				280,               // total_tokens
-				sqlmock.AnyArg(),  // estimated_cost_cents
-				true,              // success
-				sqlmock.AnyArg(),  // error_code
-				sqlmock.AnyArg(),  // error_message
-				500,               // latency_ms
-				sqlmock.AnyArg(),  // request_metadata
+				"exec-789",       // execution_id
+				"workflow-abc",   // workflow_id
+				200,              // prompt_tokens
+				80,               // completion_tokens
+				280,              // total_tokens
+				sqlmock.AnyArg(), // estimated_cost_cents
+				true,             // success
+				sqlmock.AnyArg(), // error_code
+				sqlmock.AnyArg(), // error_message
+				500,              // latency_ms
+				sqlmock.AnyArg(), // request_metadata
 			).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 

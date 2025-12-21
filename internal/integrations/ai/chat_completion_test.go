@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
-	"github.com/gorax/gorax/internal/llm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
+	"github.com/gorax/gorax/internal/llm"
 )
 
 // mockCredentialService is a mock credential service for testing

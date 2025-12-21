@@ -23,16 +23,16 @@ type BuiltinPattern struct {
 
 // PatternMatch represents a matched pattern with context
 type PatternMatch struct {
-	PatternName       string
-	Category          ErrorCategory
-	Type              SuggestionType
-	Confidence        SuggestionConfidence
-	Title             string
-	Description       string
-	MatchedPattern    string // The regex pattern that matched
-	MatchedHTTPCode   int    // The HTTP code that matched (0 if none)
-	FixTemplate       *SuggestionFix
-	Priority          int
+	PatternName     string
+	Category        ErrorCategory
+	Type            SuggestionType
+	Confidence      SuggestionConfidence
+	Title           string
+	Description     string
+	MatchedPattern  string // The regex pattern that matched
+	MatchedHTTPCode int    // The HTTP code that matched (0 if none)
+	FixTemplate     *SuggestionFix
+	Priority        int
 }
 
 // ToSuggestion converts a pattern match to a suggestion

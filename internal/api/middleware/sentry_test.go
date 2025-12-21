@@ -6,9 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gorax/gorax/internal/errortracking"
 	"github.com/gorax/gorax/internal/tenant"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSentryMiddleware_Success(t *testing.T) {
@@ -243,11 +244,11 @@ func TestEnrichSentryContext(t *testing.T) {
 
 func TestExtractIPAddress(t *testing.T) {
 	tests := []struct {
-		name           string
-		remoteAddr     string
-		forwardedFor   string
-		realIP         string
-		expectedIP     string
+		name         string
+		remoteAddr   string
+		forwardedFor string
+		realIP       string
+		expectedIP   string
 	}{
 		{
 			name:       "from RemoteAddr",
@@ -309,7 +310,6 @@ func (m *mockTracker) SetUser(ctx context.Context, user errortracking.User) {
 	m.users = append(m.users, user)
 	m.contexts = append(m.contexts, ctx)
 }
-
 
 func (m *mockTracker) CaptureError(ctx context.Context, err error) string {
 	m.errors = append(m.errors, err)

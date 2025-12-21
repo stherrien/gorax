@@ -11,9 +11,9 @@ import (
 
 func TestClassifyError(t *testing.T) {
 	tests := []struct {
-		name           string
-		err            error
-		expectedClass  ErrorClassification
+		name          string
+		err           error
+		expectedClass ErrorClassification
 	}{
 		{
 			name:          "nil error",
@@ -104,9 +104,9 @@ func TestClassifyError(t *testing.T) {
 
 func TestClassifyHTTPStatusCode(t *testing.T) {
 	tests := []struct {
-		name           string
-		statusCode     int
-		expectedClass  ErrorClassification
+		name          string
+		statusCode    int
+		expectedClass ErrorClassification
 	}{
 		{
 			name:          "200 OK",
@@ -272,24 +272,24 @@ func TestExecutionError(t *testing.T) {
 
 func TestExecutionErrorIsRetryable(t *testing.T) {
 	tests := []struct {
-		name          string
+		name           string
 		classification ErrorClassification
-		isRetryable   bool
+		isRetryable    bool
 	}{
 		{
-			name:          "transient error is retryable",
+			name:           "transient error is retryable",
 			classification: ErrorClassificationTransient,
-			isRetryable:   true,
+			isRetryable:    true,
 		},
 		{
-			name:          "permanent error is not retryable",
+			name:           "permanent error is not retryable",
 			classification: ErrorClassificationPermanent,
-			isRetryable:   false,
+			isRetryable:    false,
 		},
 		{
-			name:          "unknown error is not retryable",
+			name:           "unknown error is not retryable",
 			classification: ErrorClassificationUnknown,
-			isRetryable:   false,
+			isRetryable:    false,
 		},
 	}
 

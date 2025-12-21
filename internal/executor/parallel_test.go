@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/workflow"
 )
 
 func TestExecuteParallelAction_TwoBranches(t *testing.T) {

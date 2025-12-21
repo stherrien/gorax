@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
 )
 
 func TestCalendarCreateConfig_Validate(t *testing.T) {

@@ -81,8 +81,8 @@ func TestInvokeFunctionAction_Validate(t *testing.T) {
 		{
 			name: "valid config with sync invocation",
 			config: map[string]interface{}{
-				"function_name": "test-function",
-				"payload":       map[string]interface{}{"key": "value"},
+				"function_name":   "test-function",
+				"payload":         map[string]interface{}{"key": "value"},
 				"invocation_type": "RequestResponse",
 			},
 			wantErr: false,
@@ -90,8 +90,8 @@ func TestInvokeFunctionAction_Validate(t *testing.T) {
 		{
 			name: "valid config with async invocation",
 			config: map[string]interface{}{
-				"function_name": "test-function",
-				"payload":       map[string]interface{}{"key": "value"},
+				"function_name":   "test-function",
+				"payload":         map[string]interface{}{"key": "value"},
 				"invocation_type": "Event",
 			},
 			wantErr: false,
@@ -135,8 +135,8 @@ func TestInvokeFunctionAction_Validate(t *testing.T) {
 		{
 			name: "invalid invocation type",
 			config: map[string]interface{}{
-				"function_name": "test-function",
-				"payload":       map[string]interface{}{"key": "value"},
+				"function_name":   "test-function",
+				"payload":         map[string]interface{}{"key": "value"},
 				"invocation_type": "InvalidType",
 			},
 			wantErr: true,

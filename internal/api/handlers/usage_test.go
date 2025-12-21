@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/tenant"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type mockUsageService struct {

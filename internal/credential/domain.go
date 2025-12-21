@@ -25,19 +25,19 @@ func (e *ValidationError) Error() string {
 type CredentialType string
 
 const (
-	TypeAPIKey     CredentialType = "api_key"
-	TypeOAuth2     CredentialType = "oauth2"
-	TypeBasicAuth  CredentialType = "basic_auth"
-	TypeCustom     CredentialType = "custom"
+	TypeAPIKey    CredentialType = "api_key"
+	TypeOAuth2    CredentialType = "oauth2"
+	TypeBasicAuth CredentialType = "basic_auth"
+	TypeCustom    CredentialType = "custom"
 )
 
 // CredentialStatus represents the status of a credential
 type CredentialStatus string
 
 const (
-	StatusActive    CredentialStatus = "active"
-	StatusInactive  CredentialStatus = "inactive"
-	StatusRevoked   CredentialStatus = "revoked"
+	StatusActive   CredentialStatus = "active"
+	StatusInactive CredentialStatus = "inactive"
+	StatusRevoked  CredentialStatus = "revoked"
 )
 
 // AccessType constants
@@ -100,13 +100,13 @@ type EncryptedSecret struct {
 // CredentialValue represents the encrypted value of a credential
 // This is stored separately and only returned through secure endpoints
 type CredentialValue struct {
-	ID           string    `json:"id" db:"id"`
-	CredentialID string    `json:"credential_id" db:"credential_id"`
-	Version      int       `json:"version" db:"version"`
-	EncryptedValue string  `json:"-" db:"encrypted_value"` // Never serialize
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	CreatedBy    string    `json:"created_by" db:"created_by"`
-	IsActive     bool      `json:"is_active" db:"is_active"`
+	ID             string    `json:"id" db:"id"`
+	CredentialID   string    `json:"credential_id" db:"credential_id"`
+	Version        int       `json:"version" db:"version"`
+	EncryptedValue string    `json:"-" db:"encrypted_value"` // Never serialize
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	CreatedBy      string    `json:"created_by" db:"created_by"`
+	IsActive       bool      `json:"is_active" db:"is_active"`
 }
 
 // AccessLog represents an access log entry for credential usage

@@ -65,7 +65,7 @@ type ActionMetadata struct {
 
 // FieldSpec defines a configuration or data field
 type FieldSpec struct {
-	Type        string   // "string", "number", "boolean", "array", "object"
+	Type        string // "string", "number", "boolean", "array", "object"
 	Description string
 	Required    bool
 	Default     interface{}

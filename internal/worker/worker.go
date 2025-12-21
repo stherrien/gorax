@@ -20,17 +20,17 @@ import (
 
 // Worker processes workflow executions
 type Worker struct {
-	config   *config.Config
-	logger   *slog.Logger
-	db       *sqlx.DB
-	redis    *redis.Client
-	executor *executor.Executor
+	config       *config.Config
+	logger       *slog.Logger
+	db           *sqlx.DB
+	redis        *redis.Client
+	executor     *executor.Executor
 	workflowRepo *workflow.Repository
 
 	// Queue-based processing
-	queueConsumer  *queue.Consumer
-	sqsClient      *queue.SQSClient
-	queueEnabled   bool
+	queueConsumer *queue.Consumer
+	sqsClient     *queue.SQSClient
+	queueEnabled  bool
 
 	concurrency      int
 	concurrencyLimit *TenantConcurrencyLimiter

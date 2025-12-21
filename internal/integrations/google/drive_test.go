@@ -5,10 +5,11 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/executor/actions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/actions"
 )
 
 func TestDriveUploadConfig_Validate(t *testing.T) {

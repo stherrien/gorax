@@ -164,8 +164,8 @@ func (s *InAppService) NotifyTaskOverdue(ctx context.Context, tenantID uuid.UUID
 // NotifyWorkflowExecution creates a workflow execution notification
 func (s *InAppService) NotifyWorkflowExecution(ctx context.Context, tenantID uuid.UUID, userID, workflowName, status, errorMsg, executionURL string) error {
 	var (
-		title   string
-		message string
+		title     string
+		message   string
 		notifType NotificationType
 	)
 

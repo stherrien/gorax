@@ -223,22 +223,22 @@ func TestList_Success(t *testing.T) {
 	now := time.Now()
 	credentials := []*credential.Credential{
 		{
-			ID:          "cred-1",
-			TenantID:    "tenant-123",
-			Name:        "API Key 1",
-			Type:        credential.TypeAPIKey,
-			Status:      credential.StatusActive,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:        "cred-1",
+			TenantID:  "tenant-123",
+			Name:      "API Key 1",
+			Type:      credential.TypeAPIKey,
+			Status:    credential.StatusActive,
+			CreatedAt: now,
+			UpdatedAt: now,
 		},
 		{
-			ID:          "cred-2",
-			TenantID:    "tenant-123",
-			Name:        "OAuth Token",
-			Type:        credential.TypeOAuth2,
-			Status:      credential.StatusActive,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:        "cred-2",
+			TenantID:  "tenant-123",
+			Name:      "OAuth Token",
+			Type:      credential.TypeOAuth2,
+			Status:    credential.StatusActive,
+			CreatedAt: now,
+			UpdatedAt: now,
 		},
 	}
 
@@ -288,13 +288,13 @@ func TestGet_Success(t *testing.T) {
 
 	now := time.Now()
 	expectedCred := &credential.Credential{
-		ID:          "cred-123",
-		TenantID:    "tenant-123",
-		Name:        "My API Key",
-		Type:        credential.TypeAPIKey,
-		Status:      credential.StatusActive,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:        "cred-123",
+		TenantID:  "tenant-123",
+		Name:      "My API Key",
+		Type:      credential.TypeAPIKey,
+		Status:    credential.StatusActive,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	mockService.On("GetByID", mock.Anything, "tenant-123", "cred-123").Return(expectedCred, nil)

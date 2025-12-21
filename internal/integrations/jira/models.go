@@ -41,11 +41,11 @@ type Issue struct {
 
 // Comment represents a Jira comment
 type Comment struct {
-	ID      string                 `json:"id"`
-	Body    string                 `json:"body"`
-	Author  User                   `json:"author,omitempty"`
-	Created string                 `json:"created,omitempty"`
-	Updated string                 `json:"updated,omitempty"`
+	ID      string `json:"id"`
+	Body    string `json:"body"`
+	Author  User   `json:"author,omitempty"`
+	Created string `json:"created,omitempty"`
+	Updated string `json:"updated,omitempty"`
 }
 
 // User represents a Jira user

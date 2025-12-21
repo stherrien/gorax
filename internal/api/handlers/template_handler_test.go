@@ -331,10 +331,10 @@ func TestCreateFromWorkflow(t *testing.T) {
 	workflowID := "workflow-123"
 
 	input := template.CreateTemplateFromWorkflowInput{
-		WorkflowID:  workflowID,
-		Name:        "From Workflow",
-		Category:    "integration",
-		Definition:  json.RawMessage(`{"nodes":[],"edges":[]}`),
+		WorkflowID: workflowID,
+		Name:       "From Workflow",
+		Category:   "integration",
+		Definition: json.RawMessage(`{"nodes":[],"edges":[]}`),
 	}
 
 	createdTemplate := &template.Template{
