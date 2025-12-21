@@ -3,7 +3,6 @@ package template
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"log/slog"
