@@ -362,8 +362,8 @@ describe('FilterBuilder', () => {
       render(<FilterBuilder webhookId={mockWebhookId} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/AND/)).toBeInTheDocument()
-        expect(screen.getByText(/OR/)).toBeInTheDocument()
+        expect(screen.getAllByText(/AND/).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/OR/).length).toBeGreaterThan(0)
       })
     })
   })

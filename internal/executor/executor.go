@@ -11,6 +11,9 @@ import (
 	"github.com/gorax/gorax/internal/workflow"
 )
 
+// MaxSubWorkflowDepth is the maximum depth of nested sub-workflow execution
+const MaxSubWorkflowDepth = 10
+
 // Broadcaster defines the interface for broadcasting execution events
 type Broadcaster interface {
 	BroadcastExecutionStarted(tenantID, workflowID, executionID string, totalSteps int)
@@ -86,9 +89,46 @@ type ExecutionContext struct {
 	TenantID          string
 	ExecutionID       string
 	WorkflowID        string
+	TriggerType       string
 	TriggerData       map[string]interface{}
 	StepOutputs       map[string]interface{}
 	CredentialValues  []string // Decrypted credential values for masking
+	UserID            string   // User who triggered the execution
+	Depth             int      // Execution depth for sub-workflow tracking
+	WorkflowChain     []string // Chain of workflow IDs to detect circular dependencies
+	ParentExecutionID string   // Parent execution ID for sub-workflows
+}
+
+// GetUserID returns the user ID from the execution context
+// Returns "system" if no user ID is found (for automated executions)
+func (ec *ExecutionContext) GetUserID() string {
+	// If UserID is already set, use it
+	if ec.UserID != "" {
+		return ec.UserID
+	}
+
+	// Try to extract from trigger data
+	if ec.TriggerData != nil {
+		// Check for user_id at top level (manual triggers)
+		if userID, ok := ec.TriggerData["user_id"].(string); ok && userID != "" {
+			return userID
+		}
+
+		// Check for user_id in auth context (webhook triggers)
+		if authData, ok := ec.TriggerData["_auth"].(map[string]interface{}); ok {
+			if userID, ok := authData["user_id"].(string); ok && userID != "" {
+				return userID
+			}
+		}
+	}
+
+	// Default to system for automated executions (schedules, etc.)
+	return "system"
+}
+
+// SetUserID sets the user ID in the execution context
+func (ec *ExecutionContext) SetUserID(userID string) {
+	ec.UserID = userID
 }
 
 // Execute runs a workflow execution
@@ -145,12 +185,20 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 
 	// Create execution context
 	execCtx := &ExecutionContext{
-		TenantID:         execution.TenantID,
-		ExecutionID:      execution.ID,
-		WorkflowID:       execution.WorkflowID,
-		TriggerData:      triggerData,
-		StepOutputs:      make(map[string]interface{}),
-		CredentialValues: []string{}, // Will be populated during execution
+		TenantID:          execution.TenantID,
+		ExecutionID:       execution.ID,
+		WorkflowID:        execution.WorkflowID,
+		TriggerData:       triggerData,
+		StepOutputs:       make(map[string]interface{}),
+		CredentialValues:  []string{}, // Will be populated during execution
+		Depth:             execution.ExecutionDepth,
+		WorkflowChain:     []string{execution.WorkflowID},
+		ParentExecutionID: "",
+	}
+
+	// Set parent execution ID if this is a sub-workflow
+	if execution.ParentExecutionID != nil {
+		execCtx.ParentExecutionID = *execution.ParentExecutionID
 	}
 
 	// Build execution order from DAG
@@ -199,6 +247,10 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 			output, err = e.executeLoopAction(ctx, node, execCtx, &definition)
 		} else if node.Type == string(workflow.NodeTypeControlParallel) {
 			output, err = e.executeParallelAction(ctx, node, execCtx, &definition)
+		} else if node.Type == string(workflow.NodeTypeControlFork) {
+			output, err = e.executeForkAction(ctx, node, execCtx)
+		} else if node.Type == string(workflow.NodeTypeControlJoin) {
+			output, err = e.executeJoinAction(ctx, node, execCtx, &definition)
 		} else {
 			output, err = e.executeNodeWithTracking(ctx, node, execCtx)
 		}
@@ -369,7 +421,7 @@ func (e *Executor) executeNode(ctx context.Context, node workflow.Node, execCtx 
 			TenantID:    execCtx.TenantID,
 			WorkflowID:  execCtx.WorkflowID,
 			ExecutionID: execCtx.ExecutionID,
-			AccessedBy:  "system", // TODO: Get actual user ID
+			AccessedBy:  execCtx.GetUserID(),
 		}
 
 		injectResult, err := e.credentialInjector.InjectCredentials(ctx, node.Data.Config, injCtx)
@@ -408,6 +460,8 @@ func (e *Executor) executeNode(ctx context.Context, node workflow.Node, execCtx 
 		output, err = e.executeSlackAddReactionAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlDelay):
 		output, err = e.executeDelayAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeControlSubWorkflow):
+		output, err = e.executeSubWorkflowAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlLoop):
 		// Loop nodes need access to workflow definition
 		// For now, return error - will be handled separately in execution flow

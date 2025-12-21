@@ -126,8 +126,8 @@ func TestListExecutionsAdvanced_WithFilters(t *testing.T) {
 	handler, mockService := newTestExecutionHandler()
 
 	tests := []struct {
-		name          string
-		queryParams   string
+		name           string
+		queryParams    string
 		expectedFilter workflow.ExecutionFilter
 		expectedLimit  int
 		expectedCursor string
@@ -160,8 +160,8 @@ func TestListExecutionsAdvanced_WithFilters(t *testing.T) {
 			expectedCursor: "",
 		},
 		{
-			name:        "with pagination",
-			queryParams: "?limit=50&cursor=abc123",
+			name:           "with pagination",
+			queryParams:    "?limit=50&cursor=abc123",
 			expectedFilter: workflow.ExecutionFilter{},
 			expectedLimit:  50,
 			expectedCursor: "abc123",

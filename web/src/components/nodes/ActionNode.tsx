@@ -1,7 +1,8 @@
 import { Handle, Position } from '@xyflow/react'
 import type { ActionNodeData } from '../../stores/workflowStore'
 
-interface ActionNodeProps {
+export interface ActionNodeProps {
+  id: string
   data: ActionNodeData
   selected?: boolean
 }

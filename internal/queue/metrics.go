@@ -21,9 +21,9 @@ type MetricsCollector struct {
 // QueueMetrics represents queue metrics
 type QueueMetrics struct {
 	// Main queue metrics
-	ApproximateNumberOfMessages            int
-	ApproximateNumberOfMessagesNotVisible  int
-	ApproximateNumberOfMessagesDelayed     int
+	ApproximateNumberOfMessages           int
+	ApproximateNumberOfMessagesNotVisible int
+	ApproximateNumberOfMessagesDelayed    int
 
 	// Dead-letter queue metrics
 	DLQApproximateNumberOfMessages int

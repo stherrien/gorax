@@ -171,7 +171,8 @@ export const executionAPI = {
    * Bulk delete executions
    */
   async bulkDelete(ids: string[]): Promise<BulkOperationResult> {
-    return apiClient.delete('/api/v1/executions/bulk', { data: { ids } })
+    // Use POST to /bulk/delete since DELETE doesn't support body in our API client
+    return apiClient.post('/api/v1/executions/bulk/delete', { ids })
   },
 
   /**

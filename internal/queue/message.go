@@ -81,8 +81,8 @@ func (m *ExecutionMessage) Validate() error {
 // GetMessageAttributes returns message attributes for SQS
 func (m *ExecutionMessage) GetMessageAttributes() map[string]string {
 	attrs := map[string]string{
-		"tenant_id":   m.TenantID,
-		"workflow_id": m.WorkflowID,
+		"tenant_id":    m.TenantID,
+		"workflow_id":  m.WorkflowID,
 		"trigger_type": m.TriggerType,
 	}
 

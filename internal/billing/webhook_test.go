@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -101,19 +103,22 @@ func TestWebhookNotifier_SendQuotaThreshold(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test server
-			called := false
+			// Create test server with thread-safe variables
+			var called atomic.Bool
 			var receivedPayload WebhookPayload
+			var payloadMu sync.Mutex
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				called = true
+				called.Store(true)
 
 				// Verify headers
 				assert.NotEmpty(t, r.Header.Get("X-Webhook-Signature"))
 				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 				// Decode payload
+				payloadMu.Lock()
 				err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+				payloadMu.Unlock()
 				assert.NoError(t, err)
 
 				w.WriteHeader(tt.expectedStatus)
@@ -143,9 +148,10 @@ func TestWebhookNotifier_SendQuotaThreshold(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 
 			// Verify webhook was called if expected
-			assert.Equal(t, tt.expectWebhook, called)
+			assert.Equal(t, tt.expectWebhook, called.Load())
 
 			if tt.expectWebhook {
+				payloadMu.Lock()
 				assert.Equal(t, "quota.threshold", receivedPayload.Event)
 				assert.Equal(t, "tenant-1", receivedPayload.TenantID)
 
@@ -153,18 +159,22 @@ func TestWebhookNotifier_SendQuotaThreshold(t *testing.T) {
 				assert.Equal(t, float64(tt.threshold), data["threshold_percent"])
 				assert.Equal(t, float64(tt.current), data["current"])
 				assert.Equal(t, float64(tt.limit), data["limit"])
+				payloadMu.Unlock()
 			}
 		})
 	}
 }
 
 func TestWebhookNotifier_SendExecutionCompleted(t *testing.T) {
-	called := false
+	var called atomic.Bool
 	var receivedPayload WebhookPayload
+	var payloadMu sync.Mutex
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
+		called.Store(true)
+		payloadMu.Lock()
 		err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+		payloadMu.Unlock()
 		assert.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -197,15 +207,17 @@ func TestWebhookNotifier_SendExecutionCompleted(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.True(t, called)
+	assert.True(t, called.Load())
+	payloadMu.Lock()
 	assert.Equal(t, "execution.completed", receivedPayload.Event)
+	payloadMu.Unlock()
 }
 
 func TestWebhookNotifier_RetryLogic(t *testing.T) {
-	attempts := 0
+	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attempts++
-		if attempts < 3 {
+		count := attempts.Add(1)
+		if count < 3 {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -236,14 +248,14 @@ func TestWebhookNotifier_RetryLogic(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Should have retried until success
-	assert.GreaterOrEqual(t, attempts, 3)
+	assert.GreaterOrEqual(t, int(attempts.Load()), 3)
 }
 
 func TestWebhookNotifier_SignatureVerification(t *testing.T) {
-	var receivedSignature string
+	var receivedSignature atomic.Value
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedSignature = r.Header.Get("X-Webhook-Signature")
+		receivedSignature.Store(r.Header.Get("X-Webhook-Signature"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -269,10 +281,11 @@ func TestWebhookNotifier_SignatureVerification(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify signature was sent
-	assert.NotEmpty(t, receivedSignature)
+	sig := receivedSignature.Load().(string)
+	assert.NotEmpty(t, sig)
 
 	// Verify signature format (should be sha256=<hex>)
-	assert.Contains(t, receivedSignature, "sha256=")
+	assert.Contains(t, sig, "sha256=")
 }
 
 func TestWebhookNotifier_DeliveryLog(t *testing.T) {
@@ -308,17 +321,17 @@ func TestWebhookNotifier_DeliveryLog(t *testing.T) {
 }
 
 func TestWebhookNotifier_FilterByEvent(t *testing.T) {
-	quotaCalled := false
-	executionCalled := false
+	var quotaCalled atomic.Bool
+	var executionCalled atomic.Bool
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var payload WebhookPayload
 		json.NewDecoder(r.Body).Decode(&payload)
 
 		if payload.Event == "quota.threshold" {
-			quotaCalled = true
+			quotaCalled.Store(true)
 		} else if payload.Event == "execution.completed" {
-			executionCalled = true
+			executionCalled.Store(true)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -357,8 +370,8 @@ func TestWebhookNotifier_FilterByEvent(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.True(t, quotaCalled, "quota webhook should have been called")
-	assert.False(t, executionCalled, "execution webhook should NOT have been called")
+	assert.True(t, quotaCalled.Load(), "quota webhook should have been called")
+	assert.False(t, executionCalled.Load(), "execution webhook should NOT have been called")
 }
 
 func TestWebhookConfig_Validation(t *testing.T) {

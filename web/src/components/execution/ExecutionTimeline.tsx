@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useExecutionTraceStore } from '../../stores/executionTraceStore'
-import type { TimelineEvent, TimelineEventType } from '../../stores/executionTraceStore'
+import type { TimelineEventType } from '../../stores/executionTraceStore'
 import '../../styles/executionTrace.css'
 
 /**

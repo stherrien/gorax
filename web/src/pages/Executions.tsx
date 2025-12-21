@@ -27,7 +27,7 @@ export default function Executions() {
       p.status = status
     }
     if (workflowId) p.workflowId = workflowId
-    if (search) p.search = search
+    if (search) p.errorSearch = search
     return p
   }, [page, status, workflowId, search, advancedFilters])
 

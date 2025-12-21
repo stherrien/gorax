@@ -1,0 +1,85 @@
+# OpenTelemetry Collector Configuration
+# This is an example configuration for advanced trace processing
+# Use this if you need to:
+# - Route traces to multiple backends
+# - Sample/filter traces based on attributes
+# - Transform trace data
+# - Add additional processing
+
+receivers:
+  # OTLP receiver for traces
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch processor - batches spans before sending
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+  # Memory limiter - prevents OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  # Attributes processor - modify span attributes
+  attributes:
+    actions:
+      - key: environment
+        value: development
+        action: insert
+
+  # Sampling processor - reduce trace volume
+  # probabilistic_sampler:
+  #   sampling_percentage: 50  # Sample 50% of traces
+
+  # Filter processor - drop specific traces
+  # filter:
+  #   traces:
+  #     span:
+  #       - 'attributes["http.target"] == "/health"'
+  #       - 'attributes["http.target"] == "/ready"'
+
+exporters:
+  # Export to Jaeger
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Export to logging (for debugging)
+  logging:
+    loglevel: debug
+
+  # Export to Prometheus (for trace metrics)
+  # prometheus:
+  #   endpoint: "0.0.0.0:8889"
+
+extensions:
+  # Health check extension
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # pprof extension for profiling
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  # zpages extension for debugging
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [otlp/jaeger, logging]
+
+  telemetry:
+    logs:
+      level: info

@@ -122,14 +122,14 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, input UpdateW
 	// Sync webhooks if definition was updated and webhook service is available
 	if input.Definition != nil && s.webhookService != nil {
 		webhookNodes := s.extractWebhookNodes(input.Definition)
-	// Create version record if definition was updated
-	if input.Definition != nil {
-		_, err := s.repo.CreateWorkflowVersion(ctx, workflow.ID, workflow.Version, workflow.Definition, workflow.CreatedBy)
-		if err != nil {
-			s.logger.Error("failed to create workflow version", "error", err, "workflow_id", workflow.ID, "version", workflow.Version)
-			// Don't fail the workflow update if version creation fails
+		// Create version record if definition was updated
+		if input.Definition != nil {
+			_, err := s.repo.CreateWorkflowVersion(ctx, workflow.ID, workflow.Version, workflow.Definition, workflow.CreatedBy)
+			if err != nil {
+				s.logger.Error("failed to create workflow version", "error", err, "workflow_id", workflow.ID, "version", workflow.Version)
+				// Don't fail the workflow update if version creation fails
+			}
 		}
-	}
 
 		if err := s.webhookService.SyncWorkflowWebhooks(ctx, tenantID, workflow.ID, webhookNodes); err != nil {
 			s.logger.Error("failed to sync webhooks", "error", err, "workflow_id", workflow.ID)
@@ -629,11 +629,11 @@ func (s *Service) DryRun(ctx context.Context, tenantID, workflowID string, testD
 				if err := json.Unmarshal(node.Data.Config, &loopConfig); err == nil {
 					if loopConfig.ItemVariable != "" {
 						availableVars[loopConfig.ItemVariable] = true
-						result.VariableMapping[loopConfig.ItemVariable] = "loop:"+nodeID
+						result.VariableMapping[loopConfig.ItemVariable] = "loop:" + nodeID
 					}
 					if loopConfig.IndexVariable != "" {
 						availableVars[loopConfig.IndexVariable] = true
-						result.VariableMapping[loopConfig.IndexVariable] = "loop:"+nodeID
+						result.VariableMapping[loopConfig.IndexVariable] = "loop:" + nodeID
 					}
 				}
 			}

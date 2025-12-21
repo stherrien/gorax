@@ -1,0 +1,246 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  gorax-alerts.yml: |
+    groups:
+    - name: gorax_workflows
+      interval: 30s
+      rules:
+      - alert: HighWorkflowFailureRate
+        expr: |
+          (
+            rate(gorax_workflow_executions_total{status="failed"}[5m])
+            /
+            rate(gorax_workflow_executions_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: workflow-engine
+        annotations:
+          summary: "High workflow failure rate on {{ $labels.instance }}"
+          description: |
+            Workflow failure rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}.
+            This may indicate issues with external dependencies or workflow definitions.
+          runbook_url: https://docs.gorax.io/runbooks/high-failure-rate
+
+      - alert: CriticalWorkflowFailureRate
+        expr: |
+          (
+            rate(gorax_workflow_executions_total{status="failed"}[5m])
+            /
+            rate(gorax_workflow_executions_total[5m])
+          ) > 0.25
+        for: 2m
+        labels:
+          severity: critical
+          component: workflow-engine
+        annotations:
+          summary: "Critical workflow failure rate on {{ $labels.instance }}"
+          description: |
+            Workflow failure rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}.
+            Immediate action required.
+
+      - alert: SlowWorkflowExecutions
+        expr: |
+          histogram_quantile(0.95,
+            rate(gorax_workflow_execution_duration_seconds_bucket[5m])
+          ) > 60
+        for: 5m
+        labels:
+          severity: warning
+          component: workflow-engine
+        annotations:
+          summary: "Slow workflow executions detected"
+          description: |
+            95th percentile workflow execution time is {{ $value }} seconds.
+            Expected threshold is 60 seconds.
+
+      - alert: WorkflowExecutionStalled
+        expr: |
+          rate(gorax_workflow_executions_total[5m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+          component: workflow-engine
+        annotations:
+          summary: "No workflow executions in the last 10 minutes"
+          description: |
+            No workflows have been executed in the last 10 minutes on {{ $labels.instance }}.
+            This may indicate a worker failure or queue issue.
+
+    - name: gorax_queue
+      interval: 30s
+      rules:
+      - alert: QueueBacklog
+        expr: gorax_queue_depth{queue="default"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "Queue backlog growing"
+          description: |
+            Queue depth is {{ $value }} messages for queue {{ $labels.queue }}.
+            Consider scaling up workers or investigating slow executions.
+
+      - alert: QueueBacklogCritical
+        expr: gorax_queue_depth{queue="default"} > 5000
+        for: 5m
+        labels:
+          severity: critical
+          component: queue
+        annotations:
+          summary: "Critical queue backlog"
+          description: |
+            Queue depth is {{ $value }} messages for queue {{ $labels.queue }}.
+            System is severely backlogged. Scale up immediately.
+
+      - alert: NoActiveWorkers
+        expr: gorax_active_workers == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: worker
+        annotations:
+          summary: "No active workers"
+          description: |
+            No workers are currently active. Jobs will not be processed.
+            Check worker pod status immediately.
+
+      - alert: LowWorkerCount
+        expr: gorax_active_workers < 3
+        for: 5m
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "Low worker count"
+          description: |
+            Only {{ $value }} workers are active. Consider scaling up if queue depth is growing.
+
+    - name: gorax_api
+      interval: 30s
+      rules:
+      - alert: HighHTTPErrorRate
+        expr: |
+          (
+            rate(gorax_http_requests_total{status=~"5.."}[5m])
+            /
+            rate(gorax_http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High HTTP 5xx error rate"
+          description: |
+            HTTP 5xx error rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}.
+            Investigate server errors immediately.
+
+      - alert: HighHTTPLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(gorax_http_request_duration_seconds_bucket{path!~"/metrics|/health.*"}[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High HTTP request latency"
+          description: |
+            95th percentile HTTP latency is {{ $value }} seconds for {{ $labels.path }}.
+            Expected threshold is 2 seconds.
+
+      - alert: HighHTTPRequestRate
+        expr: |
+          rate(gorax_http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          component: api
+        annotations:
+          summary: "High HTTP request rate"
+          description: |
+            HTTP request rate is {{ $value }} requests/second.
+            Monitor for potential capacity issues.
+
+    - name: gorax_infrastructure
+      interval: 60s
+      rules:
+      - alert: DatabaseConnectionFailure
+        expr: up{job="gorax-api"} == 0 or up{job="gorax-worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Service cannot connect to database"
+          description: |
+            {{ $labels.job }} on {{ $labels.instance }} is down or cannot reach the database.
+
+      - alert: RedisConnectionFailure
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis connection failure"
+          description: |
+            Redis is down or unreachable. This will affect caching and session management.
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes{job=~"gorax-.*"}
+            /
+            1024 / 1024 / 1024
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: |
+            {{ $labels.job }} on {{ $labels.instance }} is using {{ $value }}GB of memory.
+            Monitor for potential memory leaks.
+
+    - name: gorax_step_failures
+      interval: 30s
+      rules:
+      - alert: HighStepFailureRate
+        expr: |
+          (
+            rate(gorax_step_executions_total{status="failed"}[5m])
+            /
+            rate(gorax_step_executions_total[5m])
+          ) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: workflow-engine
+        annotations:
+          summary: "High step failure rate for {{ $labels.step_type }}"
+          description: |
+            Step failure rate for {{ $labels.step_type }} is {{ $value | humanizePercentage }}.
+            Check external service health and step configurations.
+
+      - alert: HTTPActionFailures
+        expr: |
+          rate(gorax_step_executions_total{step_type="http",status="failed"}[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: http-actions
+        annotations:
+          summary: "High HTTP action failure rate"
+          description: |
+            HTTP actions are failing at {{ $value }} failures/second.
+            Investigate target service health and network connectivity.

@@ -12,6 +12,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+
 	"github.com/gorax/gorax/internal/workflow"
 )
 

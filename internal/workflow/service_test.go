@@ -439,9 +439,9 @@ func TestGetExecutionStats_Success(t *testing.T) {
 	tenantID := "tenant-123"
 
 	tests := []struct {
-		name         string
-		filter       ExecutionFilter
-		mockCounts   map[string]int
+		name          string
+		filter        ExecutionFilter
+		mockCounts    map[string]int
 		expectedStats ExecutionStats
 	}{
 		{
@@ -581,10 +581,4 @@ func TestGetExecutionStats_ZeroCounts(t *testing.T) {
 	assert.Equal(t, 0, result.StatusCounts["failed"])
 	assert.Equal(t, 0, result.StatusCounts["cancelled"])
 	mockRepo.AssertExpectations(t)
-}
-
-// Helper functions
-
-func jsonRawMessage(s string) json.RawMessage {
-	return json.RawMessage(s)
 }

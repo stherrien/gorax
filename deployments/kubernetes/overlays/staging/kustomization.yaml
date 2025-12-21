@@ -1,0 +1,116 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: gorax-staging
+
+namePrefix: staging-
+nameSuffix: ""
+
+commonLabels:
+  environment: staging
+
+resources:
+  - ../../base
+
+replicas:
+  - name: gorax-api
+    count: 2
+  - name: gorax-worker
+    count: 2
+
+images:
+  - name: gorax/api
+    newTag: staging
+  - name: gorax/worker
+    newTag: staging
+
+configMapGenerator:
+  - name: gorax-config
+    behavior: merge
+    literals:
+      - log-level=info
+      - cors-allowed-origins=https://staging.gorax.io
+      - worker-concurrency=8
+      - feature-webhook-replay=true
+      - feature-workflow-versioning=true
+      - feature-advanced-filtering=true
+      - tracing-sample-rate=0.5
+
+patches:
+  # Moderate resource allocation for staging
+  - target:
+      kind: Deployment
+      name: gorax-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "192Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "200m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "384Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "400m"
+
+  - target:
+      kind: Deployment
+      name: gorax-worker
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "384Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "400m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "768Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "800m"
+
+  # Adjust HPA for staging
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: gorax-api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 6
+
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: gorax-worker-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10
+
+  # Update ingress for staging domain
+  - target:
+      kind: Ingress
+      name: gorax-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - api.staging.gorax.io
+          - webhooks.staging.gorax.io
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.staging.gorax.io
+      - op: replace
+        path: /spec/rules/1/host
+        value: webhooks.staging.gorax.io
+      - op: replace
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-staging

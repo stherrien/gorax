@@ -1,6 +1,6 @@
 import { Handle, Position } from '@xyflow/react'
 
-interface LoopNodeData {
+export interface LoopNodeData {
   label: string
   source?: string
   itemVariable?: string
@@ -9,7 +9,8 @@ interface LoopNodeData {
   onError?: 'stop' | 'continue'
 }
 
-interface LoopNodeProps {
+export interface LoopNodeProps {
+  id: string
   data: LoopNodeData
   selected?: boolean
 }

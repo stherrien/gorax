@@ -199,12 +199,26 @@ class WorkflowAPI {
    * @param format - Export format (txt, json, csv)
    */
   async exportLogs(executionId: string, format: 'txt' | 'json' | 'csv'): Promise<void> {
-    const response = await apiClient.get(
-      `/api/v1/executions/${executionId}/logs/export?format=${format}`,
-      { responseType: 'blob' }
+    // Use native fetch for blob response since API client doesn't support responseType
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    const token = localStorage.getItem('auth_token')
+    const headers: HeadersInit = {
+      'X-Tenant-ID': '00000000-0000-0000-0000-000000000001',
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(
+      `${baseURL}/api/v1/executions/${executionId}/logs/export?format=${format}`,
+      { headers }
     )
 
-    const blob = response instanceof Blob ? response : response.data
+    if (!response.ok) {
+      throw new Error(`Failed to export logs: ${response.statusText}`)
+    }
+
+    const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/workflow"
 )
 
 func TestExecuteLoopAction_BasicLoop(t *testing.T) {
@@ -827,12 +828,12 @@ func TestFindLoopBody_MultipleExitPoints(t *testing.T) {
 			{ID: "node_after", Type: string(workflow.NodeTypeActionTransform)},
 		},
 		Edges: []workflow.Edge{
-			{ID: "e1", Source: "loop1", Target: "node1"},        // Body entrance
-			{ID: "e2", Source: "node1", Target: "node2"},        // Branch 1
-			{ID: "e3", Source: "node1", Target: "node3"},        // Branch 2
-			{ID: "e4", Source: "node2", Target: "node_after"},   // Exit from branch 1
-			{ID: "e5", Source: "node3", Target: "node_after"},   // Exit from branch 2
-			{ID: "e6", Source: "loop1", Target: "node_after"},   // Explicit loop exit
+			{ID: "e1", Source: "loop1", Target: "node1"},      // Body entrance
+			{ID: "e2", Source: "node1", Target: "node2"},      // Branch 1
+			{ID: "e3", Source: "node1", Target: "node3"},      // Branch 2
+			{ID: "e4", Source: "node2", Target: "node_after"}, // Exit from branch 1
+			{ID: "e5", Source: "node3", Target: "node_after"}, // Exit from branch 2
+			{ID: "e6", Source: "loop1", Target: "node_after"}, // Explicit loop exit
 		},
 	}
 

@@ -21,8 +21,8 @@ const (
 
 // LoopResult represents the result of a loop execution
 type LoopResult struct {
-	IterationCount int                  `json:"iteration_count"`
-	Iterations     []IterationResult    `json:"iterations"`
+	IterationCount int                    `json:"iteration_count"`
+	Iterations     []IterationResult      `json:"iterations"`
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -309,9 +309,9 @@ func (e *Executor) executeLoopAction(
 // direct loop exits) are considered part of the loop body.
 //
 // Limitations:
-// - Cannot distinguish between internal merge points and external exit merge points
-//   without explicit loop-end markers in the workflow definition
-// - Merge points where multiple body paths converge are included in the body
+//   - Cannot distinguish between internal merge points and external exit merge points
+//     without explicit loop-end markers in the workflow definition
+//   - Merge points where multiple body paths converge are included in the body
 //
 // Cognitive Complexity: 3 (well within the limit of 15)
 func (e *Executor) findLoopBody(loopNodeID string, definition *workflow.WorkflowDefinition) ([]workflow.Node, []workflow.Edge) {

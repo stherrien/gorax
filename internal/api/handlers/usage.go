@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/tenant"
@@ -38,10 +39,10 @@ func NewUsageHandler(service UsageService) *UsageHandler {
 
 // UsageResponse represents current usage statistics
 type UsageResponse struct {
-	TenantID      string       `json:"tenant_id"`
-	CurrentPeriod PeriodUsage  `json:"current_period"`
-	MonthToDate   PeriodUsage  `json:"month_to_date"`
-	Quotas        QuotaInfo    `json:"quotas"`
+	TenantID      string        `json:"tenant_id"`
+	CurrentPeriod PeriodUsage   `json:"current_period"`
+	MonthToDate   PeriodUsage   `json:"month_to_date"`
+	Quotas        QuotaInfo     `json:"quotas"`
 	RateLimits    RateLimitInfo `json:"rate_limits"`
 }
 
@@ -72,12 +73,12 @@ type RateLimitInfo struct {
 
 // UsageHistoryResponse represents historical usage data
 type UsageHistoryResponse struct {
-	Usage      []quota.UsageByDate `json:"usage"`
-	Total      int                 `json:"total"`
-	Page       int                 `json:"page"`
-	Limit      int                 `json:"limit"`
-	StartDate  string              `json:"start_date"`
-	EndDate    string              `json:"end_date"`
+	Usage     []quota.UsageByDate `json:"usage"`
+	Total     int                 `json:"total"`
+	Page      int                 `json:"page"`
+	Limit     int                 `json:"limit"`
+	StartDate string              `json:"start_date"`
+	EndDate   string              `json:"end_date"`
 }
 
 // GetCurrentUsage returns current usage statistics for a tenant

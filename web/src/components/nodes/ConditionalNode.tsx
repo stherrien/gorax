@@ -1,12 +1,13 @@
 import { Handle, Position } from '@xyflow/react'
 
-interface ConditionalNodeData {
+export interface ConditionalNodeData {
   label: string
   condition?: string
   description?: string
 }
 
-interface ConditionalNodeProps {
+export interface ConditionalNodeProps {
+  id: string
   data: ConditionalNodeData
   selected?: boolean
 }

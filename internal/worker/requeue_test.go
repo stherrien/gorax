@@ -39,10 +39,10 @@ func (m *MockSQSClient) SendMessage(ctx context.Context, body string, attributes
 // TestRequeueExecution_WhenTenantAtCapacity tests requeue with delay
 func TestRequeueExecution_WhenTenantAtCapacity(t *testing.T) {
 	tests := []struct {
-		name              string
-		currentRetry      int
-		expectedDelay     int32
-		shouldRequeue     bool
+		name          string
+		currentRetry  int
+		expectedDelay int32
+		shouldRequeue bool
 	}{
 		{
 			name:          "first retry - 30 second delay",
@@ -201,12 +201,12 @@ func TestWorker_MessageRequeue_EndToEnd(t *testing.T) {
 // TestRequeueWithReceiptHandle tests requeue with SQS receipt handle
 func TestRequeueWithReceiptHandle(t *testing.T) {
 	tests := []struct {
-		name           string
-		receiptHandle  string
-		retryCount     int
-		expectedDelay  int32
-		setupMock      func(*MockSQSClient)
-		expectedError  bool
+		name          string
+		receiptHandle string
+		retryCount    int
+		expectedDelay int32
+		setupMock     func(*MockSQSClient)
+		expectedError bool
 	}{
 		{
 			name:          "successful requeue - first retry",

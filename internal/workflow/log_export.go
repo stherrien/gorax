@@ -139,12 +139,12 @@ func writeIndentedJSON(buf *bytes.Buffer, data json.RawMessage, indent int) {
 // createJSONOutput creates the JSON output structure
 func createJSONOutput(execution *Execution, steps []*StepExecution) map[string]interface{} {
 	output := map[string]interface{}{
-		"execution_id":      execution.ID,
-		"workflow_id":       execution.WorkflowID,
-		"workflow_version":  execution.WorkflowVersion,
-		"status":            execution.Status,
-		"trigger_type":      execution.TriggerType,
-		"steps":             convertStepsToJSON(steps),
+		"execution_id":     execution.ID,
+		"workflow_id":      execution.WorkflowID,
+		"workflow_version": execution.WorkflowVersion,
+		"status":           execution.Status,
+		"trigger_type":     execution.TriggerType,
+		"steps":            convertStepsToJSON(steps),
 	}
 
 	if execution.StartedAt != nil {

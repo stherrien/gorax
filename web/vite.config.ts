@@ -17,4 +17,10 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Generate source maps for production error tracking
+    sourcemap: true,
+    // Reduce chunk size warnings threshold
+    chunkSizeWarningLimit: 1000,
+  },
 })

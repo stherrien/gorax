@@ -7,13 +7,13 @@ import (
 
 // CredentialMetadata represents Slack-specific OAuth credential data
 type CredentialMetadata struct {
-	TeamID      string   `json:"team_id"`
-	TeamName    string   `json:"team_name"`
-	UserID      string   `json:"user_id,omitempty"`
-	BotUserID   string   `json:"bot_user_id,omitempty"`
-	Scope       string   `json:"scope"`
-	AppID       string   `json:"app_id,omitempty"`
-	TokenType   string   `json:"token_type"` // "bot" or "user"
+	TeamID    string `json:"team_id"`
+	TeamName  string `json:"team_name"`
+	UserID    string `json:"user_id,omitempty"`
+	BotUserID string `json:"bot_user_id,omitempty"`
+	Scope     string `json:"scope"`
+	AppID     string `json:"app_id,omitempty"`
+	TokenType string `json:"token_type"` // "bot" or "user"
 }
 
 // OAuthResponse represents the response from Slack OAuth2 token exchange
@@ -28,13 +28,13 @@ type OAuthResponse struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"team"`
-	Enterprise         interface{} `json:"enterprise,omitempty"`
-	AuthedUser         interface{} `json:"authed_user,omitempty"`
-	IncomingWebhook    interface{} `json:"incoming_webhook,omitempty"`
-	RefreshToken       string      `json:"refresh_token,omitempty"`
-	ExpiresIn          int         `json:"expires_in,omitempty"`
-	Error              string      `json:"error,omitempty"`
-	ErrorDescription   string      `json:"error_description,omitempty"`
+	Enterprise       interface{} `json:"enterprise,omitempty"`
+	AuthedUser       interface{} `json:"authed_user,omitempty"`
+	IncomingWebhook  interface{} `json:"incoming_webhook,omitempty"`
+	RefreshToken     string      `json:"refresh_token,omitempty"`
+	ExpiresIn        int         `json:"expires_in,omitempty"`
+	Error            string      `json:"error,omitempty"`
+	ErrorDescription string      `json:"error_description,omitempty"`
 }
 
 // APIResponse is the base Slack API response structure
@@ -45,20 +45,20 @@ type APIResponse struct {
 
 // SendMessageRequest represents a request to send a message
 type SendMessageRequest struct {
-	Channel         string                   `json:"channel"`
-	Text            string                   `json:"text,omitempty"`
-	Blocks          []map[string]interface{} `json:"blocks,omitempty"`
-	Attachments     []Attachment             `json:"attachments,omitempty"`
-	ThreadTS        string                   `json:"thread_ts,omitempty"`
-	ReplyBroadcast  bool                     `json:"reply_broadcast,omitempty"`
-	UnfurlLinks     bool                     `json:"unfurl_links,omitempty"`
-	UnfurlMedia     bool                     `json:"unfurl_media,omitempty"`
-	IconEmoji       string                   `json:"icon_emoji,omitempty"`
-	IconURL         string                   `json:"icon_url,omitempty"`
-	Username        string                   `json:"username,omitempty"`
-	AsUser          bool                     `json:"as_user,omitempty"`
-	LinkNames       bool                     `json:"link_names,omitempty"`
-	Mrkdwn          bool                     `json:"mrkdwn,omitempty"`
+	Channel        string                   `json:"channel"`
+	Text           string                   `json:"text,omitempty"`
+	Blocks         []map[string]interface{} `json:"blocks,omitempty"`
+	Attachments    []Attachment             `json:"attachments,omitempty"`
+	ThreadTS       string                   `json:"thread_ts,omitempty"`
+	ReplyBroadcast bool                     `json:"reply_broadcast,omitempty"`
+	UnfurlLinks    bool                     `json:"unfurl_links,omitempty"`
+	UnfurlMedia    bool                     `json:"unfurl_media,omitempty"`
+	IconEmoji      string                   `json:"icon_emoji,omitempty"`
+	IconURL        string                   `json:"icon_url,omitempty"`
+	Username       string                   `json:"username,omitempty"`
+	AsUser         bool                     `json:"as_user,omitempty"`
+	LinkNames      bool                     `json:"link_names,omitempty"`
+	Mrkdwn         bool                     `json:"mrkdwn,omitempty"`
 }
 
 // Attachment represents a Slack message attachment (legacy)
@@ -112,10 +112,10 @@ type Message struct {
 
 // MessageIcons represents message icons
 type MessageIcons struct {
-	Emoji       string `json:"emoji,omitempty"`
-	Image48     string `json:"image_48,omitempty"`
-	Image64     string `json:"image_64,omitempty"`
-	Image72     string `json:"image_72,omitempty"`
+	Emoji   string `json:"emoji,omitempty"`
+	Image48 string `json:"image_48,omitempty"`
+	Image64 string `json:"image_64,omitempty"`
+	Image72 string `json:"image_72,omitempty"`
 }
 
 // UpdateMessageRequest represents a request to update a message
@@ -179,26 +179,26 @@ type UserByEmailResponse struct {
 
 // Conversation represents a Slack channel or DM
 type Conversation struct {
-	ID                 string   `json:"id"`
-	Name               string   `json:"name,omitempty"`
-	IsChannel          bool     `json:"is_channel"`
-	IsGroup            bool     `json:"is_group"`
-	IsIM               bool     `json:"is_im"`
-	IsMpIM             bool     `json:"is_mpim"`
-	IsPrivate          bool     `json:"is_private"`
-	Created            int64    `json:"created"`
-	IsArchived         bool     `json:"is_archived"`
-	IsGeneral          bool     `json:"is_general,omitempty"`
-	Unlinked           int      `json:"unlinked,omitempty"`
-	NameNormalized     string   `json:"name_normalized,omitempty"`
-	IsShared           bool     `json:"is_shared,omitempty"`
-	IsOrgShared        bool     `json:"is_org_shared,omitempty"`
-	IsMember           bool     `json:"is_member,omitempty"`
-	IsReadOnly         bool     `json:"is_read_only,omitempty"`
-	Creator            string   `json:"creator,omitempty"`
-	Topic              *Topic   `json:"topic,omitempty"`
-	Purpose            *Purpose `json:"purpose,omitempty"`
-	NumMembers         int      `json:"num_members,omitempty"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name,omitempty"`
+	IsChannel      bool     `json:"is_channel"`
+	IsGroup        bool     `json:"is_group"`
+	IsIM           bool     `json:"is_im"`
+	IsMpIM         bool     `json:"is_mpim"`
+	IsPrivate      bool     `json:"is_private"`
+	Created        int64    `json:"created"`
+	IsArchived     bool     `json:"is_archived"`
+	IsGeneral      bool     `json:"is_general,omitempty"`
+	Unlinked       int      `json:"unlinked,omitempty"`
+	NameNormalized string   `json:"name_normalized,omitempty"`
+	IsShared       bool     `json:"is_shared,omitempty"`
+	IsOrgShared    bool     `json:"is_org_shared,omitempty"`
+	IsMember       bool     `json:"is_member,omitempty"`
+	IsReadOnly     bool     `json:"is_read_only,omitempty"`
+	Creator        string   `json:"creator,omitempty"`
+	Topic          *Topic   `json:"topic,omitempty"`
+	Purpose        *Purpose `json:"purpose,omitempty"`
+	NumMembers     int      `json:"num_members,omitempty"`
 }
 
 // Topic represents a channel topic
@@ -257,15 +257,15 @@ type ActionConfig struct {
 
 // SendMessageConfig represents configuration for SendMessage action
 type SendMessageConfig struct {
-	Channel         string                   `json:"channel"`
-	Text            string                   `json:"text,omitempty"`
-	Blocks          []map[string]interface{} `json:"blocks,omitempty"`
-	ThreadTS        string                   `json:"thread_ts,omitempty"`
-	ReplyBroadcast  bool                     `json:"reply_broadcast,omitempty"`
-	UnfurlLinks     *bool                    `json:"unfurl_links,omitempty"`
-	UnfurlMedia     *bool                    `json:"unfurl_media,omitempty"`
-	IconEmoji       string                   `json:"icon_emoji,omitempty"`
-	Username        string                   `json:"username,omitempty"`
+	Channel        string                   `json:"channel"`
+	Text           string                   `json:"text,omitempty"`
+	Blocks         []map[string]interface{} `json:"blocks,omitempty"`
+	ThreadTS       string                   `json:"thread_ts,omitempty"`
+	ReplyBroadcast bool                     `json:"reply_broadcast,omitempty"`
+	UnfurlLinks    *bool                    `json:"unfurl_links,omitempty"`
+	UnfurlMedia    *bool                    `json:"unfurl_media,omitempty"`
+	IconEmoji      string                   `json:"icon_emoji,omitempty"`
+	Username       string                   `json:"username,omitempty"`
 }
 
 // SendDMConfig represents configuration for SendDM action

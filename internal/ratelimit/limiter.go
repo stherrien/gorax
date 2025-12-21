@@ -63,9 +63,9 @@ func (l *SlidingWindowLimiter) Allow(ctx context.Context, tenantID string, limit
 	`)
 
 	result, err := script.Run(ctx, l.client, []string{key},
-		windowStart, // ARGV[1] - window start
-		now,         // ARGV[2] - current timestamp
-		limit,       // ARGV[3] - limit
+		windowStart,             // ARGV[1] - window start
+		now,                     // ARGV[2] - current timestamp
+		limit,                   // ARGV[3] - limit
 		int(window.Seconds())+1, // ARGV[4] - TTL
 	).Result()
 

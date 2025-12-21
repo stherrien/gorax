@@ -61,10 +61,8 @@ func (s *ServiceImpl) GetValue(ctx context.Context, tenantID, credentialID, user
 	}
 
 	// Update last used time (synchronous for now - could be made async)
-	if err := s.repo.UpdateLastUsedAt(ctx, tenantID, credentialID); err != nil {
-		// Log error but don't fail the request
-		// In production, this should use a proper logger
-	}
+	// Note: Error is intentionally ignored as this is a non-critical operation
+	_ = s.repo.UpdateLastUsedAt(ctx, tenantID, credentialID)
 
 	// Log access
 	accessLog := &AccessLog{
@@ -75,10 +73,8 @@ func (s *ServiceImpl) GetValue(ctx context.Context, tenantID, credentialID, user
 		AccessedAt:   time.Now().UTC(),
 		Success:      true,
 	}
-	if err := s.repo.LogAccess(ctx, accessLog); err != nil {
-		// Log error but don't fail the request
-		// In production, this should use a proper logger
-	}
+	// Note: Error is intentionally ignored as this is a non-critical operation
+	_ = s.repo.LogAccess(ctx, accessLog)
 
 	// Build and return decrypted value
 	return &DecryptedValue{

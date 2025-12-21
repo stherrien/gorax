@@ -141,7 +141,7 @@ describe('WebhookList', () => {
 
   describe('Loading and Error States', () => {
     it('should render loading state', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [],
         total: 0,
         loading: true,
@@ -179,7 +179,7 @@ describe('WebhookList', () => {
     })
 
     it('should render empty state when no webhooks', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [],
         total: 0,
         loading: false,
@@ -199,7 +199,7 @@ describe('WebhookList', () => {
 
   describe('Webhook List Display', () => {
     it('should render webhook list', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -222,7 +222,7 @@ describe('WebhookList', () => {
     })
 
     it('should display webhook paths', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -243,7 +243,7 @@ describe('WebhookList', () => {
     })
 
     it('should display workflow names with links', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -267,7 +267,7 @@ describe('WebhookList', () => {
     })
 
     it('should display trigger counts', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -292,7 +292,7 @@ describe('WebhookList', () => {
 
   describe('Auth Type Badges', () => {
     it('should show correct auth type badges', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -317,7 +317,7 @@ describe('WebhookList', () => {
 
   describe('Status Display', () => {
     it('should show toggle switch checked for enabled webhooks', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [mockWebhooks[0]], // enabled webhook
         total: 1,
         loading: false,
@@ -338,7 +338,7 @@ describe('WebhookList', () => {
     })
 
     it('should show toggle switch unchecked for disabled webhooks', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [mockWebhooks[1]], // disabled webhook
         total: 1,
         loading: false,
@@ -390,7 +390,7 @@ describe('WebhookList', () => {
     })
 
     it('should show never for webhooks not yet triggered', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [mockWebhooks[1]], // never triggered
         total: 1,
         loading: false,
@@ -412,7 +412,7 @@ describe('WebhookList', () => {
 
   describe('Navigation', () => {
     it('should have create button that links to /webhooks/new', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -431,7 +431,7 @@ describe('WebhookList', () => {
     })
 
     it('should have edit links for each webhook', async () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -456,7 +456,7 @@ describe('WebhookList', () => {
 
   describe('Copy URL Action', () => {
     it('should have copy URL button for each webhook', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -617,7 +617,7 @@ describe('WebhookList', () => {
 
   describe('Header', () => {
     it('should render header with Webhooks title', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -637,7 +637,7 @@ describe('WebhookList', () => {
 
   describe('Pagination', () => {
     it('should show pagination controls when total exceeds limit', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: 25, // More than page size (20)
         loading: false,
@@ -657,7 +657,7 @@ describe('WebhookList', () => {
     })
 
     it('should disable previous button on first page', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: 25,
         loading: false,
@@ -702,7 +702,7 @@ describe('WebhookList', () => {
     })
 
     it('should hide pagination when total is less than page size', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -722,7 +722,7 @@ describe('WebhookList', () => {
 
   describe('Enable/Disable Toggle', () => {
     it('should have toggle switch for each webhook', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: mockWebhooks,
         total: mockWebhooks.length,
         loading: false,
@@ -874,7 +874,7 @@ describe('WebhookList', () => {
     })
 
     it('should display Low priority badge with gray styling', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [{ ...mockWebhooks[0], priority: 0 }],
         total: 1,
         loading: false,
@@ -894,7 +894,7 @@ describe('WebhookList', () => {
     })
 
     it('should display High priority badge with yellow styling', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [{ ...mockWebhooks[0], priority: 2 }],
         total: 1,
         loading: false,
@@ -914,7 +914,7 @@ describe('WebhookList', () => {
     })
 
     it('should display Critical priority badge with red styling', () => {
-      ;(useWebhooks as any).mockReturnValue({
+      (useWebhooks as any).mockReturnValue({
         webhooks: [{ ...mockWebhooks[0], priority: 3 }],
         total: 1,
         loading: false,

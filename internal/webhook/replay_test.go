@@ -661,14 +661,14 @@ func TestReplayService_BatchReplayEvents_AllEventsFail(t *testing.T) {
 // Table-driven tests for ReplayEvent error scenarios
 func TestReplayService_ReplayEvent_TableDriven(t *testing.T) {
 	tests := []struct {
-		name           string
-		setupMocks     func(*MockReplayRepository, *MockWorkflowExecutor)
-		tenantID       string
-		eventID        string
-		modifiedPayload json.RawMessage
-		wantSuccess    bool
+		name              string
+		setupMocks        func(*MockReplayRepository, *MockWorkflowExecutor)
+		tenantID          string
+		eventID           string
+		modifiedPayload   json.RawMessage
+		wantSuccess       bool
 		wantErrorContains string
-		wantExecutionID string
+		wantExecutionID   string
 	}{
 		{
 			name: "success with original payload",
@@ -692,9 +692,9 @@ func TestReplayService_ReplayEvent_TableDriven(t *testing.T) {
 					[]byte(`{"data": "original"}`)).Return("exec-1", nil)
 				repo.On("CreateEvent", mock.Anything, mock.AnythingOfType("*webhook.WebhookEvent")).Return(nil)
 			},
-			tenantID:       "tenant-1",
-			eventID:        "event-1",
-			wantSuccess:    true,
+			tenantID:        "tenant-1",
+			eventID:         "event-1",
+			wantSuccess:     true,
 			wantExecutionID: "exec-1",
 		},
 		{
@@ -851,11 +851,11 @@ func TestReplayService_ReplayEvent_TableDriven(t *testing.T) {
 // Table-driven tests for BatchReplayEvents scenarios
 func TestReplayService_BatchReplayEvents_TableDriven(t *testing.T) {
 	tests := []struct {
-		name              string
-		eventIDs          []string
-		setupMocks        func(*MockReplayRepository, *MockWorkflowExecutor)
-		wantResultsCount  int
-		validateResults   func(*testing.T, *BatchReplayResponse)
+		name             string
+		eventIDs         []string
+		setupMocks       func(*MockReplayRepository, *MockWorkflowExecutor)
+		wantResultsCount int
+		validateResults  func(*testing.T, *BatchReplayResponse)
 	}{
 		{
 			name:     "empty event list",

@@ -3,7 +3,6 @@ package template
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"log/slog"
@@ -378,6 +377,3 @@ func TestService_ValidateDefinition(t *testing.T) {
 		})
 	}
 }
-
-// Helper error for testing
-var errTest = errors.New("test error")

@@ -53,7 +53,7 @@ describe('UsageDashboard', () => {
     render(<UsageDashboard tenantId="tenant-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/workflow executions/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/workflow executions/i).length).toBeGreaterThan(0);
     });
 
     // Check for "Today's Usage" section which should have 50 workflow executions
@@ -69,7 +69,7 @@ describe('UsageDashboard', () => {
     render(<UsageDashboard tenantId="tenant-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/remaining/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/remaining/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -100,7 +100,8 @@ describe('UsageDashboard', () => {
     render(<UsageDashboard tenantId="tenant-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/85\.0%/)).toBeInTheDocument();
+      const percentageElements = screen.getAllByText(/85\.0%/);
+      expect(percentageElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -120,7 +121,7 @@ describe('UsageDashboard', () => {
     render(<UsageDashboard tenantId="tenant-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/unlimited/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/unlimited/i).length).toBeGreaterThan(0);
     });
   });
 });

@@ -10,9 +10,9 @@ import (
 
 // TenantConcurrencyLimiter manages per-tenant concurrency limits
 type TenantConcurrencyLimiter struct {
-	redis       *redis.Client
+	redis        *redis.Client
 	maxPerTenant int
-	keyPrefix   string
+	keyPrefix    string
 }
 
 // NewTenantConcurrencyLimiter creates a new tenant concurrency limiter

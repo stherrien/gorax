@@ -125,26 +125,26 @@ type WebhookEventFilter struct {
 type FilterOperator string
 
 const (
-	OpEquals       FilterOperator = "equals"
-	OpNotEquals    FilterOperator = "not_equals"
-	OpContains     FilterOperator = "contains"
-	OpNotContains  FilterOperator = "not_contains"
-	OpStartsWith   FilterOperator = "starts_with"
-	OpEndsWith     FilterOperator = "ends_with"
-	OpRegex        FilterOperator = "regex"
-	OpGreaterThan  FilterOperator = "gt"
-	OpLessThan     FilterOperator = "lt"
-	OpIn           FilterOperator = "in"
-	OpNotIn        FilterOperator = "not_in"
-	OpExists       FilterOperator = "exists"
-	OpNotExists    FilterOperator = "not_exists"
+	OpEquals      FilterOperator = "equals"
+	OpNotEquals   FilterOperator = "not_equals"
+	OpContains    FilterOperator = "contains"
+	OpNotContains FilterOperator = "not_contains"
+	OpStartsWith  FilterOperator = "starts_with"
+	OpEndsWith    FilterOperator = "ends_with"
+	OpRegex       FilterOperator = "regex"
+	OpGreaterThan FilterOperator = "gt"
+	OpLessThan    FilterOperator = "lt"
+	OpIn          FilterOperator = "in"
+	OpNotIn       FilterOperator = "not_in"
+	OpExists      FilterOperator = "exists"
+	OpNotExists   FilterOperator = "not_exists"
 )
 
 // WebhookFilter represents a filter rule for webhook payload evaluation
 type WebhookFilter struct {
 	ID         string         `json:"id" db:"id"`
 	WebhookID  string         `json:"webhookId" db:"webhook_id"`
-	FieldPath  string         `json:"fieldPath" db:"field_path"`   // JSON path like "$.data.status"
+	FieldPath  string         `json:"fieldPath" db:"field_path"` // JSON path like "$.data.status"
 	Operator   FilterOperator `json:"operator" db:"operator"`
 	Value      interface{}    `json:"value" db:"value"`
 	LogicGroup int            `json:"logicGroup" db:"logic_group"` // For AND/OR grouping
@@ -171,14 +171,14 @@ type TestResult struct {
 
 // Event represents a webhook event log entry
 type Event struct {
-	ID           string     `db:"id" json:"id"`
-	WebhookID    string     `db:"webhook_id" json:"webhookId"`
-	ExecutionID  string     `db:"execution_id" json:"executionId"`
-	Status       string     `db:"status" json:"status"`
-	StatusCode   int        `db:"status_code" json:"statusCode"`
-	ResponseTime int        `db:"response_time" json:"responseTimeMs"`
-	ErrorMessage *string    `db:"error_message" json:"errorMessage,omitempty"`
-	CreatedAt    time.Time  `db:"created_at" json:"createdAt"`
+	ID           string    `db:"id" json:"id"`
+	WebhookID    string    `db:"webhook_id" json:"webhookId"`
+	ExecutionID  string    `db:"execution_id" json:"executionId"`
+	Status       string    `db:"status" json:"status"`
+	StatusCode   int       `db:"status_code" json:"statusCode"`
+	ResponseTime int       `db:"response_time" json:"responseTimeMs"`
+	ErrorMessage *string   `db:"error_message" json:"errorMessage,omitempty"`
+	CreatedAt    time.Time `db:"created_at" json:"createdAt"`
 }
 
 // ReplayRequest represents a request to replay a webhook event
@@ -246,13 +246,13 @@ func findChar(s string, char rune) int {
 // ToWorkflowContext converts WebhookEvent to a map suitable for workflow context
 func (e *WebhookEvent) ToWorkflowContext() map[string]interface{} {
 	context := map[string]interface{}{
-		"eventId":      e.ID,
-		"webhookId":    e.WebhookID,
-		"method":       e.RequestMethod,
-		"headers":      e.RequestHeaders,
-		"body":         e.RequestBody,
-		"status":       string(e.Status),
-		"createdAt":    e.CreatedAt.Format(time.RFC3339),
+		"eventId":   e.ID,
+		"webhookId": e.WebhookID,
+		"method":    e.RequestMethod,
+		"headers":   e.RequestHeaders,
+		"body":      e.RequestBody,
+		"status":    string(e.Status),
+		"createdAt": e.CreatedAt.Format(time.RFC3339),
 	}
 
 	if e.ExecutionID != nil {

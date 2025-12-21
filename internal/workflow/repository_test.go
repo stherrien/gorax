@@ -39,19 +39,19 @@ func TestListExecutionsAdvanced(t *testing.T) {
 	_ = workflowID
 
 	tests := []struct {
-		name           string
-		filter         ExecutionFilter
-		cursor         string
-		limit          int
-		expectedCount  int
+		name            string
+		filter          ExecutionFilter
+		cursor          string
+		limit           int
+		expectedCount   int
 		expectedHasMore bool
-		validateFn     func(*testing.T, *ExecutionListResult)
+		validateFn      func(*testing.T, *ExecutionListResult)
 	}{
 		{
-			name:           "list all executions without filter",
-			filter:         ExecutionFilter{},
-			limit:          10,
-			expectedCount:  5,
+			name:            "list all executions without filter",
+			filter:          ExecutionFilter{},
+			limit:           10,
+			expectedCount:   5,
 			expectedHasMore: false,
 		},
 		{
@@ -156,7 +156,7 @@ func TestListExecutionsAdvanced(t *testing.T) {
 			for i := 1; i < len(result.Data); i++ {
 				assert.True(t,
 					result.Data[i-1].CreatedAt.After(result.Data[i].CreatedAt) ||
-					result.Data[i-1].CreatedAt.Equal(result.Data[i].CreatedAt),
+						result.Data[i-1].CreatedAt.Equal(result.Data[i].CreatedAt),
 					"Results should be sorted by created_at DESC")
 			}
 		})
@@ -253,10 +253,10 @@ func TestGetExecutionWithSteps(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name           string
-		executionID    string
-		expectedSteps  int
-		shouldError    bool
+		name          string
+		executionID   string
+		expectedSteps int
+		shouldError   bool
 	}{
 		{
 			name:          "get execution with steps",
@@ -291,7 +291,7 @@ func TestGetExecutionWithSteps(t *testing.T) {
 				if result.Steps[i-1].StartedAt != nil && result.Steps[i].StartedAt != nil {
 					assert.True(t,
 						result.Steps[i-1].StartedAt.Before(*result.Steps[i].StartedAt) ||
-						result.Steps[i-1].StartedAt.Equal(*result.Steps[i].StartedAt),
+							result.Steps[i-1].StartedAt.Equal(*result.Steps[i].StartedAt),
 						"Steps should be ordered by started_at ASC")
 				}
 			}
@@ -994,4 +994,3 @@ func stringPtr(s string) *string {
 func int64Ptr(i int64) *int64 {
 	return &i
 }
-

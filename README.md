@@ -7,7 +7,11 @@
 Build, deploy, and manage complex workflows with ease. No code required.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.23-00ADD8?logo=go)](https://go.dev/)
+[![CI](https://github.com/stherrien/gorax/actions/workflows/ci.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/ci.yml)
+[![Security](https://github.com/stherrien/gorax/actions/workflows/security.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/security.yml)
+[![CodeQL](https://github.com/stherrien/gorax/actions/workflows/codeql.yml/badge.svg)](https://github.com/stherrien/gorax/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/stherrien/gorax/branch/main/graph/badge.svg)](https://codecov.io/gh/stherrien/gorax)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-red?logo=github)](https://github.com/sponsors/stherrien)
 
 [Getting Started](#-quick-start) • [Documentation](docs/) • [Examples](examples/) • [Contributing](#-contributing)
@@ -26,22 +30,28 @@ Build, deploy, and manage complex workflows with ease. No code required.
 Drag-and-drop interface for creating workflows. No coding required.
 
 ### 🔗 Rich Integrations
-Connect with Slack, HTTP APIs, webhooks, and more. Extensible plugin system.
+Connect with Slack, GitHub, Jira, PagerDuty, HTTP APIs, webhooks, and more.
 
 ### ⚡ Real-time Execution
 Monitor workflows as they run with live updates and detailed logs.
+
+### 🔀 Loop & Parallel Actions
+Execute steps in parallel with fork/join semantics and iterate over collections.
 
 </td>
 <td width="50%">
 
 ### 🔐 Secure by Default
-Enterprise-grade security with encrypted credentials and role-based access.
+Enterprise-grade security with encrypted credentials (AWS KMS) and RBAC.
 
-### 🎯 Template Variables
-Dynamic data interpolation between workflow steps.
+### 👥 Human Tasks
+Approval workflows with timeout escalation and notification support.
 
 ### 📊 Complete Observability
-Execution history, performance metrics, and audit trails.
+OpenTelemetry tracing, Prometheus metrics, Sentry error tracking.
+
+### 🗑️ Retention Policies
+Automatic cleanup of old executions with configurable retention periods.
 
 </td>
 </tr>
@@ -132,13 +142,23 @@ cd web && npm install && npm run dev
 | Integration | Send | Receive | Actions |
 |------------|------|---------|---------|
 | **Slack** | ✅ | ✅ | Messages, DMs, Reactions, Updates |
+| **GitHub** | ✅ | ✅ | Issues, PRs, Webhooks |
+| **Jira** | ✅ | ✅ | Issues, Transitions, Comments |
+| **PagerDuty** | ✅ | - | Incidents, Alerts |
 | **HTTP/REST** | ✅ | ✅ | Any API endpoint |
-| **Webhooks** | ✅ | ✅ | Inbound & outbound |
-| **JavaScript** | ✅ | - | Custom code execution |
+| **Webhooks** | ✅ | ✅ | Inbound & outbound with filtering |
+| **JavaScript** | ✅ | - | Custom code execution (Goja sandbox) |
+| **Email** | ✅ | - | SMTP & AWS SES support |
 
-### Coming Soon
+### Enterprise Features
 
-GitHub • Jira • AWS Services • Google Workspace • Database Connectors • Email
+| Feature | Description |
+|---------|-------------|
+| **Human Tasks** | Approval workflows with escalation |
+| **RBAC** | Role-based access control with audit logging |
+| **Sub-workflows** | Nested workflow execution with recursion protection |
+| **Schedules** | Cron-based workflow scheduling |
+| **Credentials** | Encrypted vault with AWS KMS integration |
 
 ---
 
@@ -195,7 +215,7 @@ Create a deployment notification in minutes:
 
 ### Prerequisites
 
-- Go 1.25+
+- Go 1.23+
 - Node.js 18+
 - PostgreSQL 14+
 - Redis 6+

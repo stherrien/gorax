@@ -66,15 +66,15 @@ func TestRepository_CreateEvent(t *testing.T) {
 		{
 			name: "create event with processed status and execution id",
 			event: &WebhookEvent{
-				TenantID:       tenantID,
-				WebhookID:      webhook.ID,
-				ExecutionID:    stringPtr(uuid.New().String()),
-				RequestMethod:  "POST",
-				RequestHeaders: requestHeaders,
-				RequestBody:    requestBody,
-				ResponseStatus: intPtr(200),
+				TenantID:         tenantID,
+				WebhookID:        webhook.ID,
+				ExecutionID:      stringPtr(uuid.New().String()),
+				RequestMethod:    "POST",
+				RequestHeaders:   requestHeaders,
+				RequestBody:      requestBody,
+				ResponseStatus:   intPtr(200),
 				ProcessingTimeMs: intPtr(150),
-				Status:         EventStatusProcessed,
+				Status:           EventStatusProcessed,
 			},
 			wantErr: false,
 		},
@@ -323,11 +323,11 @@ func TestRepository_UpdateEventStatus(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name      string
-		eventID   string
-		status    WebhookEventStatus
-		errorMsg  *string
-		wantErr   bool
+		name     string
+		eventID  string
+		status   WebhookEventStatus
+		errorMsg *string
+		wantErr  bool
 	}{
 		{
 			name:     "update to processed status",

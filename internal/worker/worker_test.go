@@ -54,7 +54,7 @@ func TestPollExecution_ReturnsPendingExecution(t *testing.T) {
 	// Create pending executions
 	exec1 := createExecution(t, db, tenantID, workflowID, "pending", time.Now().Add(-2*time.Minute))
 	exec2 := createExecution(t, db, tenantID, workflowID, "pending", time.Now().Add(-1*time.Minute))
-	createExecution(t, db, tenantID, workflowID, "running", time.Now())  // Should not be picked
+	createExecution(t, db, tenantID, workflowID, "running", time.Now())   // Should not be picked
 	createExecution(t, db, tenantID, workflowID, "completed", time.Now()) // Should not be picked
 
 	// Test - should return oldest pending execution

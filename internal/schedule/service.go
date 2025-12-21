@@ -251,6 +251,12 @@ func (s *Service) GetNextRunTimes(expression, timezone string, count int) ([]tim
 		return []time.Time{}, nil
 	}
 
+	// Cap count to prevent excessive memory allocation
+	const maxCount = 1000
+	if count > maxCount {
+		count = maxCount
+	}
+
 	// Parse cron expression
 	sched, err := s.cronParser.Parse(expression)
 	if err != nil {
