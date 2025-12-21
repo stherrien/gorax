@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
@@ -19,6 +20,10 @@ import (
 
 	"github.com/gorax/gorax/internal/aibuilder"
 	"github.com/gorax/gorax/internal/api/handlers"
+	"github.com/gorax/gorax/internal/llm"
+	"github.com/gorax/gorax/internal/llm/providers/anthropic"
+	"github.com/gorax/gorax/internal/llm/providers/bedrock"
+	"github.com/gorax/gorax/internal/llm/providers/openai"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
@@ -34,6 +39,29 @@ import (
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
 )
+
+var llmProvidersOnce sync.Once
+
+// registerLLMProviders registers all LLM providers with the global registry.
+// This is called once on application startup.
+func registerLLMProviders() {
+	llmProvidersOnce.Do(func() {
+		// Register OpenAI provider
+		_ = llm.RegisterProvider(llm.ProviderOpenAI, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return openai.NewClient(cfg)
+		})
+
+		// Register Anthropic provider
+		_ = llm.RegisterProvider(llm.ProviderAnthropic, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return anthropic.NewClient(cfg)
+		})
+
+		// Register AWS Bedrock provider
+		_ = llm.RegisterProvider(llm.ProviderBedrock, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return bedrock.NewClient(cfg)
+		})
+	})
+}
 
 // App holds application dependencies
 type App struct {
@@ -84,6 +112,9 @@ type App struct {
 
 // NewApp creates a new application instance
 func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
+	// Register LLM providers once at startup
+	registerLLMProviders()
+
 	app := &App{
 		config: cfg,
 		logger: logger,
@@ -233,16 +264,51 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize AI builder service and handler
 	aibuilderRepo := aibuilder.NewPostgresRepository(db)
 	nodeRegistry := aibuilder.NewNodeRegistry()
-	// Note: AI builder requires LLM configuration to function fully
-	// For now, create with nil generator - will return error if used without config
+
+	var aibuilderGenerator *aibuilder.WorkflowGenerator
+	if cfg.AIBuilder.Enabled && cfg.AIBuilder.APIKey != "" {
+		// Create LLM provider from configuration
+		llmConfig := &llm.ProviderConfig{
+			APIKey: cfg.AIBuilder.APIKey,
+		}
+
+		// For AWS Bedrock, use AWS credentials from main AWS config
+		if cfg.AIBuilder.Provider == "bedrock" {
+			llmConfig.Region = cfg.AWS.Region
+			llmConfig.AWSAccessKeyID = cfg.AWS.AccessKeyID
+			llmConfig.AWSSecretAccessKey = cfg.AWS.SecretAccessKey
+		}
+
+		llmProvider, err := llm.GlobalProviderRegistry.GetProvider(cfg.AIBuilder.Provider, llmConfig)
+		if err != nil {
+			logger.Warn("Failed to initialize LLM provider for AI Builder", "error", err, "provider", cfg.AIBuilder.Provider)
+		} else {
+			// Create generator with LLM provider
+			generatorConfig := &aibuilder.GeneratorConfig{
+				Model:       cfg.AIBuilder.Model,
+				MaxTokens:   cfg.AIBuilder.MaxTokens,
+				Temperature: cfg.AIBuilder.Temperature,
+			}
+			aibuilderGenerator = aibuilder.NewWorkflowGenerator(llmProvider, nodeRegistry, generatorConfig)
+			logger.Info("AI Builder initialized with LLM provider",
+				"provider", cfg.AIBuilder.Provider,
+				"model", cfg.AIBuilder.Model,
+			)
+		}
+	} else {
+		logger.Info("AI Builder initialized without LLM provider",
+			"enabled", cfg.AIBuilder.Enabled,
+			"api_key_set", cfg.AIBuilder.APIKey != "",
+			"note", "Set AI_BUILDER_ENABLED=true and AI_BUILDER_API_KEY to enable",
+		)
+	}
+
 	aibuilderService := aibuilder.NewAIBuilderService(
 		aibuilder.NewContextRepositoryAdapter(aibuilderRepo),
-		nil, // Generator requires LLM provider - configure via config
+		aibuilderGenerator,
 		&workflowCreatorAdapter{workflowService: app.workflowService},
 	)
-	_ = nodeRegistry // Node registry available for LLM context
 	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
-	logger.Info("AI Builder initialized", "llm_configured", false, "note", "Configure LLM provider for full functionality")
 
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
