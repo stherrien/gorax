@@ -23,6 +23,24 @@ type Config struct {
 	Notification   NotificationConfig
 	CORS           CORSConfig
 	SecurityHeader SecurityHeaderConfig
+	AIBuilder      AIBuilderConfig
+}
+
+// AIBuilderConfig holds AI Workflow Builder configuration
+type AIBuilderConfig struct {
+	// Enabled indicates whether the AI Builder feature is enabled
+	Enabled bool
+	// Provider is the LLM provider to use (openai, anthropic, bedrock)
+	Provider string
+	// APIKey is the API key for the LLM provider
+	// For AWS Bedrock, use AWS credentials from AWSConfig instead
+	APIKey string
+	// Model is the model name/ID to use for generation
+	Model string
+	// MaxTokens is the maximum number of tokens for completion
+	MaxTokens int
+	// Temperature controls randomness in generation (0.0 to 1.0)
+	Temperature float64
 }
 
 // CredentialConfig holds credential vault configuration
@@ -318,6 +336,14 @@ func Load() (*Config, error) {
 		},
 		CORS:           loadCORSConfig(),
 		SecurityHeader: loadSecurityHeaderConfig(),
+		AIBuilder: AIBuilderConfig{
+			Enabled:     getEnvAsBool("AI_BUILDER_ENABLED", false),
+			Provider:    getEnv("AI_BUILDER_PROVIDER", "openai"),
+			APIKey:      getEnv("AI_BUILDER_API_KEY", ""),
+			Model:       getEnv("AI_BUILDER_MODEL", "gpt-4"),
+			MaxTokens:   getEnvAsInt("AI_BUILDER_MAX_TOKENS", 4096),
+			Temperature: getEnvAsFloat("AI_BUILDER_TEMPERATURE", 0.7),
+		},
 	}
 
 	return cfg, nil
