@@ -67,26 +67,26 @@ export const scheduleTemplatesApi = {
     const queryString = params.toString();
     const url = `/api/v1/schedule-templates${queryString ? `?${queryString}` : ''}`;
 
-    const response = await apiClient.get<ScheduleTemplate[]>(url);
-    return response.data;
+    const response = await apiClient.get(url);
+    return response as ScheduleTemplate[];
   },
 
   /**
    * Get a single schedule template by ID
    */
   get: async (id: string): Promise<ScheduleTemplate> => {
-    const response = await apiClient.get<ScheduleTemplate>(`/api/v1/schedule-templates/${id}`);
-    return response.data;
+    const response = await apiClient.get(`/api/v1/schedule-templates/${id}`);
+    return response as ScheduleTemplate;
   },
 
   /**
    * Apply a template to create a schedule
    */
   apply: async (templateId: string, input: ApplyTemplateInput): Promise<Schedule> => {
-    const response = await apiClient.post<Schedule>(
+    const response = await apiClient.post(
       `/api/v1/schedule-templates/${templateId}/apply`,
       input
     );
-    return response.data;
+    return response as Schedule;
   },
 };

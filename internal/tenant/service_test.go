@@ -8,10 +8,10 @@ import (
 // TestDefaultQuotas verifies quota defaults for different tiers
 func TestDefaultQuotas(t *testing.T) {
 	tests := []struct {
-		tier                      string
-		expectedMaxWorkflows      int
-		expectedMaxExecutionsDay  int
-		expectedMaxConcurrent     int
+		tier                     string
+		expectedMaxWorkflows     int
+		expectedMaxExecutionsDay int
+		expectedMaxConcurrent    int
 	}{
 		{
 			tier:                     "free",

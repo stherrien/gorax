@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/validation"
 )
 
 // ScheduleHandler handles schedule-related HTTP requests
@@ -59,8 +59,12 @@ func (h *ScheduleHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	workflowID := chi.URLParam(r, "workflowID")
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	schedules, err := h.service.List(r.Context(), tenantID, workflowID, limit, offset)
 	if err != nil {
@@ -80,8 +84,12 @@ func (h *ScheduleHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ScheduleHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
 
 	schedules, err := h.service.ListAll(r.Context(), tenantID, limit, offset)
 	if err != nil {

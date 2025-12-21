@@ -85,7 +85,7 @@ describe('ExecutionDetail Integration', () => {
 
   describe('Load execution details', () => {
     it('should display execution metadata from API', async () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: mockExecution,
         loading: false,
         error: null,
@@ -110,7 +110,7 @@ describe('ExecutionDetail Integration', () => {
     })
 
     it('should show loading state while fetching', () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: null,
         loading: true,
         error: null,
@@ -152,7 +152,7 @@ describe('ExecutionDetail Integration', () => {
 
   describe('Execution steps', () => {
     it('should display all execution steps', async () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: mockExecution,
         loading: false,
         error: null,
@@ -177,7 +177,7 @@ describe('ExecutionDetail Integration', () => {
     })
 
     it('should display step status badges', async () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: mockExecution,
         loading: false,
         error: null,
@@ -201,7 +201,7 @@ describe('ExecutionDetail Integration', () => {
     })
 
     it('should display step duration', async () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: mockExecution,
         loading: false,
         error: null,
@@ -417,7 +417,7 @@ describe('ExecutionDetail Integration', () => {
 
   describe('Navigation', () => {
     it('should have back button to execution list', async () => {
-      ;(useExecution as any).mockReturnValue({
+      (useExecution as any).mockReturnValue({
         execution: mockExecution,
         loading: false,
         error: null,

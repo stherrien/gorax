@@ -12,17 +12,17 @@ import (
 // TestServiceImpl_GetValue tests the GetValue method
 func TestServiceImpl_GetValue(t *testing.T) {
 	tests := []struct {
-		name             string
-		tenantID         string
-		credentialID     string
-		userID           string
-		repoCredential   *Credential
-		repoError        error
-		encryptedData    *CredentialData
-		encryptionError  error
-		wantErr          bool
-		errorContains    string
-		validateResult   func(t *testing.T, result *DecryptedValue)
+		name            string
+		tenantID        string
+		credentialID    string
+		userID          string
+		repoCredential  *Credential
+		repoError       error
+		encryptedData   *CredentialData
+		encryptionError error
+		wantErr         bool
+		errorContains   string
+		validateResult  func(t *testing.T, result *DecryptedValue)
 	}{
 		{
 			name:         "successful credential retrieval",
@@ -55,13 +55,13 @@ func TestServiceImpl_GetValue(t *testing.T) {
 			},
 		},
 		{
-			name:           "credential not found",
-			tenantID:       "tenant-123",
-			credentialID:   "cred-not-found",
-			userID:         "user-123",
-			repoError:      ErrNotFound,
-			wantErr:        true,
-			errorContains:  "failed to retrieve credential",
+			name:          "credential not found",
+			tenantID:      "tenant-123",
+			credentialID:  "cred-not-found",
+			userID:        "user-123",
+			repoError:     ErrNotFound,
+			wantErr:       true,
+			errorContains: "failed to retrieve credential",
 		},
 		{
 			name:         "decryption failure",

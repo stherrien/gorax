@@ -1,4 +1,3 @@
-import React from 'react'
 import { parseAnsiToElements } from '../../utils/ansiParser'
 
 interface AnsiTextProps {

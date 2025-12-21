@@ -53,7 +53,7 @@ describe('Workflow API', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
 
       const result = await workflowAPI.list()
 
@@ -62,7 +62,7 @@ describe('Workflow API', () => {
     })
 
     it('should support pagination parameters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
 
       await workflowAPI.list({ page: 2, limit: 20 })
 
@@ -72,7 +72,7 @@ describe('Workflow API', () => {
     })
 
     it('should support status filter', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ workflows: [], total: 0 })
 
       await workflowAPI.list({ status: 'active' })
 
@@ -84,7 +84,7 @@ describe('Workflow API', () => {
 
   describe('get', () => {
     it('should fetch single workflow by ID', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce(mockWorkflow)
+      (apiClient.get as any).mockResolvedValueOnce(mockWorkflow)
 
       const result = await workflowAPI.get('wf-123')
 
@@ -219,7 +219,7 @@ describe('Workflow API', () => {
 
   describe('delete', () => {
     it('should delete workflow by ID', async () => {
-      ;(apiClient.delete as any).mockResolvedValueOnce({})
+      (apiClient.delete as any).mockResolvedValueOnce({})
 
       await workflowAPI.delete('wf-123')
 
@@ -333,7 +333,7 @@ describe('Workflow API', () => {
       })
 
       it('should handle empty version list', async () => {
-        ;(apiClient.get as any).mockResolvedValueOnce({ data: [] })
+        (apiClient.get as any).mockResolvedValueOnce({ data: [] })
 
         const result = await workflowAPI.listVersions('wf-123')
 

@@ -16,18 +16,18 @@ type HTTPAction struct{}
 
 // HTTPActionConfig represents the configuration for an HTTP action
 type HTTPActionConfig struct {
-	Method   string            `json:"method"`
-	URL      string            `json:"url"`
-	Headers  map[string]string `json:"headers,omitempty"`
-	Body     json.RawMessage   `json:"body,omitempty"`
-	Timeout  int               `json:"timeout,omitempty"`  // seconds
-	Auth     *HTTPAuth         `json:"auth,omitempty"`     // authentication config
-	FollowRedirects bool       `json:"follow_redirects,omitempty"` // default: true
+	Method          string            `json:"method"`
+	URL             string            `json:"url"`
+	Headers         map[string]string `json:"headers,omitempty"`
+	Body            json.RawMessage   `json:"body,omitempty"`
+	Timeout         int               `json:"timeout,omitempty"`          // seconds
+	Auth            *HTTPAuth         `json:"auth,omitempty"`             // authentication config
+	FollowRedirects bool              `json:"follow_redirects,omitempty"` // default: true
 }
 
 // HTTPAuth represents HTTP authentication configuration
 type HTTPAuth struct {
-	Type     string `json:"type"`      // basic, bearer, api_key
+	Type     string `json:"type"`               // basic, bearer, api_key
 	Username string `json:"username,omitempty"` // for basic auth
 	Password string `json:"password,omitempty"` // for basic auth
 	Token    string `json:"token,omitempty"`    // for bearer auth

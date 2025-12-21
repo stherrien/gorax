@@ -7,6 +7,14 @@ BINARY_API=gorax-api
 BINARY_WORKER=gorax-worker
 DOCKER_COMPOSE=docker compose -f deployments/docker/docker-compose.yml
 
+# Build variables
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+LDFLAGS := -ldflags "-X github.com/gorax/gorax/internal/buildinfo.version=$(VERSION) \
+                      -X github.com/gorax/gorax/internal/buildinfo.buildTime=$(BUILD_TIME) \
+                      -X github.com/gorax/gorax/internal/buildinfo.gitCommit=$(GIT_COMMIT)"
+
 # Default target - show help
 .DEFAULT_GOAL := help
 
@@ -19,16 +27,16 @@ deps:
 
 # Build binaries
 build:
-	go build -o bin/$(BINARY_API) ./cmd/api
-	go build -o bin/$(BINARY_WORKER) ./cmd/worker
+	go build $(LDFLAGS) -o bin/$(BINARY_API) ./cmd/api
+	go build $(LDFLAGS) -o bin/$(BINARY_WORKER) ./cmd/worker
 
 # Build API only
 build-api:
-	go build -o bin/$(BINARY_API) ./cmd/api
+	go build $(LDFLAGS) -o bin/$(BINARY_API) ./cmd/api
 
 # Build Worker only
 build-worker:
-	go build -o bin/$(BINARY_WORKER) ./cmd/worker
+	go build $(LDFLAGS) -o bin/$(BINARY_WORKER) ./cmd/worker
 
 # Run API locally
 run-api:

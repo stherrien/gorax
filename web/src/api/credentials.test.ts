@@ -42,7 +42,7 @@ describe('Credential API', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
 
       const result = await credentialAPI.list()
 
@@ -51,7 +51,7 @@ describe('Credential API', () => {
     })
 
     it('should support pagination parameters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
 
       await credentialAPI.list({ page: 2, limit: 20 })
 
@@ -61,7 +61,7 @@ describe('Credential API', () => {
     })
 
     it('should support type filter', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
 
       await credentialAPI.list({ type: 'oauth2' })
 
@@ -71,7 +71,7 @@ describe('Credential API', () => {
     })
 
     it('should support search parameter', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ credentials: [], total: 0 })
 
       await credentialAPI.list({ search: 'production' })
 
@@ -83,7 +83,7 @@ describe('Credential API', () => {
 
   describe('get', () => {
     it('should fetch single credential by ID', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce(mockCredential)
+      (apiClient.get as any).mockResolvedValueOnce(mockCredential)
 
       const result = await credentialAPI.get('cred-123')
 
@@ -244,7 +244,7 @@ describe('Credential API', () => {
 
   describe('delete', () => {
     it('should delete credential by ID', async () => {
-      ;(apiClient.delete as any).mockResolvedValueOnce({})
+      (apiClient.delete as any).mockResolvedValueOnce({})
 
       await credentialAPI.delete('cred-123')
 

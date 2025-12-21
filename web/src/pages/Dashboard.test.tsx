@@ -77,7 +77,7 @@ describe('Dashboard Integration', () => {
 
   describe('Load dashboard data', () => {
     it('should display dashboard statistics from API', async () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,
@@ -105,7 +105,7 @@ describe('Dashboard Integration', () => {
     })
 
     it('should show loading state while fetching stats', () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: null,
         loading: true,
         error: null,
@@ -157,7 +157,7 @@ describe('Dashboard Integration', () => {
 
   describe('Recent executions', () => {
     it('should display recent executions from API', async () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,
@@ -184,7 +184,7 @@ describe('Dashboard Integration', () => {
     })
 
     it('should display execution status badges', async () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,
@@ -211,7 +211,7 @@ describe('Dashboard Integration', () => {
     })
 
     it('should show empty state when no recent executions', async () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,
@@ -237,7 +237,7 @@ describe('Dashboard Integration', () => {
     })
 
     it('should display trigger type for executions', async () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,
@@ -266,7 +266,7 @@ describe('Dashboard Integration', () => {
 
   describe('Navigation', () => {
     it('should have quick action links', () => {
-      ;(useDashboardStats as any).mockReturnValue({
+      (useDashboardStats as any).mockReturnValue({
         stats: mockStats,
         loading: false,
         error: null,

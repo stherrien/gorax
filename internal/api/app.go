@@ -3,38 +3,76 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	httpSwagger "github.com/swaggo/http-swagger"
 
+	"github.com/gorax/gorax/internal/aibuilder"
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/errortracking"
 	"github.com/gorax/gorax/internal/eventtypes"
 	"github.com/gorax/gorax/internal/executor"
+	"github.com/gorax/gorax/internal/llm"
+	"github.com/gorax/gorax/internal/llm/providers/anthropic"
+	"github.com/gorax/gorax/internal/llm/providers/bedrock"
+	"github.com/gorax/gorax/internal/llm/providers/openai"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/suggestions"
 	"github.com/gorax/gorax/internal/tenant"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
+var llmProvidersOnce sync.Once
+
+// registerLLMProviders registers all LLM providers with the global registry.
+// This is called once on application startup.
+func registerLLMProviders() {
+	llmProvidersOnce.Do(func() {
+		// Register OpenAI provider
+		_ = llm.RegisterProvider(llm.ProviderOpenAI, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return openai.NewClient(cfg)
+		})
+
+		// Register Anthropic provider
+		_ = llm.RegisterProvider(llm.ProviderAnthropic, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return anthropic.NewClient(cfg)
+		})
+
+		// Register AWS Bedrock provider
+		_ = llm.RegisterProvider(llm.ProviderBedrock, func(cfg *llm.ProviderConfig) (llm.Provider, error) {
+			return bedrock.NewClient(cfg)
+		})
+	})
+}
+
 // App holds application dependencies
 type App struct {
-	config   *config.Config
-	logger   *slog.Logger
-	db       *sqlx.DB
-	redis    *redis.Client
-	router   *chi.Mux
+	config *config.Config
+	logger *slog.Logger
+	db     *sqlx.DB
+	redis  *redis.Client
+	router *chi.Mux
+
+	// Error tracking
+	errorTracker *errortracking.Tracker
 
 	// Services
 	tenantService     *tenant.Service
@@ -62,6 +100,8 @@ type App struct {
 	credentialHandler        *handlers.CredentialHandler
 	metricsHandler           *handlers.MetricsHandler
 	eventTypesHandler        *handlers.EventTypesHandler
+	suggestionsHandler       *handlers.SuggestionsHandler
+	aiBuilderHandler         *handlers.AIBuilderHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -72,6 +112,9 @@ type App struct {
 
 // NewApp creates a new application instance
 func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
+	// Register LLM providers once at startup
+	registerLLMProviders()
+
 	app := &App{
 		config: cfg,
 		logger: logger,
@@ -92,6 +135,14 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
+
+	// Initialize error tracking (Sentry)
+	errorTracker, err := errortracking.Initialize(cfg.Observability)
+	if err != nil {
+		logger.Warn("failed to initialize Sentry", "error", err)
+		// Continue without error tracking rather than failing
+	}
+	app.errorTracker = errorTracker
 
 	// Initialize repositories
 	tenantRepo := tenant.NewRepository(db)
@@ -147,23 +198,45 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize credential service
 	credentialRepo := credential.NewRepository(db)
 
-	// Decode master key from base64
-	masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode credential master key: %w", err)
-	}
-
-	// Create encryption service (SimpleEncryption for dev, KMS for production)
+	// Create encryption service (KMS for production, SimpleEncryption for dev)
 	var encryptionService credential.EncryptionServiceInterface
 	if cfg.Credential.UseKMS {
-		// TODO: Initialize AWS KMS client when KMS support is needed
-		return nil, fmt.Errorf("KMS encryption not yet implemented")
+		// Production: Use AWS KMS for envelope encryption
+		if cfg.Credential.KMSKeyID == "" {
+			return nil, fmt.Errorf("CREDENTIAL_KMS_KEY_ID is required when USE_KMS is true")
+		}
+
+		// Load AWS config with region override if KMSRegion is set
+		awsCfg, err := awsConfig.LoadDefaultConfig(context.Background(), awsConfig.WithRegion(cfg.Credential.KMSRegion))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load AWS config for KMS: %w", err)
+		}
+
+		// Create KMS client
+		kmsClient := kms.NewFromConfig(awsCfg)
+
+		// Create KMS encryption service
+		kmsEncryptionService, err := credential.NewKMSEncryptionService(kmsClient, cfg.Credential.KMSKeyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create KMS encryption service: %w", err)
+		}
+
+		encryptionService = credential.NewKMSEncryptionAdapter(kmsEncryptionService)
+		logger.Info("Credential encryption initialized", "mode", "KMS", "key_id", cfg.Credential.KMSKeyID, "region", cfg.Credential.KMSRegion)
 	} else {
+		// Development: Use simple encryption with master key
+		masterKey, err := base64.StdEncoding.DecodeString(cfg.Credential.MasterKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode credential master key: %w", err)
+		}
+
 		simpleEncryption, err := credential.NewSimpleEncryptionService(masterKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create encryption service: %w", err)
+			return nil, fmt.Errorf("failed to create simple encryption service: %w", err)
 		}
+
 		encryptionService = credential.NewSimpleEncryptionAdapter(simpleEncryption)
+		logger.Warn("Credential encryption initialized", "mode", "simple", "warning", "Use KMS in production")
 	}
 
 	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
@@ -175,6 +248,89 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize usage service and handler
 	usageService := handlers.NewUsageService(app.quotaTracker, app.tenantService, logger)
 	app.usageHandler = handlers.NewUsageHandler(usageService)
+
+	// Initialize LLM provider (shared by suggestions and AI builder)
+	var llmProvider llm.Provider
+	if cfg.AIBuilder.Enabled && cfg.AIBuilder.APIKey != "" {
+		llmConfig := &llm.ProviderConfig{
+			APIKey: cfg.AIBuilder.APIKey,
+		}
+
+		// For AWS Bedrock, use AWS credentials from main AWS config
+		if cfg.AIBuilder.Provider == "bedrock" {
+			llmConfig.Region = cfg.AWS.Region
+			llmConfig.AWSAccessKeyID = cfg.AWS.AccessKeyID
+			llmConfig.AWSSecretAccessKey = cfg.AWS.SecretAccessKey
+		}
+
+		var err error
+		llmProvider, err = llm.GlobalProviderRegistry.GetProvider(cfg.AIBuilder.Provider, llmConfig)
+		if err != nil {
+			logger.Warn("Failed to initialize LLM provider", "error", err, "provider", cfg.AIBuilder.Provider)
+		} else {
+			logger.Info("LLM provider initialized",
+				"provider", cfg.AIBuilder.Provider,
+				"model", cfg.AIBuilder.Model,
+			)
+		}
+	}
+
+	// Initialize suggestions service and handler
+	suggestionsRepo := suggestions.NewPostgresRepository(db)
+	patternAnalyzer := suggestions.NewPatternAnalyzer(nil) // Uses default patterns
+
+	var llmAnalyzer suggestions.Analyzer
+	useLLMForUnmatched := false
+	if llmProvider != nil {
+		// Create LLM analyzer for suggestions using the shared provider
+		llmAnalyzerConfig := suggestions.LLMAnalyzerConfig{
+			Model:     cfg.AIBuilder.Model,
+			MaxTokens: 1024, // Suggestions need less tokens
+		}
+		llmAnalyzer = suggestions.NewLLMAnalyzer(llmProvider, llmAnalyzerConfig)
+		useLLMForUnmatched = true
+		logger.Info("Smart Suggestions LLM analyzer initialized")
+	}
+
+	suggestionsService := suggestions.NewSuggestionService(suggestions.SuggestionServiceConfig{
+		Repository:         suggestionsRepo,
+		PatternAnalyzer:    patternAnalyzer,
+		LLMAnalyzer:        llmAnalyzer,
+		UseLLMForUnmatched: useLLMForUnmatched,
+		Logger:             logger,
+	})
+	app.suggestionsHandler = handlers.NewSuggestionsHandler(suggestionsService, logger)
+
+	// Initialize AI builder service and handler
+	aibuilderRepo := aibuilder.NewPostgresRepository(db)
+	nodeRegistry := aibuilder.NewNodeRegistry()
+
+	var aibuilderGenerator *aibuilder.WorkflowGenerator
+	if llmProvider != nil {
+		// Create generator with LLM provider
+		generatorConfig := &aibuilder.GeneratorConfig{
+			Model:       cfg.AIBuilder.Model,
+			MaxTokens:   cfg.AIBuilder.MaxTokens,
+			Temperature: cfg.AIBuilder.Temperature,
+		}
+		aibuilderGenerator = aibuilder.NewWorkflowGenerator(llmProvider, nodeRegistry, generatorConfig)
+		logger.Info("AI Builder generator initialized",
+			"model", cfg.AIBuilder.Model,
+		)
+	} else {
+		logger.Info("AI Builder initialized without LLM provider",
+			"enabled", cfg.AIBuilder.Enabled,
+			"api_key_set", cfg.AIBuilder.APIKey != "",
+			"note", "Set AI_BUILDER_ENABLED=true and AI_BUILDER_API_KEY to enable",
+		)
+	}
+
+	aibuilderService := aibuilder.NewAIBuilderService(
+		aibuilder.NewContextRepositoryAdapter(aibuilderRepo),
+		aibuilderGenerator,
+		&workflowCreatorAdapter{workflowService: app.workflowService},
+	)
+	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
 
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
@@ -192,6 +348,9 @@ func (a *App) Router() http.Handler {
 
 // Close cleans up application resources
 func (a *App) Close() error {
+	if a.errorTracker != nil {
+		a.errorTracker.Close()
+	}
 	if a.db != nil {
 		a.db.Close()
 	}
@@ -208,22 +367,46 @@ func (a *App) setupRouter() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(apiMiddleware.StructuredLogger(a.logger))
+
+	// Security headers middleware
+	securityHeadersConfig := apiMiddleware.SecurityHeadersConfig{
+		EnableHSTS:    a.config.SecurityHeader.EnableHSTS,
+		HSTSMaxAge:    a.config.SecurityHeader.HSTSMaxAge,
+		CSPDirectives: a.config.SecurityHeader.CSPDirectives,
+		FrameOptions:  a.config.SecurityHeader.FrameOptions,
+	}
+	r.Use(apiMiddleware.SecurityHeaders(securityHeadersConfig))
+
+	// Add distributed tracing middleware if enabled
+	if a.config.Observability.TracingEnabled {
+		r.Use(tracing.HTTPMiddleware())
+	}
+
+	// Add Sentry middleware if error tracking is enabled
+	if a.errorTracker != nil {
+		r.Use(apiMiddleware.SentryMiddleware(a.errorTracker))
+	}
+
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 
-	// CORS configuration
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Tenant-ID"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	// CORS middleware with environment-aware validation
+	corsMiddleware, err := apiMiddleware.NewCORSMiddleware(a.config.CORS, a.config.Server.Env)
+	if err != nil {
+		a.logger.Error("failed to create CORS middleware", "error", err)
+		// Fall back to restrictive CORS in case of configuration error
+	} else {
+		r.Use(corsMiddleware)
+	}
 
 	// Health check endpoints (no auth required)
 	r.Get("/health", a.healthHandler.Health)
 	r.Get("/ready", a.healthHandler.Ready)
+
+	// Swagger API documentation (no auth required)
+	r.Get("/api/docs/*", httpSwagger.Handler(
+		httpSwagger.URL("/docs/api/swagger.json"),
+	))
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -364,6 +547,31 @@ func (a *App) setupRouter() {
 				r.Get("/{credentialID}/versions", a.credentialHandler.ListVersions)
 				r.Get("/{credentialID}/access-log", a.credentialHandler.GetAccessLog)
 			})
+
+			// Suggestions routes (Smart error analysis)
+			r.Route("/suggestions", func(r chi.Router) {
+				r.Get("/{suggestionID}", a.suggestionsHandler.Get)
+				r.Post("/{suggestionID}/apply", a.suggestionsHandler.Apply)
+				r.Post("/{suggestionID}/dismiss", a.suggestionsHandler.Dismiss)
+			})
+
+			// Execution suggestions (nested under executions for context)
+			r.Route("/executions/{executionID}/suggestions", func(r chi.Router) {
+				r.Get("/", a.suggestionsHandler.List)
+				r.Post("/analyze", a.suggestionsHandler.Analyze)
+			})
+
+			// AI Workflow Builder routes
+			r.Route("/ai/workflows", func(r chi.Router) {
+				r.Post("/generate", a.aiBuilderHandler.Generate)
+				r.Post("/refine", a.aiBuilderHandler.Refine)
+				r.Route("/conversations", func(r chi.Router) {
+					r.Get("/", a.aiBuilderHandler.ListConversations)
+					r.Get("/{id}", a.aiBuilderHandler.GetConversation)
+					r.Post("/{id}/apply", a.aiBuilderHandler.Apply)
+					r.Post("/{id}/abandon", a.aiBuilderHandler.Abandon)
+				})
+			})
 		})
 	})
 
@@ -395,4 +603,81 @@ func (w *workflowExecutorAdapter) Execute(ctx context.Context, tenantID, workflo
 		return "", err
 	}
 	return execution.ID, nil
+}
+
+// workflowCreatorAdapter adapts workflow.Service to aibuilder.WorkflowCreator interface
+type workflowCreatorAdapter struct {
+	workflowService *workflow.Service
+}
+
+func (w *workflowCreatorAdapter) CreateWorkflow(ctx context.Context, tenantID, userID string, generated *aibuilder.GeneratedWorkflow) (string, error) {
+	// Convert generated workflow definition to JSON
+	var definitionJSON json.RawMessage
+	var err error
+	if generated.Definition != nil {
+		// Build the definition structure
+		def := workflow.WorkflowDefinition{
+			Nodes: make([]workflow.Node, len(generated.Definition.Nodes)),
+			Edges: make([]workflow.Edge, len(generated.Definition.Edges)),
+		}
+
+		// Convert nodes
+		for i, gn := range generated.Definition.Nodes {
+			var position workflow.Position
+			if gn.Position != nil {
+				position = workflow.Position{X: gn.Position.X, Y: gn.Position.Y}
+			}
+
+			// Marshal config to json.RawMessage
+			var configJSON json.RawMessage
+			if gn.Config != nil {
+				configJSON, err = json.Marshal(gn.Config)
+				if err != nil {
+					return "", fmt.Errorf("failed to marshal node config: %w", err)
+				}
+			}
+
+			def.Nodes[i] = workflow.Node{
+				ID:       gn.ID,
+				Type:     gn.Type,
+				Position: position,
+				Data: workflow.NodeData{
+					Name:   gn.Name,
+					Config: configJSON,
+				},
+			}
+		}
+
+		// Convert edges
+		if generated.Definition.Edges != nil {
+			for i, ge := range generated.Definition.Edges {
+				def.Edges[i] = workflow.Edge{
+					ID:       ge.ID,
+					Source:   ge.Source,
+					Target:   ge.Target,
+					SourceID: ge.SourceHandle,
+					TargetID: ge.TargetHandle,
+				}
+			}
+		}
+
+		definitionJSON, err = json.Marshal(def)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal workflow definition: %w", err)
+		}
+	}
+
+	// Create workflow using the service's CreateWorkflowInput
+	input := workflow.CreateWorkflowInput{
+		Name:        generated.Name,
+		Description: generated.Description,
+		Definition:  definitionJSON,
+	}
+
+	// Create the workflow
+	created, err := w.workflowService.Create(ctx, tenantID, userID, input)
+	if err != nil {
+		return "", err
+	}
+	return created.ID, nil
 }

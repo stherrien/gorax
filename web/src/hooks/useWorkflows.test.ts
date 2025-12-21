@@ -36,7 +36,7 @@ describe('useWorkflows', () => {
 
   describe('useWorkflows - list hook', () => {
     it('should load workflows on mount', async () => {
-      ;(workflowAPI.list as any).mockResolvedValueOnce({
+      (workflowAPI.list as any).mockResolvedValueOnce({
         workflows: [mockWorkflow],
         total: 1,
       })
@@ -56,7 +56,7 @@ describe('useWorkflows', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(workflowAPI.list as any).mockResolvedValueOnce({
+      (workflowAPI.list as any).mockResolvedValueOnce({
         workflows: [],
         total: 0,
       })
@@ -86,7 +86,7 @@ describe('useWorkflows', () => {
     })
 
     it('should support refetch', async () => {
-      ;(workflowAPI.list as any).mockResolvedValue({
+      (workflowAPI.list as any).mockResolvedValue({
         workflows: [mockWorkflow],
         total: 1,
       })
@@ -108,7 +108,7 @@ describe('useWorkflows', () => {
     })
 
     it('should pass filter params to API', async () => {
-      ;(workflowAPI.list as any).mockResolvedValueOnce({
+      (workflowAPI.list as any).mockResolvedValueOnce({
         workflows: [],
         total: 0,
       })
@@ -123,7 +123,7 @@ describe('useWorkflows', () => {
 
   describe('useWorkflow - single workflow hook', () => {
     it('should load workflow by ID on mount', async () => {
-      ;(workflowAPI.get as any).mockResolvedValueOnce(mockWorkflow)
+      (workflowAPI.get as any).mockResolvedValueOnce(mockWorkflow)
 
       const { result } = renderHook(() => useWorkflow('wf-123'))
 
@@ -161,7 +161,7 @@ describe('useWorkflows', () => {
     })
 
     it('should refetch workflow', async () => {
-      ;(workflowAPI.get as any).mockResolvedValue(mockWorkflow)
+      (workflowAPI.get as any).mockResolvedValue(mockWorkflow)
 
       const { result } = renderHook(() => useWorkflow('wf-123'))
 
@@ -241,7 +241,7 @@ describe('useWorkflows', () => {
     })
 
     it('should delete workflow', async () => {
-      ;(workflowAPI.delete as any).mockResolvedValueOnce(undefined)
+      (workflowAPI.delete as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useWorkflowMutations())
 

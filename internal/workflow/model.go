@@ -35,10 +35,10 @@ type NodeData struct {
 }
 
 type Node struct {
-	ID       string          `json:"id"`
-	Type     string          `json:"type"`
-	Position Position        `json:"position"`
-	Data     NodeData        `json:"data"`
+	ID       string   `json:"id"`
+	Type     string   `json:"type"`
+	Position Position `json:"position"`
+	Data     NodeData `json:"data"`
 	// Config is extracted from Data.Config for backward compatibility
 	Config json.RawMessage `json:"-"`
 }
@@ -63,21 +63,24 @@ type Edge struct {
 type NodeType string
 
 const (
-	NodeTypeTriggerWebhook        NodeType = "trigger:webhook"
-	NodeTypeTriggerSchedule       NodeType = "trigger:schedule"
-	NodeTypeActionHTTP            NodeType = "action:http"
-	NodeTypeActionTransform       NodeType = "action:transform"
-	NodeTypeActionFormula         NodeType = "action:formula"
-	NodeTypeActionCode            NodeType = "action:code"
-	NodeTypeActionEmail           NodeType = "action:email"
-	NodeTypeActionSlackSendMessage NodeType = "slack:send_message"
-	NodeTypeActionSlackSendDM      NodeType = "slack:send_dm"
+	NodeTypeTriggerWebhook           NodeType = "trigger:webhook"
+	NodeTypeTriggerSchedule          NodeType = "trigger:schedule"
+	NodeTypeActionHTTP               NodeType = "action:http"
+	NodeTypeActionTransform          NodeType = "action:transform"
+	NodeTypeActionFormula            NodeType = "action:formula"
+	NodeTypeActionCode               NodeType = "action:code"
+	NodeTypeActionEmail              NodeType = "action:email"
+	NodeTypeActionSlackSendMessage   NodeType = "slack:send_message"
+	NodeTypeActionSlackSendDM        NodeType = "slack:send_dm"
 	NodeTypeActionSlackUpdateMessage NodeType = "slack:update_message"
-	NodeTypeActionSlackAddReaction NodeType = "slack:add_reaction"
-	NodeTypeControlIf             NodeType = "control:if"
-	NodeTypeControlLoop           NodeType = "control:loop"
-	NodeTypeControlParallel       NodeType = "control:parallel"
-	NodeTypeControlDelay          NodeType = "control:delay"
+	NodeTypeActionSlackAddReaction   NodeType = "slack:add_reaction"
+	NodeTypeControlIf                NodeType = "control:if"
+	NodeTypeControlLoop              NodeType = "control:loop"
+	NodeTypeControlParallel          NodeType = "control:parallel"
+	NodeTypeControlFork              NodeType = "control:fork"
+	NodeTypeControlJoin              NodeType = "control:join"
+	NodeTypeControlDelay             NodeType = "control:delay"
+	NodeTypeControlSubWorkflow       NodeType = "control:sub_workflow"
 )
 
 // HTTPActionConfig represents HTTP action configuration
@@ -125,21 +128,21 @@ type ScheduleTriggerConfig struct {
 
 // ConditionalActionConfig represents conditional (if/else) action configuration
 type ConditionalActionConfig struct {
-	Condition     string `json:"condition"`                 // Boolean expression to evaluate
-	TrueBranch    string `json:"true_branch,omitempty"`     // Edge ID or label for true branch
-	FalseBranch   string `json:"false_branch,omitempty"`    // Edge ID or label for false branch
-	Description   string `json:"description,omitempty"`     // Optional description of the condition
-	StopOnTrue    bool   `json:"stop_on_true,omitempty"`    // Stop workflow if condition is true
-	StopOnFalse   bool   `json:"stop_on_false,omitempty"`   // Stop workflow if condition is false
+	Condition   string `json:"condition"`               // Boolean expression to evaluate
+	TrueBranch  string `json:"true_branch,omitempty"`   // Edge ID or label for true branch
+	FalseBranch string `json:"false_branch,omitempty"`  // Edge ID or label for false branch
+	Description string `json:"description,omitempty"`   // Optional description of the condition
+	StopOnTrue  bool   `json:"stop_on_true,omitempty"`  // Stop workflow if condition is true
+	StopOnFalse bool   `json:"stop_on_false,omitempty"` // Stop workflow if condition is false
 }
 
 // LoopActionConfig represents loop (for-each) action configuration
 type LoopActionConfig struct {
-	Source        string `json:"source"`                    // JSONPath to array (e.g., ${steps.node1.output.items})
-	ItemVariable  string `json:"item_variable"`             // Variable name for current item (e.g., "item")
-	IndexVariable string `json:"index_variable,omitempty"`  // Variable name for current index (e.g., "index")
-	MaxIterations int    `json:"max_iterations,omitempty"`  // Safety limit (default 1000)
-	OnError       string `json:"on_error,omitempty"`        // "continue" or "stop" (default "stop")
+	Source        string `json:"source"`                   // JSONPath to array (e.g., ${steps.node1.output.items})
+	ItemVariable  string `json:"item_variable"`            // Variable name for current item (e.g., "item")
+	IndexVariable string `json:"index_variable,omitempty"` // Variable name for current index (e.g., "index")
+	MaxIterations int    `json:"max_iterations,omitempty"` // Safety limit (default 1000)
+	OnError       string `json:"on_error,omitempty"`       // "continue" or "stop" (default "stop")
 }
 
 // ParallelConfig represents parallel execution configuration
@@ -151,6 +154,28 @@ type ParallelConfig struct {
 // DelayConfig represents delay action configuration
 type DelayConfig struct {
 	Duration string `json:"duration"` // Duration string (e.g., "5s", "1m", "2h") or template variable (e.g., "{{steps.node1.delay}}")
+}
+
+// ForkConfig represents fork node configuration
+type ForkConfig struct {
+	BranchCount int `json:"branch_count"` // Number of parallel branches to create
+}
+
+// JoinConfig represents join node configuration
+type JoinConfig struct {
+	JoinStrategy  string `json:"join_strategy"`            // "wait_all" or "wait_n"
+	RequiredCount int    `json:"required_count,omitempty"` // Number of branches required for wait_n strategy
+	TimeoutMs     int    `json:"timeout_ms,omitempty"`     // Optional timeout for waiting (0 = no timeout)
+	OnTimeout     string `json:"on_timeout,omitempty"`     // "fail" or "continue" (default "fail")
+}
+
+// SubWorkflowConfig represents sub-workflow action configuration
+type SubWorkflowConfig struct {
+	WorkflowID    string            `json:"workflow_id"`              // ID of the workflow to execute
+	InputMapping  map[string]string `json:"input_mapping,omitempty"`  // Map parent context to sub-workflow input
+	OutputMapping map[string]string `json:"output_mapping,omitempty"` // Map sub-workflow output to parent context
+	WaitForResult bool              `json:"wait_for_result"`          // Sync (true) vs async (false) execution
+	TimeoutMs     int               `json:"timeout_ms,omitempty"`     // Timeout in milliseconds (0 = no timeout)
 }
 
 // CreateWorkflowInput represents input for creating a workflow
@@ -180,18 +205,20 @@ const (
 
 // Execution represents a workflow execution
 type Execution struct {
-	ID              string           `db:"id" json:"id"`
-	TenantID        string           `db:"tenant_id" json:"tenant_id"`
-	WorkflowID      string           `db:"workflow_id" json:"workflow_id"`
-	WorkflowVersion int              `db:"workflow_version" json:"workflow_version"`
-	Status          string           `db:"status" json:"status"`
-	TriggerType     string           `db:"trigger_type" json:"trigger_type"`
-	TriggerData     *json.RawMessage `db:"trigger_data" json:"trigger_data,omitempty"`
-	OutputData      *json.RawMessage `db:"output_data" json:"output_data,omitempty"`
-	ErrorMessage    *string          `db:"error_message" json:"error_message,omitempty"`
-	StartedAt       *time.Time       `db:"started_at" json:"started_at,omitempty"`
-	CompletedAt     *time.Time       `db:"completed_at" json:"completed_at,omitempty"`
-	CreatedAt       time.Time        `db:"created_at" json:"created_at"`
+	ID                string           `db:"id" json:"id"`
+	TenantID          string           `db:"tenant_id" json:"tenant_id"`
+	WorkflowID        string           `db:"workflow_id" json:"workflow_id"`
+	WorkflowVersion   int              `db:"workflow_version" json:"workflow_version"`
+	Status            string           `db:"status" json:"status"`
+	TriggerType       string           `db:"trigger_type" json:"trigger_type"`
+	TriggerData       *json.RawMessage `db:"trigger_data" json:"trigger_data,omitempty"`
+	OutputData        *json.RawMessage `db:"output_data" json:"output_data,omitempty"`
+	ErrorMessage      *string          `db:"error_message" json:"error_message,omitempty"`
+	ParentExecutionID *string          `db:"parent_execution_id" json:"parent_execution_id,omitempty"`
+	ExecutionDepth    int              `db:"execution_depth" json:"execution_depth"`
+	StartedAt         *time.Time       `db:"started_at" json:"started_at,omitempty"`
+	CompletedAt       *time.Time       `db:"completed_at" json:"completed_at,omitempty"`
+	CreatedAt         time.Time        `db:"created_at" json:"created_at"`
 }
 
 // StepExecution represents a single step in an execution
@@ -315,11 +342,11 @@ type ExecutionStats struct {
 
 // DryRunResult represents the result of a workflow dry-run validation
 type DryRunResult struct {
-	Valid           bool                `json:"valid"`
-	ExecutionOrder  []string            `json:"execution_order"`   // Node IDs in execution order
-	VariableMapping map[string]string   `json:"variable_mapping"`  // Variable -> source mapping
-	Warnings        []DryRunWarning     `json:"warnings"`
-	Errors          []DryRunError       `json:"errors"`
+	Valid           bool              `json:"valid"`
+	ExecutionOrder  []string          `json:"execution_order"`  // Node IDs in execution order
+	VariableMapping map[string]string `json:"variable_mapping"` // Variable -> source mapping
+	Warnings        []DryRunWarning   `json:"warnings"`
+	Errors          []DryRunError     `json:"errors"`
 }
 
 // DryRunWarning represents a warning found during dry-run

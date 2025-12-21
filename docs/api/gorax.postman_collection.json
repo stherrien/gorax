@@ -1,0 +1,1118 @@
+{
+  "info": {
+    "name": "Gorax Workflow Automation API",
+    "description": "Complete API collection for Gorax workflow automation platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "apiBasePath",
+      "value": "/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "tenant_dev",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user_dev",
+      "type": "string"
+    },
+    {
+      "key": "workflowId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhookId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "executionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheduleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "credentialId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check endpoint"
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["ready"]
+            },
+            "description": "Check if service is ready (includes database and Redis health)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "List Workflows",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('workflowId', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Workflow\",\n  \"description\": \"A test workflow created from Postman\",\n  \"enabled\": true,\n  \"definition\": {\n    \"trigger\": {\n      \"type\": \"webhook\",\n      \"config\": {}\n    },\n    \"actions\": [\n      {\n        \"id\": \"log_event\",\n        \"type\": \"log\",\n        \"config\": {\n          \"message\": \"Event received\"\n        }\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows"]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Workflow",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Test Workflow\",\n  \"description\": \"Updated description\",\n  \"enabled\": true,\n  \"definition\": {\n    \"trigger\": {\n      \"type\": \"webhook\",\n      \"config\": {}\n    },\n    \"actions\": [\n      {\n        \"id\": \"log_event\",\n        \"type\": \"log\",\n        \"config\": {\n          \"message\": \"Updated event\"\n        }\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}"]
+            }
+          }
+        },
+        {
+          "name": "Execute Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('executionId', response.data.execution_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test_key\": \"test_value\",\n  \"timestamp\": \"{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}", "execute"]
+            }
+          }
+        },
+        {
+          "name": "Dry-Run Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test_data\": {\n    \"test_key\": \"test_value\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}/dry-run",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}", "dry-run"]
+            }
+          }
+        },
+        {
+          "name": "List Workflow Versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}", "versions"]
+            }
+          }
+        },
+        {
+          "name": "Delete Workflow",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "List Webhooks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Webhook",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('webhookId', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Webhook\",\n  \"workflowId\": \"{{workflowId}}\",\n  \"path\": \"/test\",\n  \"authType\": \"signature\",\n  \"description\": \"Test webhook endpoint\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks"]
+            }
+          }
+        },
+        {
+          "name": "Get Webhook",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Webhook",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Test Webhook\",\n  \"authType\": \"signature\",\n  \"description\": \"Updated description\",\n  \"priority\": 2,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}"]
+            }
+          }
+        },
+        {
+          "name": "Regenerate Webhook Secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}/regenerate-secret",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}", "regenerate-secret"]
+            }
+          }
+        },
+        {
+          "name": "Test Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"POST\",\n  \"headers\": {\n    \"Content-Type\": \"application/json\"\n  },\n  \"body\": {\n    \"test\": true,\n    \"timestamp\": \"{{$timestamp}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}", "test"]
+            }
+          }
+        },
+        {
+          "name": "Get Webhook Event History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}/events?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}", "events"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Webhook",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/webhooks/{{webhookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "webhooks", "{{webhookId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Executions",
+      "item": [
+        {
+          "name": "List Executions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/executions?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "executions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "workflow_id",
+                  "value": "{{workflowId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Execution",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/executions/{{executionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "executions", "{{executionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Execution Steps",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/executions/{{executionId}}/steps",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "executions", "{{executionId}}", "steps"]
+            }
+          }
+        },
+        {
+          "name": "Get Execution Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/executions/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "executions", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedules",
+      "item": [
+        {
+          "name": "List All Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "schedules"]
+            }
+          }
+        },
+        {
+          "name": "Create Schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('scheduleId', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cron_expression\": \"0 9 * * *\",\n  \"timezone\": \"America/New_York\",\n  \"enabled\": true,\n  \"payload\": {\n    \"source\": \"scheduled\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/workflows/{{workflowId}}/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "workflows", "{{workflowId}}", "schedules"]
+            }
+          }
+        },
+        {
+          "name": "Parse Cron Expression",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cron_expression\": \"0 9 * * *\",\n  \"timezone\": \"America/New_York\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/schedules/parse-cron",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "schedules", "parse-cron"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credentials",
+      "item": [
+        {
+          "name": "List Credentials",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "credentials"]
+            }
+          }
+        },
+        {
+          "name": "Create Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('credentialId', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test API Key\",\n  \"type\": \"api_key\",\n  \"description\": \"Test credential\",\n  \"value\": {\n    \"api_key\": \"test_key_12345\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "credentials"]
+            }
+          }
+        },
+        {
+          "name": "Get Credential",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/credentials/{{credentialId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "credentials", "{{credentialId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Credential Value (Sensitive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/credentials/{{credentialId}}/value",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "credentials", "{{credentialId}}", "value"]
+            },
+            "description": "This endpoint retrieves the decrypted credential value and is audited."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {
+          "name": "Get Execution Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/metrics/trends",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "metrics", "trends"]
+            }
+          }
+        },
+        {
+          "name": "Get Duration Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/metrics/duration",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "metrics", "duration"]
+            }
+          }
+        },
+        {
+          "name": "Get Top Failures",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/metrics/failures",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "metrics", "failures"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin (Tenant Management)",
+      "item": [
+        {
+          "name": "List Tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-ID",
+                "value": "admin_user",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/admin/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "admin", "tenants"]
+            },
+            "description": "Requires admin role. No tenant context needed."
+          }
+        },
+        {
+          "name": "Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-ID",
+                "value": "admin_user",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Tenant Corp\",\n  \"admin_email\": \"admin@newtenant.com\",\n  \"quotas\": {\n    \"max_workflows\": 50,\n    \"max_executions_per_day\": 5000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/admin/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "admin", "tenants"]
+            }
+          }
+        },
+        {
+          "name": "Get Tenant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-ID",
+                "value": "admin_user",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/admin/tenants/{{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "admin", "tenants", "{{tenantId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Tenant Quotas",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-User-ID",
+                "value": "admin_user",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_workflows\": 100,\n  \"max_executions_per_day\": 10000,\n  \"max_api_requests_per_minute\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}{{apiBasePath}}/admin/tenants/{{tenantId}}/quotas",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiBasePath}}", "admin", "tenants", "{{tenantId}}", "quotas"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

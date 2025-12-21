@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTemplates, useTemplateMutations } from '../../hooks/useTemplates'
 import type { Template, TemplateCategory } from '../../api/templates'
 
@@ -25,7 +25,7 @@ export function TemplateBrowser({ onSelectTemplate, onClose }: TemplateBrowserPr
     search: searchQuery || undefined,
   })
 
-  const { instantiateTemplate, instantiating } = useTemplateMutations()
+  const { instantiating } = useTemplateMutations()
 
   const handleUseTemplate = async (template: Template) => {
     if (onSelectTemplate) {

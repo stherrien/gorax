@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/gorax/gorax/internal/buildinfo"
 )
 
 // HealthServer provides health check endpoints for the worker
@@ -26,10 +28,10 @@ type HealthResponse struct {
 
 // WorkerInfo contains worker statistics
 type WorkerInfo struct {
-	Concurrency       int   `json:"concurrency"`
-	ActiveExecutions  int32 `json:"active_executions"`
-	ProcessedTotal    int64 `json:"processed_total"`
-	FailedTotal       int64 `json:"failed_total"`
+	Concurrency      int   `json:"concurrency"`
+	ActiveExecutions int32 `json:"active_executions"`
+	ProcessedTotal   int64 `json:"processed_total"`
+	FailedTotal      int64 `json:"failed_total"`
 }
 
 // ConnectionsHealth contains connection status
@@ -101,7 +103,9 @@ func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if worker can accept more work
-	if hs.worker.getActiveExecutions() >= int32(hs.worker.concurrency) {
+	// Convert concurrency to int32 safely (concurrency is always a small positive config value)
+	concurrencyInt32 := safeIntToInt32(hs.worker.concurrency)
+	if hs.worker.getActiveExecutions() >= concurrencyInt32 {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "at_capacity",
@@ -125,7 +129,7 @@ func (hs *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
 		Status:    "healthy",
 		Timestamp: time.Now(),
-		Version:   "1.0.0", // TODO: Get from build info
+		Version:   buildinfo.GetVersion(),
 		WorkerInfo: WorkerInfo{
 			Concurrency:      hs.worker.concurrency,
 			ActiveExecutions: hs.worker.getActiveExecutions(),
@@ -135,12 +139,12 @@ func (hs *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Connections: ConnectionsHealth{
 			Database: hs.checkDatabase(ctx),
 			Redis:    hs.checkRedis(ctx),
-			Queue:    "ok", // TODO: Check queue connection
+			Queue:    hs.checkQueue(ctx),
 		},
 	}
 
 	// If any connection is unhealthy, set overall status to unhealthy
-	if response.Connections.Database != "ok" || response.Connections.Redis != "ok" {
+	if response.Connections.Database != "ok" || response.Connections.Redis != "ok" || response.Connections.Queue != "ok" {
 		response.Status = "unhealthy"
 		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
@@ -165,4 +169,37 @@ func (hs *HealthServer) checkRedis(ctx context.Context) string {
 		return "error: " + err.Error()
 	}
 	return "ok"
+}
+
+// checkQueue checks queue connectivity and health
+func (hs *HealthServer) checkQueue(ctx context.Context) string {
+	// If queue is not enabled, report as ok (not applicable)
+	if !hs.worker.queueEnabled {
+		return "ok"
+	}
+
+	// If queue is enabled but client is nil, report error
+	if hs.worker.sqsClient == nil {
+		return "error: queue client not initialized"
+	}
+
+	// Check SQS queue health by attempting to get queue attributes
+	if err := hs.worker.sqsClient.HealthCheck(ctx); err != nil {
+		return "error: " + err.Error()
+	}
+
+	return "ok"
+}
+
+// safeIntToInt32 safely converts int to int32 with bounds checking
+// Returns 0 for negative values, maxInt32 for values exceeding int32 range
+func safeIntToInt32(val int) int32 {
+	const maxInt32 = 1<<31 - 1 // 2147483647
+	if val < 0 {
+		return 0
+	}
+	if val > maxInt32 {
+		return maxInt32
+	}
+	return int32(val)
 }

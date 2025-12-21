@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/gorax/gorax/internal/validation"
 )
 
 // FilterRepository defines the interface for filter-related data access
@@ -200,19 +202,15 @@ func extractValue(path string, payload map[string]interface{}) (interface{}, boo
 				}
 			}
 
-			// Parse index
-			index, err := strconv.Atoi(indexStr)
-			if err != nil {
-				return nil, false
-			}
-
-			// Get array element
+			// Get array element first to determine length
 			arr, ok := current.([]interface{})
 			if !ok {
 				return nil, false
 			}
 
-			if index < 0 || index >= len(arr) {
+			// Parse index with bounds checking to prevent overflow
+			index, valid := validation.ParseArrayIndex(indexStr, len(arr))
+			if !valid {
 				return nil, false
 			}
 
@@ -221,19 +219,15 @@ func extractValue(path string, payload map[string]interface{}) (interface{}, boo
 		}
 
 		// Check if part is a numeric string (array index without brackets)
-		if index, err := strconv.Atoi(part); err == nil {
-			// This is an array index
-			arr, ok := current.([]interface{})
-			if !ok {
-				return nil, false
+		// First check if current value is an array
+		arr, isArray := current.([]interface{})
+		if isArray {
+			// Try to parse as array index with overflow protection
+			index, valid := validation.ParseArrayIndex(part, len(arr))
+			if valid {
+				current = arr[index]
+				continue
 			}
-
-			if index < 0 || index >= len(arr) {
-				return nil, false
-			}
-
-			current = arr[index]
-			continue
 		}
 
 		// Regular field access

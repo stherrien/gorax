@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
 )
 
@@ -43,7 +46,16 @@ func (h *WebhookReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Reques
 		modifiedPayload = input.ModifiedPayload
 	}
 
-	result := h.replayService.ReplayEvent(r.Context(), tenantID, eventID, modifiedPayload)
+	var result *webhook.ReplayResult
+
+	// Wrap replay operation with tracing
+	_, _ = tracing.TraceWebhookReplay(r.Context(), tenantID, "", eventID, func(ctx context.Context) (string, error) {
+		result = h.replayService.ReplayEvent(ctx, tenantID, eventID, modifiedPayload)
+		if !result.Success {
+			return "", fmt.Errorf("replay failed: %s", result.Error)
+		}
+		return result.ExecutionID, nil
+	})
 
 	if !result.Success {
 		status := http.StatusInternalServerError
@@ -74,7 +86,23 @@ func (h *WebhookReplayHandler) BatchReplayEvents(w http.ResponseWriter, r *http.
 		return
 	}
 
-	results := h.replayService.BatchReplayEvents(r.Context(), tenantID, webhookID, input.EventIDs)
+	var results *webhook.BatchReplayResponse
+
+	// Wrap batch replay operation with tracing
+	_ = tracing.TraceWebhookBatchReplay(r.Context(), tenantID, webhookID, len(input.EventIDs), func(ctx context.Context) (int, int, error) {
+		results = h.replayService.BatchReplayEvents(ctx, tenantID, webhookID, input.EventIDs)
+
+		// Count successes and failures
+		successCount, failureCount := 0, 0
+		for _, result := range results.Results {
+			if result.Success {
+				successCount++
+			} else {
+				failureCount++
+			}
+		}
+		return successCount, failureCount, nil
+	})
 
 	h.respondJSON(w, http.StatusOK, results)
 }

@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 const navigation = [
   { name: 'Dashboard', href: '/' },
   { name: 'Workflows', href: '/workflows' },
+  { name: 'AI Builder', href: '/ai/builder' },
   { name: 'Webhooks', href: '/webhooks' },
   { name: 'Schedules', href: '/schedules' },
   { name: 'Executions', href: '/executions' },

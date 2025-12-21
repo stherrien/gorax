@@ -1,0 +1,137 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: gorax-prod
+
+namePrefix: prod-
+nameSuffix: ""
+
+commonLabels:
+  environment: production
+
+resources:
+  - ../../base
+
+replicas:
+  - name: gorax-api
+    count: 3
+  - name: gorax-worker
+    count: 3
+
+images:
+  - name: gorax/api
+    newTag: latest  # In production, use specific version tags
+  - name: gorax/worker
+    newTag: latest  # In production, use specific version tags
+
+configMapGenerator:
+  - name: gorax-config
+    behavior: merge
+    literals:
+      - log-level=warn
+      - cors-allowed-origins=https://app.gorax.io,https://gorax.io
+      - worker-concurrency=10
+      - feature-webhook-replay=true
+      - feature-workflow-versioning=true
+      - feature-advanced-filtering=true
+      - tracing-sample-rate=0.1
+      - db-max-open-conns=50
+      - db-max-idle-conns=25
+
+patches:
+  # Production resource allocation (keep base values from deployment)
+  # No changes needed as base already has production-ready resources
+
+  # Production HPA settings (more aggressive scaling)
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: gorax-api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+      - op: replace
+        path: /spec/metrics/0/resource/target/averageUtilization
+        value: 60
+
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: gorax-worker-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 30
+      - op: replace
+        path: /spec/metrics/0/resource/target/averageUtilization
+        value: 70
+
+  # Production PDB (more strict availability requirements)
+  - target:
+      kind: PodDisruptionBudget
+      name: gorax-api-pdb
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+
+  - target:
+      kind: PodDisruptionBudget
+      name: gorax-worker-pdb
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+
+  # Update ingress for production domain
+  - target:
+      kind: Ingress
+      name: gorax-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - api.gorax.io
+          - webhooks.gorax.io
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.gorax.io
+      - op: replace
+        path: /spec/rules/1/host
+        value: webhooks.gorax.io
+
+  # Add topology spread constraints for production
+  - target:
+      kind: Deployment
+      name: gorax-api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/topologySpreadConstraints
+        value:
+          - maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                app: gorax
+                component: api
+
+  - target:
+      kind: Deployment
+      name: gorax-worker
+    patch: |-
+      - op: add
+        path: /spec/template/spec/topologySpreadConstraints
+        value:
+          - maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                app: gorax
+                component: worker

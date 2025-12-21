@@ -65,12 +65,12 @@ func (m *MockCredentialService) GetAccessLog(ctx context.Context, tenantID, cred
 // TestExecuteSlackSendMessageAction tests the Slack send message execution
 func TestExecuteSlackSendMessageAction(t *testing.T) {
 	tests := []struct {
-		name          string
-		node          workflow.Node
-		execCtx       *ExecutionContext
-		credService   credential.Service
-		wantErr       bool
-		errorContains string
+		name           string
+		node           workflow.Node
+		execCtx        *ExecutionContext
+		credService    credential.Service
+		wantErr        bool
+		errorContains  string
 		validateOutput func(t *testing.T, output interface{})
 	}{
 		{

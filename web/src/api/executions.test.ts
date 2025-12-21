@@ -118,7 +118,7 @@ describe('Execution API', () => {
 
   describe('get', () => {
     it('should fetch single execution by ID', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce(mockExecution)
+      (apiClient.get as any).mockResolvedValueOnce(mockExecution)
 
       const result = await executionAPI.get('exec-123')
 
