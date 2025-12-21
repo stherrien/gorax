@@ -272,9 +272,9 @@ func Load() (*Config, error) {
 		},
 		Queue: QueueConfig{
 			Enabled:            getEnvAsBool("QUEUE_ENABLED", false),
-			MaxMessages:        int32(getEnvAsInt("QUEUE_MAX_MESSAGES", 10)),
-			WaitTimeSeconds:    int32(getEnvAsInt("QUEUE_WAIT_TIME_SECONDS", 20)),
-			VisibilityTimeout:  int32(getEnvAsInt("QUEUE_VISIBILITY_TIMEOUT", 30)),
+			MaxMessages:        safeIntToInt32(getEnvAsInt("QUEUE_MAX_MESSAGES", 10)),
+			WaitTimeSeconds:    safeIntToInt32(getEnvAsInt("QUEUE_WAIT_TIME_SECONDS", 20)),
+			VisibilityTimeout:  safeIntToInt32(getEnvAsInt("QUEUE_VISIBILITY_TIMEOUT", 30)),
 			MaxRetries:         getEnvAsInt("QUEUE_MAX_RETRIES", 3),
 			ProcessTimeout:     getEnvAsInt("QUEUE_PROCESS_TIMEOUT", 300), // 5 minutes
 			PollInterval:       getEnvAsInt("QUEUE_POLL_INTERVAL", 1),
@@ -412,6 +412,17 @@ func getEnvWithFallback(key, fallbackKey, defaultValue string) string {
 	}
 	// Return default
 	return defaultValue
+}
+
+// safeIntToInt32 safely converts int to int32 with bounds checking
+// Returns 0 for values outside int32 range
+func safeIntToInt32(val int) int32 {
+	const maxInt32 = 2147483647
+	const minInt32 = -2147483648
+	if val > maxInt32 || val < minInt32 {
+		return 0
+	}
+	return int32(val)
 }
 
 func loadCORSConfig() CORSConfig {

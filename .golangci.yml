@@ -27,6 +27,7 @@ linters:
     - exportloopref
     - noctx
     - bodyclose
+    - shadow
 
 linters-settings:
   errcheck:
@@ -34,7 +35,6 @@ linters-settings:
     check-blank: true
 
   govet:
-    check-shadowing: true
     enable-all: true
 
   gocyclo:
@@ -90,6 +90,5 @@ issues:
   max-same-issues: 0
 
 output:
-  format: colored-line-number
   print-issued-lines: true
   print-linter-name: true

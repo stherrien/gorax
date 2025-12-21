@@ -88,7 +88,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Initial Load', () => {
     it('should display loading state while fetching events', () => {
-      ;(webhookAPI.getEvents as any).mockImplementation(
+      (webhookAPI.getEvents as any).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       )
 
@@ -98,7 +98,7 @@ describe('WebhookEventHistory', () => {
     })
 
     it('should display list of events from API', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -114,7 +114,7 @@ describe('WebhookEventHistory', () => {
     })
 
     it('should show error message if fetch fails', async () => {
-      ;(webhookAPI.getEvents as any).mockRejectedValueOnce(new Error('Failed to fetch events'))
+      (webhookAPI.getEvents as any).mockRejectedValueOnce(new Error('Failed to fetch events'))
 
       renderWithRouter(<WebhookEventHistory webhookId="wh-1" />)
 
@@ -124,7 +124,7 @@ describe('WebhookEventHistory', () => {
     })
 
     it('should show empty state when no events exist', async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [],
         total: 0,
       })
@@ -139,7 +139,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Event Table Display', () => {
     beforeEach(async () => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -245,7 +245,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Sorting', () => {
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -289,7 +289,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Event Detail Modal', () => {
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -472,7 +472,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Filtering', () => {
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValue({
+      (webhookAPI.getEvents as any).mockResolvedValue({
         events: mockEvents,
         total: 4,
       })
@@ -742,7 +742,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Export Functionality', () => {
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -777,7 +777,7 @@ describe('WebhookEventHistory', () => {
 
   describe('Accessibility', () => {
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
+      (webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: mockEvents,
         total: 4,
       })
@@ -867,7 +867,7 @@ describe('WebhookEventHistory', () => {
     ]
 
     beforeEach(() => {
-      ;(webhookAPI.getEvents as any).mockResolvedValue({
+      (webhookAPI.getEvents as any).mockResolvedValue({
         events: mockEventsWithReplay,
         total: 3,
       })

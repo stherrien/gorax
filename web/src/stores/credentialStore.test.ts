@@ -78,7 +78,7 @@ describe('credentialStore', () => {
     })
 
     it('should set loading state during fetch', async () => {
-      ;(credentialAPI.list as any).mockImplementationOnce(
+      (credentialAPI.list as any).mockImplementationOnce(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       )
 
@@ -122,7 +122,7 @@ describe('credentialStore', () => {
 
   describe('fetchCredential', () => {
     it('should fetch and set selected credential', async () => {
-      ;(credentialAPI.get as any).mockResolvedValueOnce(mockCredential)
+      (credentialAPI.get as any).mockResolvedValueOnce(mockCredential)
 
       const { result } = renderHook(() => useCredentialStore())
 
@@ -232,7 +232,7 @@ describe('credentialStore', () => {
 
   describe('deleteCredential', () => {
     it('should delete credential', async () => {
-      ;(credentialAPI.delete as any).mockResolvedValueOnce(undefined)
+      (credentialAPI.delete as any).mockResolvedValueOnce(undefined)
       ;(credentialAPI.list as any).mockResolvedValueOnce({
         credentials: [],
         total: 0,

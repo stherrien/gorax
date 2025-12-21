@@ -41,7 +41,7 @@ describe('WorkflowEditor', () => {
 
   describe('New workflow', () => {
     it('should render editor for new workflow', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
@@ -68,7 +68,7 @@ describe('WorkflowEditor', () => {
     })
 
     it('should have workflow name input', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
@@ -93,7 +93,7 @@ describe('WorkflowEditor', () => {
     })
 
     it('should have description textarea', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
@@ -161,7 +161,7 @@ describe('WorkflowEditor', () => {
     })
 
     it('should show loading state while fetching workflow', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: true,
         error: null,
@@ -216,7 +216,7 @@ describe('WorkflowEditor', () => {
 
   describe('Save functionality', () => {
     it('should have save button', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
@@ -364,7 +364,7 @@ describe('WorkflowEditor', () => {
 
   describe('Navigation', () => {
     it('should have back button', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,

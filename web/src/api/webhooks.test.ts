@@ -65,7 +65,7 @@ describe('Webhook API', () => {
     })
 
     it('should handle empty list', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
 
       const result = await webhookAPI.list()
 
@@ -74,7 +74,7 @@ describe('Webhook API', () => {
     })
 
     it('should support pagination parameters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
 
       await webhookAPI.list({ page: 2, limit: 20 })
 
@@ -84,7 +84,7 @@ describe('Webhook API', () => {
     })
 
     it('should support workflowId filter', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
 
       await webhookAPI.list({ workflowId: 'wf-123' })
 
@@ -94,7 +94,7 @@ describe('Webhook API', () => {
     })
 
     it('should support enabled filter', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
 
       await webhookAPI.list({ enabled: true })
 
@@ -104,7 +104,7 @@ describe('Webhook API', () => {
     })
 
     it('should support multiple filters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ webhooks: [], total: 0 })
 
       await webhookAPI.list({ workflowId: 'wf-123', enabled: true, page: 1, limit: 10 })
 
@@ -116,7 +116,7 @@ describe('Webhook API', () => {
 
   describe('get', () => {
     it('should fetch single webhook by ID', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce(mockWebhook)
+      (apiClient.get as any).mockResolvedValueOnce(mockWebhook)
 
       const result = await webhookAPI.get('wh-123')
 
@@ -271,7 +271,7 @@ describe('Webhook API', () => {
 
   describe('delete', () => {
     it('should delete webhook by ID', async () => {
-      ;(apiClient.delete as any).mockResolvedValueOnce({})
+      (apiClient.delete as any).mockResolvedValueOnce({})
 
       await webhookAPI.delete('wh-123')
 
@@ -382,7 +382,7 @@ describe('Webhook API', () => {
     })
 
     it('should handle empty events list', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ events: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ events: [], total: 0 })
 
       const result = await webhookAPI.getEvents('wh-123')
 
@@ -391,7 +391,7 @@ describe('Webhook API', () => {
     })
 
     it('should support pagination parameters', async () => {
-      ;(apiClient.get as any).mockResolvedValueOnce({ events: [], total: 0 })
+      (apiClient.get as any).mockResolvedValueOnce({ events: [], total: 0 })
 
       await webhookAPI.getEvents('wh-123', { page: 2, limit: 50 })
 

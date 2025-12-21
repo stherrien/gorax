@@ -42,7 +42,7 @@ describe('APIClient', () => {
     })
 
     it('should include auth token in header when available', async () => {
-      ;(localStorage.getItem as any).mockReturnValueOnce('test-token')
+      (localStorage.getItem as any).mockReturnValueOnce('test-token')
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -62,7 +62,7 @@ describe('APIClient', () => {
     })
 
     it('should handle query parameters', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -117,7 +117,7 @@ describe('APIClient', () => {
 
   describe('DELETE requests', () => {
     it('should make successful DELETE request', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         status: 204,
         json: async () => ({}),
@@ -134,7 +134,7 @@ describe('APIClient', () => {
 
   describe('Error handling', () => {
     it('should throw AuthError on 401 response', async () => {
-      ;(global.fetch as any).mockResolvedValue({
+      (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -145,7 +145,7 @@ describe('APIClient', () => {
     })
 
     it('should throw AuthError on 403 response', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 403,
         json: async () => ({ error: 'Forbidden' }),
@@ -155,7 +155,7 @@ describe('APIClient', () => {
     })
 
     it('should throw NotFoundError on 404 response', async () => {
-      ;(global.fetch as any).mockResolvedValue({
+      (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 404,
         json: async () => ({ error: 'Not found' }),
@@ -166,7 +166,7 @@ describe('APIClient', () => {
     })
 
     it('should throw ValidationError on 400 response', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Invalid input' }),
@@ -176,7 +176,7 @@ describe('APIClient', () => {
     })
 
     it('should throw ValidationError on 422 response', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 422,
         json: async () => ({ error: 'Validation failed' }),
@@ -186,7 +186,7 @@ describe('APIClient', () => {
     })
 
     it('should throw ServerError on 500 response', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({ error: 'Internal server error' }),
@@ -196,7 +196,7 @@ describe('APIClient', () => {
     })
 
     it('should throw ServerError on 503 response', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 503,
         json: async () => ({ error: 'Service unavailable' }),
@@ -206,14 +206,14 @@ describe('APIClient', () => {
     })
 
     it('should throw NetworkError when fetch fails', async () => {
-      ;(global.fetch as any).mockRejectedValue(new Error('Network failure'))
+      (global.fetch as any).mockRejectedValue(new Error('Network failure'))
 
       await expect(client.get('/test')).rejects.toThrow(NetworkError)
       await expect(client.get('/test')).rejects.toThrow('Network failure')
     })
 
     it('should handle non-JSON error responses', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => {
@@ -228,7 +228,7 @@ describe('APIClient', () => {
 
   describe('Retry logic', () => {
     it('should retry on 503 errors', async () => {
-      ;(global.fetch as any)
+      (global.fetch as any)
         .mockResolvedValueOnce({
           ok: false,
           status: 503,
@@ -247,7 +247,7 @@ describe('APIClient', () => {
     })
 
     it('should not retry on 4xx errors', async () => {
-      ;(global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 404,
         json: async () => ({ error: 'Not found' }),
@@ -258,7 +258,7 @@ describe('APIClient', () => {
     })
 
     it('should exhaust retry attempts and throw error', async () => {
-      ;(global.fetch as any).mockResolvedValue({
+      (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 503,
         json: async () => ({ error: 'Service unavailable' }),
@@ -272,7 +272,7 @@ describe('APIClient', () => {
   describe('Timeout handling', () => {
     // Skip: happy-dom doesn't fully support AbortController
     it.skip('should timeout long requests', async () => {
-      ;(global.fetch as any).mockImplementationOnce(
+      (global.fetch as any).mockImplementationOnce(
         () =>
           new Promise((resolve) =>
             setTimeout(() => resolve({ ok: true, json: async () => ({}) }), 5000)

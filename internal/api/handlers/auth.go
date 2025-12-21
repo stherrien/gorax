@@ -232,9 +232,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Copy session cookie from Kratos response
+	// Copy session cookie from Kratos response with security attributes
 	if cookies := resp.Cookies(); len(cookies) > 0 {
 		for _, cookie := range cookies {
+			// Ensure security attributes are set
+			cookie.Secure = true
+			cookie.HttpOnly = true
+			cookie.SameSite = http.SameSiteStrictMode
 			http.SetCookie(w, cookie)
 		}
 	}
@@ -274,12 +278,15 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Clear session cookie
+	// Clear session cookie with security attributes
 	http.SetCookie(w, &http.Cookie{
-		Name:   "ory_kratos_session",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
+		Name:     "ory_kratos_session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	w.WriteHeader(http.StatusNoContent)
