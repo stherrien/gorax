@@ -5,7 +5,8 @@ import ParallelConfigPanel from './ParallelConfigPanel'
 import SlackConfigPanel from './SlackConfigPanel'
 import PrioritySelector from '../webhooks/PrioritySelector'
 import { AIConfigPanel } from '../ai/AIConfigPanel'
-import type { AIAction, AIConfigData } from '../ai/AIConfigPanel'
+import type { AIConfigData } from '../ai/AIConfigPanel'
+import type { AIAction } from '../../types/ai'
 import { AI_MODELS } from '../../types/ai'
 
 // Mock credentials for now - in production this would come from useCredentials hook
@@ -60,7 +61,7 @@ export default function PropertyPanel({ node, onUpdate, onClose, onSave, isSavin
     )
   }
 
-  const nodeType = node.data?.nodeType || 'unknown'
+  const nodeType: string = typeof node.data?.nodeType === 'string' ? node.data.nodeType : 'unknown'
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev: any) => ({

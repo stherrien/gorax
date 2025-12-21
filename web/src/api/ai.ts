@@ -4,7 +4,6 @@ import type {
   AIAction,
   AIModel,
   ChatMessage,
-  TokenUsage,
   ChatCompletionResult,
   SummarizationResult,
   ClassificationResult,

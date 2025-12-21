@@ -13,6 +13,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
   onApply,
 }) => {
   const [input, setInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -53,6 +54,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
 
     const message = input.trim()
     setInput('')
+    setError(null)
 
     try {
       if (hasConversation) {
@@ -60,33 +62,46 @@ export const ChatPanel: FC<ChatPanelProps> = ({
       } else {
         await startConversation(message)
       }
-    } catch (error) {
-      console.error('Failed to send message:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
+      setError(errorMessage)
+      console.error('Failed to send message:', err)
     }
   }
 
   const handleApply = async () => {
     if (!hasWorkflow) return
+    setError(null)
 
     try {
       const workflowId = await applyWorkflow()
       onApply?.(workflowId)
-    } catch (error) {
-      console.error('Failed to apply workflow:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create workflow'
+      setError(errorMessage)
+      console.error('Failed to apply workflow:', err)
     }
   }
 
   const handleAbandon = async () => {
+    setError(null)
     try {
       await abandonConversation()
-    } catch (error) {
-      console.error('Failed to abandon conversation:', error)
+    } catch (err) {
+      console.error('Failed to abandon conversation:', err)
     }
   }
 
   const handleReset = () => {
     reset()
     setInput('')
+    setError(null)
+    inputRef.current?.focus()
+  }
+
+  const handleExampleClick = (text: string) => {
+    setInput(text)
+    setError(null)
     inputRef.current?.focus()
   }
 
@@ -147,9 +162,9 @@ export const ChatPanel: FC<ChatPanelProps> = ({
             </p>
             <div className="mt-6 space-y-2 text-left">
               <p className="text-xs font-medium text-gray-400">Try saying:</p>
-              <ExamplePrompt text="Send a Slack message when a GitHub PR is opened" />
-              <ExamplePrompt text="Every day at 9am, fetch data from an API and email me a summary" />
-              <ExamplePrompt text="When a webhook is received, transform the data and POST to another API" />
+              <ExamplePrompt text="Send a Slack message when a GitHub PR is opened" onClick={handleExampleClick} />
+              <ExamplePrompt text="Every day at 9am, fetch data from an API and email me a summary" onClick={handleExampleClick} />
+              <ExamplePrompt text="When a webhook is received, transform the data and POST to another API" onClick={handleExampleClick} />
             </div>
           </div>
         ) : (
@@ -200,6 +215,24 @@ export const ChatPanel: FC<ChatPanelProps> = ({
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="border-t border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-red-500">⚠️</span>
+              <span className="text-sm text-red-700">{error}</span>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-600"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="border-t border-gray-200 p-4">
         <form onSubmit={handleSubmit}>
@@ -239,13 +272,15 @@ export const ChatPanel: FC<ChatPanelProps> = ({
 
 // Helper components
 
-const ExamplePrompt: FC<{ text: string }> = ({ text }) => (
+interface ExamplePromptProps {
+  text: string
+  onClick: (text: string) => void
+}
+
+const ExamplePrompt: FC<ExamplePromptProps> = ({ text, onClick }) => (
   <button
-    className="block w-full rounded border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-600 hover:border-blue-300 hover:bg-blue-50"
-    onClick={() => {
-      // This will be handled by parent component
-      console.log('Example clicked:', text)
-    }}
+    className="block w-full rounded border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-600 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+    onClick={() => onClick(text)}
   >
     &quot;{text}&quot;
   </button>

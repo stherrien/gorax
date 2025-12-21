@@ -249,25 +249,9 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	usageService := handlers.NewUsageService(app.quotaTracker, app.tenantService, logger)
 	app.usageHandler = handlers.NewUsageHandler(usageService)
 
-	// Initialize suggestions service and handler
-	suggestionsRepo := suggestions.NewPostgresRepository(db)
-	patternAnalyzer := suggestions.NewPatternAnalyzer(nil) // Uses default patterns
-	suggestionsService := suggestions.NewSuggestionService(suggestions.SuggestionServiceConfig{
-		Repository:         suggestionsRepo,
-		PatternAnalyzer:    patternAnalyzer,
-		LLMAnalyzer:        nil, // LLM analyzer can be configured separately
-		UseLLMForUnmatched: false,
-		Logger:             logger,
-	})
-	app.suggestionsHandler = handlers.NewSuggestionsHandler(suggestionsService, logger)
-
-	// Initialize AI builder service and handler
-	aibuilderRepo := aibuilder.NewPostgresRepository(db)
-	nodeRegistry := aibuilder.NewNodeRegistry()
-
-	var aibuilderGenerator *aibuilder.WorkflowGenerator
+	// Initialize LLM provider (shared by suggestions and AI builder)
+	var llmProvider llm.Provider
 	if cfg.AIBuilder.Enabled && cfg.AIBuilder.APIKey != "" {
-		// Create LLM provider from configuration
 		llmConfig := &llm.ProviderConfig{
 			APIKey: cfg.AIBuilder.APIKey,
 		}
@@ -279,22 +263,60 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 			llmConfig.AWSSecretAccessKey = cfg.AWS.SecretAccessKey
 		}
 
-		llmProvider, err := llm.GlobalProviderRegistry.GetProvider(cfg.AIBuilder.Provider, llmConfig)
+		var err error
+		llmProvider, err = llm.GlobalProviderRegistry.GetProvider(cfg.AIBuilder.Provider, llmConfig)
 		if err != nil {
-			logger.Warn("Failed to initialize LLM provider for AI Builder", "error", err, "provider", cfg.AIBuilder.Provider)
+			logger.Warn("Failed to initialize LLM provider", "error", err, "provider", cfg.AIBuilder.Provider)
 		} else {
-			// Create generator with LLM provider
-			generatorConfig := &aibuilder.GeneratorConfig{
-				Model:       cfg.AIBuilder.Model,
-				MaxTokens:   cfg.AIBuilder.MaxTokens,
-				Temperature: cfg.AIBuilder.Temperature,
-			}
-			aibuilderGenerator = aibuilder.NewWorkflowGenerator(llmProvider, nodeRegistry, generatorConfig)
-			logger.Info("AI Builder initialized with LLM provider",
+			logger.Info("LLM provider initialized",
 				"provider", cfg.AIBuilder.Provider,
 				"model", cfg.AIBuilder.Model,
 			)
 		}
+	}
+
+	// Initialize suggestions service and handler
+	suggestionsRepo := suggestions.NewPostgresRepository(db)
+	patternAnalyzer := suggestions.NewPatternAnalyzer(nil) // Uses default patterns
+
+	var llmAnalyzer suggestions.Analyzer
+	useLLMForUnmatched := false
+	if llmProvider != nil {
+		// Create LLM analyzer for suggestions using the shared provider
+		llmAnalyzerConfig := suggestions.LLMAnalyzerConfig{
+			Model:     cfg.AIBuilder.Model,
+			MaxTokens: 1024, // Suggestions need less tokens
+		}
+		llmAnalyzer = suggestions.NewLLMAnalyzer(llmProvider, llmAnalyzerConfig)
+		useLLMForUnmatched = true
+		logger.Info("Smart Suggestions LLM analyzer initialized")
+	}
+
+	suggestionsService := suggestions.NewSuggestionService(suggestions.SuggestionServiceConfig{
+		Repository:         suggestionsRepo,
+		PatternAnalyzer:    patternAnalyzer,
+		LLMAnalyzer:        llmAnalyzer,
+		UseLLMForUnmatched: useLLMForUnmatched,
+		Logger:             logger,
+	})
+	app.suggestionsHandler = handlers.NewSuggestionsHandler(suggestionsService, logger)
+
+	// Initialize AI builder service and handler
+	aibuilderRepo := aibuilder.NewPostgresRepository(db)
+	nodeRegistry := aibuilder.NewNodeRegistry()
+
+	var aibuilderGenerator *aibuilder.WorkflowGenerator
+	if llmProvider != nil {
+		// Create generator with LLM provider
+		generatorConfig := &aibuilder.GeneratorConfig{
+			Model:       cfg.AIBuilder.Model,
+			MaxTokens:   cfg.AIBuilder.MaxTokens,
+			Temperature: cfg.AIBuilder.Temperature,
+		}
+		aibuilderGenerator = aibuilder.NewWorkflowGenerator(llmProvider, nodeRegistry, generatorConfig)
+		logger.Info("AI Builder generator initialized",
+			"model", cfg.AIBuilder.Model,
+		)
 	} else {
 		logger.Info("AI Builder initialized without LLM provider",
 			"enabled", cfg.AIBuilder.Enabled,
