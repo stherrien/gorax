@@ -24,7 +24,6 @@ linters:
     - unparam
     - unconvert
     - prealloc
-    - exportloopref
     - noctx
     - bodyclose
 
