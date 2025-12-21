@@ -108,8 +108,9 @@ func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) 
 	if concurrency < 0 {
 		concurrency = 0
 	}
-	if concurrency > int(^int32(0)>>1) { // max int32
-		concurrency = int(^int32(0) >> 1)
+	const maxInt32 = 1<<31 - 1 // 2147483647
+	if concurrency > maxInt32 {
+		concurrency = maxInt32
 	}
 	if hs.worker.getActiveExecutions() >= int32(concurrency) { // #nosec G115 -- bounds checked above
 		w.WriteHeader(http.StatusServiceUnavailable)
