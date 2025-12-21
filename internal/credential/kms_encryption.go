@@ -231,6 +231,7 @@ func (s *KMSEncryptionService) encryptWithAESGCM(plaintext, key []byte) ([]byte,
 	}
 
 	// Encrypt data (result includes authentication tag at the end)
+	// #nosec G407 -- nonce is randomly generated above, not hardcoded
 	ciphertextWithTag := gcm.Seal(nil, nonce, plaintext, nil)
 
 	// Split ciphertext and authentication tag

@@ -103,7 +103,15 @@ func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if worker can accept more work
-	if hs.worker.getActiveExecutions() >= int32(hs.worker.concurrency) {
+	// Safe conversion: concurrency is always a small positive config value
+	concurrency := hs.worker.concurrency
+	if concurrency < 0 {
+		concurrency = 0
+	}
+	if concurrency > int(^int32(0)>>1) { // max int32
+		concurrency = int(^int32(0) >> 1)
+	}
+	if hs.worker.getActiveExecutions() >= int32(concurrency) { // #nosec G115 -- bounds checked above
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "at_capacity",

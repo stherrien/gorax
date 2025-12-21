@@ -26,6 +26,7 @@ const (
 // SuggestionType indicates the type of fix suggested
 type SuggestionType string
 
+// #nosec G101 -- these are suggestion type constants, not credentials
 const (
 	SuggestionTypeRetry        SuggestionType = "retry"
 	SuggestionTypeConfigChange SuggestionType = "config_change"

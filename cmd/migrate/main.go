@@ -127,6 +127,7 @@ func migrateUp(db *sql.DB, migrationsDir string) error {
 		}
 
 		// Read migration file
+		// #nosec G304 -- file paths come from filepath.Glob on trusted migrations directory
 		content, err := os.ReadFile(file)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", file, err)
