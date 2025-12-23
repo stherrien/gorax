@@ -2,12 +2,27 @@ package executor
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"math"
 	"math/rand"
 	"time"
 )
+
+// secureRand is a math/rand source seeded with crypto/rand for jitter calculations
+var secureRand *rand.Rand
+
+func init() {
+	var seed int64
+	if err := binary.Read(cryptoRand.Reader, binary.BigEndian, &seed); err != nil {
+		// Fallback to time-based seed if crypto/rand fails
+		seed = time.Now().UnixNano()
+	}
+	// #nosec G404 -- math/rand is intentionally seeded with crypto/rand for jitter; cryptographic security not required
+	secureRand = rand.New(rand.NewSource(seed))
+}
 
 // RetryConfig holds configuration for retry behavior
 type RetryConfig struct {
@@ -208,7 +223,8 @@ func (r *RetryStrategy) calculateBackoff(attempt int) time.Duration {
 	// Add jitter if enabled (random variation of ±25%)
 	if r.config.Jitter {
 		jitter := float64(duration) * 0.25
-		variation := (rand.Float64() * 2 * jitter) - jitter // Random value between -jitter and +jitter
+		// Using secureRand which is seeded from crypto/rand
+		variation := (secureRand.Float64() * 2 * jitter) - jitter // Random value between -jitter and +jitter
 		duration = time.Duration(float64(duration) + variation)
 	}
 
