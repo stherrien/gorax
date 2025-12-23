@@ -19,6 +19,7 @@ func init() {
 		// Fallback to time-based seed if crypto/rand fails
 		seed = time.Now().UnixNano()
 	}
+	// #nosec G404 -- math/rand is intentionally seeded with crypto/rand above; cryptographic security not required for jitter
 	secureRand = rand.New(rand.NewSource(seed))
 }
 

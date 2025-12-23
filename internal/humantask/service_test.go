@@ -106,7 +106,8 @@ func TestService_CreateTask(t *testing.T) {
 			},
 			setup: func(repo *MockRepository, notif *MockNotificationService) {
 				repo.On("Create", mock.Anything, mock.Anything).Return(nil)
-				notif.On("NotifyTaskAssigned", mock.Anything, mock.Anything).Return(nil)
+				// Notification is sent async in a goroutine, use Maybe() to avoid race conditions
+				notif.On("NotifyTaskAssigned", mock.Anything, mock.Anything).Return(nil).Maybe()
 			},
 			wantErr: nil,
 		},

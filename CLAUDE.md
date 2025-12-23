@@ -1903,6 +1903,1159 @@ function NodePalette() {
 - Canvas events: onNodeClick, onEdgeClick, onNodeDragStop
 - Position calculation: use `screenToFlowPosition()` for drop zones
 
+### gorax-go-security-expert
+
+**When to use**: Go-specific security audits, SQL injection prevention, context security, goroutine safety, secure coding in Go
+
+**Key focus areas**:
+- SQL injection prevention with parameterized queries
+- Context timeout and cancellation security
+- Goroutine leaks and race conditions
+- Input validation and sanitization
+- Secure random number generation
+- Path traversal prevention
+- Command injection prevention
+- Crypto/TLS best practices in Go
+
+**Go security patterns**:
+```go
+// ✅ SECURE: Parameterized queries (prevents SQL injection)
+func (r *Repository) GetWorkflow(ctx context.Context, tenantID, workflowID string) (*Workflow, error) {
+    query := `SELECT id, name, description FROM workflows WHERE tenant_id = $1 AND id = $2`
+
+    var workflow Workflow
+    err := r.db.QueryRowContext(ctx, query, tenantID, workflowID).Scan(
+        &workflow.ID,
+        &workflow.Name,
+        &workflow.Description,
+    )
+    if err != nil {
+        return nil, fmt.Errorf("query workflow: %w", err)
+    }
+
+    return &workflow, nil
+}
+
+// ❌ INSECURE: String concatenation (SQL injection vulnerability)
+func (r *Repository) GetWorkflowInsecure(ctx context.Context, tenantID, workflowID string) (*Workflow, error) {
+    query := fmt.Sprintf("SELECT * FROM workflows WHERE tenant_id = '%s' AND id = '%s'", tenantID, workflowID)
+    // If workflowID contains "'; DROP TABLE workflows; --", database is compromised
+    return r.db.QueryContext(ctx, query)
+}
+
+// ✅ SECURE: Context with timeout prevents resource exhaustion
+func (s *Service) ProcessWithTimeout(workflowID string) error {
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel() // Always cancel to free resources
+
+    workflow, err := s.repo.GetWorkflow(ctx, workflowID)
+    if err != nil {
+        if errors.Is(err, context.DeadlineExceeded) {
+            return fmt.Errorf("operation timed out: %w", err)
+        }
+        return err
+    }
+
+    return s.execute(ctx, workflow)
+}
+
+// ✅ SECURE: Goroutine with proper cancellation
+func (s *Service) ProcessConcurrently(ctx context.Context, workflowIDs []string) error {
+    g, ctx := errgroup.WithContext(ctx)
+    g.SetLimit(10) // Limit concurrent goroutines
+
+    for _, id := range workflowIDs {
+        id := id // Capture loop variable
+        g.Go(func() error {
+            select {
+            case <-ctx.Done():
+                return ctx.Err() // Check cancellation
+            default:
+                return s.process(ctx, id)
+            }
+        })
+    }
+
+    return g.Wait()
+}
+
+// ❌ INSECURE: Goroutine leak (no cancellation)
+func (s *Service) ProcessInsecure(workflowIDs []string) {
+    for _, id := range workflowIDs {
+        go func(id string) {
+            // This goroutine will run forever if blocked
+            s.process(context.Background(), id)
+        }(id)
+    }
+}
+
+// ✅ SECURE: Path validation (prevents path traversal)
+func (s *Service) ReadFile(filename string) ([]byte, error) {
+    // Validate filename
+    if strings.Contains(filename, "..") {
+        return nil, fmt.Errorf("invalid filename: path traversal attempt")
+    }
+
+    // Use filepath.Clean to normalize
+    cleanPath := filepath.Clean(filename)
+
+    // Ensure it's within allowed directory
+    baseDir := "/var/app/data"
+    fullPath := filepath.Join(baseDir, cleanPath)
+
+    if !strings.HasPrefix(fullPath, baseDir) {
+        return nil, fmt.Errorf("invalid path: outside allowed directory")
+    }
+
+    return os.ReadFile(fullPath)
+}
+
+// ❌ INSECURE: No path validation (path traversal vulnerability)
+func (s *Service) ReadFileInsecure(filename string) ([]byte, error) {
+    // filename = "../../etc/passwd" would expose sensitive files
+    return os.ReadFile(filename)
+}
+
+// ✅ SECURE: Command execution with validation
+func (s *Service) ExecuteCommand(command string, args []string) ([]byte, error) {
+    // Allowlist of permitted commands
+    allowedCommands := map[string]bool{
+        "git":  true,
+        "node": true,
+        "npm":  true,
+    }
+
+    if !allowedCommands[command] {
+        return nil, fmt.Errorf("command not allowed: %s", command)
+    }
+
+    // Validate arguments (no shell metacharacters)
+    for _, arg := range args {
+        if strings.ContainsAny(arg, ";|&$`\n") {
+            return nil, fmt.Errorf("invalid argument: shell metacharacters detected")
+        }
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    cmd := exec.CommandContext(ctx, command, args...)
+    return cmd.Output()
+}
+
+// ❌ INSECURE: Shell injection vulnerability
+func (s *Service) ExecuteCommandInsecure(command string) ([]byte, error) {
+    // command = "ls; rm -rf /" would delete everything
+    cmd := exec.Command("sh", "-c", command)
+    return cmd.Output()
+}
+
+// ✅ SECURE: Cryptographically secure random generation
+func GenerateSecureToken() (string, error) {
+    b := make([]byte, 32)
+    if _, err := rand.Read(b); err != nil {
+        return "", fmt.Errorf("failed to generate random bytes: %w", err)
+    }
+    return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// ❌ INSECURE: Predictable random (math/rand is not cryptographically secure)
+func GenerateInsecureToken() string {
+    return fmt.Sprintf("%d", mathrand.Int63())
+}
+
+// ✅ SECURE: Input validation with bounds checking
+func ValidatePaginationParams(limit, offset string) (int, int, error) {
+    const maxLimit = 1000
+    const maxOffset = 1000000
+
+    limitInt, err := strconv.Atoi(limit)
+    if err != nil || limitInt < 1 || limitInt > maxLimit {
+        return 0, 0, fmt.Errorf("invalid limit: must be between 1 and %d", maxLimit)
+    }
+
+    offsetInt, err := strconv.Atoi(offset)
+    if err != nil || offsetInt < 0 || offsetInt > maxOffset {
+        return 0, 0, fmt.Errorf("invalid offset: must be between 0 and %d", maxOffset)
+    }
+
+    return limitInt, offsetInt, nil
+}
+
+// ✅ SECURE: TLS configuration
+func SecureTLSConfig() *tls.Config {
+    return &tls.Config{
+        MinVersion:               tls.VersionTLS13,
+        CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+        PreferServerCipherSuites: true,
+        CipherSuites: []uint16{
+            tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+            tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+        },
+    }
+}
+```
+
+**Go security checklist**:
+- [ ] All SQL queries use parameterized statements ($1, $2 placeholders)
+- [ ] Context with timeout for all external calls (DB, HTTP, etc.)
+- [ ] Goroutines have cancellation via context
+- [ ] errgroup.Group with SetLimit() for bounded concurrency
+- [ ] File paths validated against traversal (no "..")
+- [ ] Commands use exec.Command with args array (not shell)
+- [ ] crypto/rand used for tokens/keys (not math/rand)
+- [ ] Input validation with bounds checking
+- [ ] Errors wrapped with context, never expose internal details
+- [ ] Defer statements for cleanup (Close, cancel, Unlock)
+- [ ] Race detector used in tests: `go test -race ./...`
+- [ ] TLS 1.3+ for all external connections
+
+### gorax-react-security-expert
+
+**When to use**: React-specific security audits, XSS prevention, CSRF protection, secure state management, API security in React
+
+**Key focus areas**:
+- XSS prevention (dangerouslySetInnerHTML avoidance)
+- CSRF token handling
+- Secure authentication state management
+- API token storage (not in localStorage)
+- Content Security Policy compliance
+- Third-party dependency security
+- Secure routing and authorization
+
+**React security patterns**:
+```typescript
+// ✅ SECURE: React escapes content by default
+function WorkflowName({ name }: { name: string }) {
+  return <h1>{name}</h1> // Automatically escaped
+}
+
+// ❌ INSECURE: dangerouslySetInnerHTML (XSS vulnerability)
+function WorkflowNameInsecure({ html }: { html: string }) {
+  // If html = "<img src=x onerror='alert(document.cookie)'/>", XSS occurs
+  return <h1 dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+// ✅ SECURE: Sanitize before rendering HTML (if absolutely necessary)
+import DOMPurify from 'dompurify'
+
+function SanitizedContent({ html }: { html: string }) {
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'],
+    ALLOWED_ATTR: []
+  })
+  return <div dangerouslySetInnerHTML={{ __html: clean }} />
+}
+
+// ✅ SECURE: Auth token in httpOnly cookie (set by backend)
+// NO localStorage/sessionStorage for sensitive tokens
+function useAuth() {
+  // Token is automatically sent with requests via cookie
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => api.auth.getCurrentUser(), // Cookie sent automatically
+  })
+
+  return { user, isAuthenticated: !!user }
+}
+
+// ❌ INSECURE: Token in localStorage (vulnerable to XSS)
+function useAuthInsecure() {
+  const [token, setToken] = useState(localStorage.getItem('auth_token'))
+  // If XSS exists, attacker can: localStorage.getItem('auth_token')
+}
+
+// ✅ SECURE: CSRF token from meta tag
+function useCSRFToken() {
+  return useMemo(() => {
+    const meta = document.querySelector('meta[name="csrf-token"]')
+    return meta?.getAttribute('content') || ''
+  }, [])
+}
+
+// API client with CSRF protection
+const apiClient = axios.create({
+  baseURL: '/api',
+  withCredentials: true, // Send cookies
+})
+
+apiClient.interceptors.request.use((config) => {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken
+  }
+  return config
+})
+
+// ✅ SECURE: Protected route with authorization
+function ProtectedRoute({ children, requiredPermission }: Props) {
+  const { user, isLoading } = useAuth()
+  const hasPermission = user?.permissions?.includes(requiredPermission)
+
+  if (isLoading) return <Loading />
+  if (!user) return <Navigate to="/login" />
+  if (!hasPermission) return <Navigate to="/unauthorized" />
+
+  return <>{children}</>
+}
+
+// ❌ INSECURE: Client-side only authorization (can be bypassed)
+function InsecureRoute({ children }: Props) {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true'
+  // Attacker can: localStorage.setItem('isAdmin', 'true')
+  return isAdmin ? <>{children}</> : <Navigate to="/" />
+}
+
+// ✅ SECURE: Input validation before API call
+function WorkflowForm() {
+  const [name, setName] = useState('')
+  const createWorkflow = useCreateWorkflow()
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Client-side validation (UX + first line of defense)
+    if (!name || name.length > 255) {
+      toast.error('Name must be 1-255 characters')
+      return
+    }
+
+    // Remove any HTML tags
+    const sanitizedName = name.replace(/<[^>]*>/g, '')
+
+    createWorkflow.mutate({ name: sanitizedName })
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={255}
+      />
+      <button type="submit">Create</button>
+    </form>
+  )
+}
+
+// ✅ SECURE: Avoid exposing sensitive data in URL
+function WorkflowEditor() {
+  const { id } = useParams() // Public workflow ID only
+  const { data: workflow } = useWorkflow(id)
+
+  // Credentials/secrets fetched separately, never in URL
+  const { data: credentials } = useCredentials(workflow?.tenantId)
+}
+
+// ❌ INSECURE: Sensitive data in URL
+function InsecureEditor() {
+  // URL: /editor?apiKey=sk_live_xyz123
+  const [searchParams] = useSearchParams()
+  const apiKey = searchParams.get('apiKey') // Exposed in browser history/logs
+}
+
+// ✅ SECURE: Secure dependency management
+// package.json with exact versions (no ^ or ~)
+{
+  "dependencies": {
+    "react": "18.2.0",  // ✅ Exact version
+    "axios": "1.6.0"
+  }
+}
+
+// Run security audits regularly
+// npm audit
+// npm audit fix
+
+// ✅ SECURE: Content Security Policy compliant
+// No inline scripts, no eval()
+function SecureComponent() {
+  // ❌ Avoid: onclick="handleClick()"
+  // ✅ Use: React event handlers
+  return <button onClick={handleClick}>Click</button>
+}
+
+// ✅ SECURE: Safe navigation
+import { useNavigate } from 'react-router-dom'
+
+function SafeRedirect() {
+  const navigate = useNavigate()
+
+  // Validate redirect URL
+  const handleRedirect = (url: string) => {
+    const allowed = ['/dashboard', '/workflows', '/settings']
+    if (allowed.includes(url)) {
+      navigate(url)
+    }
+  }
+}
+
+// ❌ INSECURE: Open redirect vulnerability
+function InsecureRedirect() {
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect')
+  // redirect=https://evil.com would redirect user away
+  window.location.href = redirect
+}
+```
+
+**React security checklist**:
+- [ ] Never use dangerouslySetInnerHTML without DOMPurify
+- [ ] Auth tokens in httpOnly cookies (not localStorage)
+- [ ] CSRF token included in POST/PUT/DELETE requests
+- [ ] Authorization checks on both client AND server
+- [ ] Input validation before API calls
+- [ ] No sensitive data in URLs or browser history
+- [ ] Exact dependency versions in package.json
+- [ ] Regular npm audit runs
+- [ ] CSP compliant (no inline scripts)
+- [ ] Validate redirect URLs (whitelist)
+- [ ] Use HTTPS only (enforced)
+- [ ] Secrets never committed to git
+- [ ] React.StrictMode enabled in development
+
+### gorax-go-testing-expert
+
+**When to use**: Writing Go tests, table-driven tests, mocking, benchmarks, integration tests, test coverage improvement
+
+**Key expertise**:
+- Table-driven test patterns
+- testify/assert and testify/mock usage
+- Test fixtures and test data management
+- Integration test setup/teardown
+- Benchmark tests for performance
+- Race condition detection
+- Test coverage analysis
+
+**Go testing patterns**:
+```go
+// ✅ BEST PRACTICE: Table-driven tests with subtests
+func TestValidateWorkflow(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   *Workflow
+        wantErr bool
+        errMsg  string
+    }{
+        {
+            name: "valid workflow",
+            input: &Workflow{
+                Name:        "Test Workflow",
+                Description: "Valid workflow",
+                Nodes: []Node{
+                    {ID: "1", Type: "trigger"},
+                    {ID: "2", Type: "action"},
+                },
+                Edges: []Edge{{From: "1", To: "2"}},
+            },
+            wantErr: false,
+        },
+        {
+            name: "missing name",
+            input: &Workflow{
+                Nodes: []Node{{ID: "1", Type: "trigger"}},
+            },
+            wantErr: true,
+            errMsg:  "name is required",
+        },
+        {
+            name: "no trigger node",
+            input: &Workflow{
+                Name:  "Test",
+                Nodes: []Node{{ID: "1", Type: "action"}},
+            },
+            wantErr: true,
+            errMsg:  "workflow must have a trigger node",
+        },
+        {
+            name: "cycle detected",
+            input: &Workflow{
+                Name: "Cyclic",
+                Nodes: []Node{
+                    {ID: "1", Type: "trigger"},
+                    {ID: "2", Type: "action"},
+                },
+                Edges: []Edge{
+                    {From: "1", To: "2"},
+                    {From: "2", To: "1"}, // Creates cycle
+                },
+            },
+            wantErr: true,
+            errMsg:  "cycle detected",
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            err := ValidateWorkflow(tt.input)
+
+            if tt.wantErr {
+                require.Error(t, err)
+                assert.Contains(t, err.Error(), tt.errMsg)
+            } else {
+                require.NoError(t, err)
+            }
+        })
+    }
+}
+
+// ✅ BEST PRACTICE: Mock with testify/mock
+type MockRepository struct {
+    mock.Mock
+}
+
+func (m *MockRepository) GetWorkflow(ctx context.Context, tenantID, id string) (*Workflow, error) {
+    args := m.Called(ctx, tenantID, id)
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
+    return args.Get(0).(*Workflow), args.Error(1)
+}
+
+func TestWorkflowService_Execute(t *testing.T) {
+    // Arrange
+    mockRepo := new(MockRepository)
+    mockExecutor := new(MockExecutor)
+    service := NewWorkflowService(mockRepo, mockExecutor)
+
+    ctx := context.Background()
+    tenantID := "tenant-123"
+    workflowID := "wf-456"
+
+    expectedWorkflow := &Workflow{
+        ID:   workflowID,
+        Name: "Test Workflow",
+        Nodes: []Node{
+            {ID: "1", Type: "trigger"},
+            {ID: "2", Type: "action"},
+        },
+    }
+
+    // Setup mock expectations
+    mockRepo.On("GetWorkflow", ctx, tenantID, workflowID).
+        Return(expectedWorkflow, nil).
+        Once()
+
+    mockExecutor.On("Execute", ctx, expectedWorkflow).
+        Return(&ExecutionResult{Success: true}, nil).
+        Once()
+
+    // Act
+    result, err := service.Execute(ctx, tenantID, workflowID)
+
+    // Assert
+    require.NoError(t, err)
+    assert.NotNil(t, result)
+    assert.True(t, result.Success)
+
+    // Verify all expectations were met
+    mockRepo.AssertExpectations(t)
+    mockExecutor.AssertExpectations(t)
+}
+
+// ✅ BEST PRACTICE: Test helper functions
+func setupTestDB(t *testing.T) *sql.DB {
+    t.Helper()
+
+    db, err := sql.Open("postgres", "postgresql://localhost/test?sslmode=disable")
+    require.NoError(t, err)
+
+    // Run migrations
+    err = runMigrations(db)
+    require.NoError(t, err)
+
+    // Cleanup on test completion
+    t.Cleanup(func() {
+        db.Exec("TRUNCATE TABLE workflows CASCADE")
+        db.Close()
+    })
+
+    return db
+}
+
+// ✅ BEST PRACTICE: Integration test with real dependencies
+func TestWorkflowRepository_Integration(t *testing.T) {
+    if testing.Short() {
+        t.Skip("skipping integration test in short mode")
+    }
+
+    db := setupTestDB(t)
+    repo := NewWorkflowRepository(db)
+
+    ctx := context.Background()
+    tenantID := "tenant-123"
+
+    t.Run("create and retrieve workflow", func(t *testing.T) {
+        // Create
+        input := CreateWorkflowInput{
+            Name:        "Integration Test",
+            Description: "Test workflow",
+        }
+
+        created, err := repo.Create(ctx, tenantID, "user-1", input)
+        require.NoError(t, err)
+        assert.NotEmpty(t, created.ID)
+        assert.Equal(t, input.Name, created.Name)
+
+        // Retrieve
+        retrieved, err := repo.GetByID(ctx, tenantID, created.ID)
+        require.NoError(t, err)
+        assert.Equal(t, created.ID, retrieved.ID)
+        assert.Equal(t, created.Name, retrieved.Name)
+    })
+
+    t.Run("list with pagination", func(t *testing.T) {
+        // Create multiple workflows
+        for i := 0; i < 5; i++ {
+            _, err := repo.Create(ctx, tenantID, "user-1", CreateWorkflowInput{
+                Name: fmt.Sprintf("Workflow %d", i),
+            })
+            require.NoError(t, err)
+        }
+
+        // List with limit
+        workflows, err := repo.List(ctx, tenantID, 3, 0)
+        require.NoError(t, err)
+        assert.Len(t, workflows, 3)
+    })
+}
+
+// ✅ BEST PRACTICE: Benchmark test
+func BenchmarkFormulaEvaluator(b *testing.B) {
+    evaluator := NewFormulaEvaluator()
+
+    tests := []struct {
+        name    string
+        formula string
+        data    map[string]interface{}
+    }{
+        {
+            name:    "simple arithmetic",
+            formula: "a + b * c",
+            data:    map[string]interface{}{"a": 1, "b": 2, "c": 3},
+        },
+        {
+            name:    "array operations",
+            formula: "sum(map(items, item => item.value))",
+            data: map[string]interface{}{
+                "items": []map[string]interface{}{
+                    {"value": 10},
+                    {"value": 20},
+                    {"value": 30},
+                },
+            },
+        },
+        {
+            name:    "complex nested",
+            formula: "filter(map(items, i => i.value * 2), v => v > 20)",
+            data: map[string]interface{}{
+                "items": makeTestItems(100),
+            },
+        },
+    }
+
+    for _, tt := range tests {
+        b.Run(tt.name, func(b *testing.B) {
+            b.ResetTimer()
+            for i := 0; i < b.N; i++ {
+                _, _ = evaluator.Evaluate(tt.formula, tt.data)
+            }
+        })
+    }
+}
+
+// ✅ BEST PRACTICE: Test with timeout
+func TestSlowOperation(t *testing.T) {
+    if testing.Short() {
+        t.Skip("skipping slow test")
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    result, err := slowOperation(ctx)
+    require.NoError(t, err)
+    assert.NotNil(t, result)
+}
+
+// ✅ BEST PRACTICE: Race condition detection
+func TestConcurrentAccess(t *testing.T) {
+    cache := NewCache()
+
+    var wg sync.WaitGroup
+    for i := 0; i < 100; i++ {
+        wg.Add(1)
+        go func(val int) {
+            defer wg.Done()
+            cache.Set(fmt.Sprintf("key-%d", val), val)
+            cache.Get(fmt.Sprintf("key-%d", val))
+        }(i)
+    }
+
+    wg.Wait()
+
+    // Run with: go test -race ./...
+}
+
+// ✅ BEST PRACTICE: Error case testing
+func TestWorkflowService_HandleErrors(t *testing.T) {
+    mockRepo := new(MockRepository)
+    service := NewWorkflowService(mockRepo)
+
+    tests := []struct {
+        name        string
+        setupMock   func()
+        expectedErr string
+    }{
+        {
+            name: "repository error",
+            setupMock: func() {
+                mockRepo.On("GetWorkflow", mock.Anything, mock.Anything, mock.Anything).
+                    Return(nil, errors.New("database error"))
+            },
+            expectedErr: "database error",
+        },
+        {
+            name: "not found error",
+            setupMock: func() {
+                mockRepo.On("GetWorkflow", mock.Anything, mock.Anything, mock.Anything).
+                    Return(nil, ErrNotFound)
+            },
+            expectedErr: "not found",
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            mockRepo.ExpectedCalls = nil // Reset mock
+            tt.setupMock()
+
+            _, err := service.Execute(context.Background(), "tenant", "wf")
+
+            require.Error(t, err)
+            assert.Contains(t, err.Error(), tt.expectedErr)
+        })
+    }
+}
+
+// ✅ BEST PRACTICE: Test coverage helper
+func TestMain(m *testing.M) {
+    // Setup
+    setupTestEnvironment()
+
+    // Run tests
+    code := m.Run()
+
+    // Cleanup
+    teardownTestEnvironment()
+
+    os.Exit(code)
+}
+```
+
+**Go testing commands**:
+```bash
+# Run all tests
+go test ./...
+
+# Run with coverage
+go test -cover ./...
+
+# Generate coverage report
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+
+# Run with race detector
+go test -race ./...
+
+# Run only short tests
+go test -short ./...
+
+# Run specific test
+go test -run TestValidateWorkflow ./internal/workflow
+
+# Verbose output
+go test -v ./...
+
+# Benchmark tests
+go test -bench=. ./...
+
+# Benchmark with memory stats
+go test -bench=. -benchmem ./...
+```
+
+**Go testing checklist**:
+- [ ] All functions have unit tests
+- [ ] Table-driven tests for multiple cases
+- [ ] Mocks for external dependencies
+- [ ] Integration tests for database/API
+- [ ] Benchmark tests for performance-critical code
+- [ ] Tests run with -race flag
+- [ ] 80%+ code coverage on business logic
+- [ ] Error cases tested
+- [ ] Edge cases tested (nil, empty, boundary)
+- [ ] Tests use t.Helper() for test utilities
+- [ ] Tests are fast (< 100ms for unit tests)
+- [ ] Integration tests skip with -short flag
+
+### gorax-react-testing-expert
+
+**When to use**: Writing React tests, component testing, hook testing, integration tests with React Testing Library, mocking API calls
+
+**Key expertise**:
+- Vitest and React Testing Library
+- Component behavior testing
+- Custom hook testing
+- User interaction simulation
+- API mocking with MSW
+- Accessibility testing
+- Test organization and patterns
+
+**React testing patterns**:
+```typescript
+// ✅ BEST PRACTICE: Component testing with React Testing Library
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import WorkflowList from './WorkflowList'
+
+describe('WorkflowList', () => {
+  const mockWorkflows = [
+    { id: '1', name: 'Workflow 1', status: 'active' },
+    { id: '2', name: 'Workflow 2', status: 'draft' },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('rendering', () => {
+    it('should render all workflows', () => {
+      render(<WorkflowList workflows={mockWorkflows} />)
+
+      expect(screen.getByText('Workflow 1')).toBeInTheDocument()
+      expect(screen.getByText('Workflow 2')).toBeInTheDocument()
+    })
+
+    it('should show empty state when no workflows', () => {
+      render(<WorkflowList workflows={[]} />)
+
+      expect(screen.getByText(/no workflows found/i)).toBeInTheDocument()
+    })
+
+    it('should show loading spinner', () => {
+      render(<WorkflowList workflows={[]} loading />)
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument()
+      expect(screen.queryByText(/no workflows/i)).not.toBeInTheDocument()
+    })
+
+    it('should display error message', () => {
+      const error = 'Failed to load workflows'
+      render(<WorkflowList workflows={[]} error={error} />)
+
+      expect(screen.getByText(error)).toBeInTheDocument()
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+    })
+  })
+
+  describe('user interactions', () => {
+    it('should handle workflow selection', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+
+      render(<WorkflowList workflows={mockWorkflows} onSelect={onSelect} />)
+
+      await user.click(screen.getByText('Workflow 1'))
+
+      expect(onSelect).toHaveBeenCalledWith(mockWorkflows[0])
+      expect(onSelect).toHaveBeenCalledTimes(1)
+    })
+
+    it('should handle delete with confirmation', async () => {
+      const user = userEvent.setup()
+      const onDelete = vi.fn()
+
+      render(<WorkflowList workflows={mockWorkflows} onDelete={onDelete} />)
+
+      // Click delete button
+      await user.click(screen.getAllByRole('button', { name: /delete/i })[0])
+
+      // Confirm dialog appears
+      expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+
+      // Click confirm
+      await user.click(screen.getByRole('button', { name: /confirm/i }))
+
+      expect(onDelete).toHaveBeenCalledWith('1')
+    })
+
+    it('should filter workflows by search', async () => {
+      const user = userEvent.setup()
+
+      render(<WorkflowList workflows={mockWorkflows} />)
+
+      const searchInput = screen.getByPlaceholderText(/search/i)
+      await user.type(searchInput, 'Workflow 1')
+
+      expect(screen.getByText('Workflow 1')).toBeInTheDocument()
+      expect(screen.queryByText('Workflow 2')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('accessibility', () => {
+    it('should have accessible list', () => {
+      render(<WorkflowList workflows={mockWorkflows} />)
+
+      expect(screen.getByRole('list')).toBeInTheDocument()
+      expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    })
+
+    it('should have accessible buttons', () => {
+      render(<WorkflowList workflows={mockWorkflows} />)
+
+      const buttons = screen.getAllByRole('button')
+      buttons.forEach(button => {
+        expect(button).toHaveAccessibleName()
+      })
+    })
+  })
+})
+
+// ✅ BEST PRACTICE: Custom hook testing
+import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useWorkflow } from './useWorkflow'
+import * as api from '@/api'
+
+describe('useWorkflow', () => {
+  const createWrapper = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, cacheTime: 0 },
+      },
+    })
+
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    )
+  }
+
+  it('should fetch workflow data', async () => {
+    const mockWorkflow = { id: 'wf-123', name: 'Test' }
+    vi.spyOn(api.workflows, 'get').mockResolvedValue(mockWorkflow)
+
+    const { result } = renderHook(() => useWorkflow('wf-123'), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.isLoading).toBe(true)
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(result.current.data).toEqual(mockWorkflow)
+    expect(api.workflows.get).toHaveBeenCalledWith('wf-123')
+  })
+
+  it('should handle fetch errors', async () => {
+    const error = new Error('Not found')
+    vi.spyOn(api.workflows, 'get').mockRejectedValue(error)
+
+    const { result } = renderHook(() => useWorkflow('invalid'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+
+    expect(result.current.error).toEqual(error)
+  })
+
+  it('should refetch on demand', async () => {
+    vi.spyOn(api.workflows, 'get').mockResolvedValue({ id: 'wf-123', name: 'Test' })
+
+    const { result } = renderHook(() => useWorkflow('wf-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    // Trigger refetch
+    result.current.refetch()
+
+    await waitFor(() => {
+      expect(api.workflows.get).toHaveBeenCalledTimes(2)
+    })
+  })
+})
+
+// ✅ BEST PRACTICE: MSW for API mocking
+import { setupServer } from 'msw/node'
+import { http, HttpResponse } from 'msw'
+
+const handlers = [
+  http.get('/api/workflows/:id', ({ params }) => {
+    const { id } = params
+    return HttpResponse.json({
+      id,
+      name: 'Test Workflow',
+      nodes: [],
+      edges: [],
+    })
+  }),
+
+  http.post('/api/workflows', async ({ request }) => {
+    const body = await request.json()
+    return HttpResponse.json({
+      id: 'wf-new',
+      ...body,
+    }, { status: 201 })
+  }),
+
+  http.delete('/api/workflows/:id', () => {
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+const server = setupServer(...handlers)
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
+
+describe('WorkflowEditor integration', () => {
+  it('should load workflow from API', async () => {
+    render(<WorkflowEditor id="wf-123" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Workflow')).toBeInTheDocument()
+    })
+  })
+
+  it('should handle create workflow', async () => {
+    const user = userEvent.setup()
+
+    render(<WorkflowEditor />)
+
+    await user.type(screen.getByLabelText(/name/i), 'New Workflow')
+    await user.click(screen.getByRole('button', { name: /create/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/workflow created/i)).toBeInTheDocument()
+    })
+  })
+
+  it('should handle API errors', async () => {
+    server.use(
+      http.get('/api/workflows/:id', () => {
+        return HttpResponse.json(
+          { error: 'Not found' },
+          { status: 404 }
+        )
+      })
+    )
+
+    render(<WorkflowEditor id="invalid" />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/not found/i)).toBeInTheDocument()
+    })
+  })
+})
+
+// ✅ BEST PRACTICE: Testing with providers
+import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from '@/contexts/AuthContext'
+
+function renderWithProviders(
+  ui: React.ReactElement,
+  {
+    initialRoute = '/',
+    user = null,
+    ...renderOptions
+  } = {}
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider initialUser={user}>
+          <MemoryRouter initialEntries={[initialRoute]}>
+            {children}
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+    )
+  }
+
+  return render(ui, { wrapper: Wrapper, ...renderOptions })
+}
+
+// Usage
+it('should show authenticated content', () => {
+  const user = { id: '1', name: 'Test User' }
+
+  renderWithProviders(<Dashboard />, { user })
+
+  expect(screen.getByText(/welcome, test user/i)).toBeInTheDocument()
+})
+
+// ✅ BEST PRACTICE: Snapshot testing (use sparingly)
+it('should match snapshot', () => {
+  const { container } = render(<WorkflowCard workflow={mockWorkflow} />)
+  expect(container.firstChild).toMatchSnapshot()
+})
+
+// Update snapshots with: npm test -- -u
+```
+
+**React testing commands**:
+```bash
+# Run all tests
+npm test
+
+# Run in watch mode
+npm test -- --watch
+
+# Run with coverage
+npm test -- --coverage
+
+# Update snapshots
+npm test -- -u
+
+# Run specific test file
+npm test WorkflowList
+
+# Run tests matching pattern
+npm test -- --grep "user interactions"
+
+# UI mode (interactive)
+npm test -- --ui
+```
+
+**React testing checklist**:
+- [ ] All components have tests
+- [ ] User interactions tested
+- [ ] Loading states tested
+- [ ] Error states tested
+- [ ] Accessibility checked (roles, labels)
+- [ ] Custom hooks tested
+- [ ] API calls mocked with MSW
+- [ ] Provider contexts mocked
+- [ ] Edge cases tested (empty, error, loading)
+- [ ] Use screen.getByRole over getByTestId
+- [ ] Async operations use waitFor
+- [ ] No hardcoded timeouts (use waitFor)
+- [ ] Tests are isolated and independent
+
 ### Using Expert Agents
 
 Launch an expert agent for complex domain-specific tasks:

@@ -142,6 +142,7 @@ func (s *EncryptionService) encryptWithAESGCM(plaintext, key []byte) ([]byte, er
 	}
 
 	// Encrypt data (includes authentication tag)
+	// #nosec G407 -- nonce is randomly generated via crypto/rand.Reader above (line 140), not hardcoded
 	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
 
 	// Prepend nonce to ciphertext for easy retrieval during decryption
@@ -359,6 +360,7 @@ func (s *SimpleEncryptionService) Encrypt(ctx context.Context, tenantID string, 
 	}
 
 	// Encrypt DEK (includes auth tag)
+	// #nosec G407 -- dekNonce is randomly generated via crypto/rand.Reader above (line 354), not hardcoded
 	encryptedDEK := gcm.Seal(nil, dekNonce, dek, nil)
 
 	// Prepend nonce to encrypted DEK
@@ -392,6 +394,7 @@ func (s *SimpleEncryptionService) Encrypt(ctx context.Context, tenantID string, 
 	}
 
 	// Encrypt and get ciphertext with auth tag
+	// #nosec G407 -- nonce is randomly generated via crypto/rand.Reader above (line 387), not hardcoded
 	ciphertextWithTag := dataGCM.Seal(nil, nonce, plaintext, nil)
 
 	// Split ciphertext and auth tag
