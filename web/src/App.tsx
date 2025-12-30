@@ -12,6 +12,9 @@ import WebhookList from './pages/WebhookList'
 import WebhookDetail from './pages/WebhookDetail'
 import { CredentialManager } from './pages/CredentialManager'
 import AIWorkflowBuilder from './pages/AIWorkflowBuilder'
+import Marketplace from './pages/Marketplace'
+import Analytics from './pages/Analytics'
+import Documentation from './pages/Documentation'
 
 function App() {
   return (
@@ -30,6 +33,9 @@ function App() {
         <Route path="schedules/:id/edit" element={<EditSchedule />} />
         <Route path="credentials" element={<CredentialManager />} />
         <Route path="ai/builder" element={<AIWorkflowBuilder />} />
+        <Route path="marketplace" element={<Marketplace />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="docs" element={<Documentation />} />
       </Route>
     </Routes>
   )

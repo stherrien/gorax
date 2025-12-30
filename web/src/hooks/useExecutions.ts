@@ -131,7 +131,7 @@ export function useRecentExecutions(limit: number = 10) {
       setLoading(true)
       setError(null)
       const response = await executionAPI.getRecentExecutions(limit)
-      setExecutions(response.executions)
+      setExecutions(response.executions || [])
     } catch (err) {
       setError(err as Error)
       setExecutions([])

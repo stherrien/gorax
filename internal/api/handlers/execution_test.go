@@ -15,8 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gorax/gorax/internal/api/middleware"
-	"github.com/gorax/gorax/internal/tenant"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -57,14 +55,6 @@ func newTestExecutionHandler() (*ExecutionHandler, *MockWorkflowService) {
 }
 
 // addTenantContext adds tenant context to the request for testing
-func addTenantContext(req *http.Request, tenantID string) *http.Request {
-	t := &tenant.Tenant{
-		ID:     tenantID,
-		Status: "active",
-	}
-	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, t)
-	return req.WithContext(ctx)
-}
 
 // TestListExecutionsAdvanced_Success tests successful execution listing
 func TestListExecutionsAdvanced_Success(t *testing.T) {

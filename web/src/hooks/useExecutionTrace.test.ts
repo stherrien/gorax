@@ -432,4 +432,351 @@ describe('useExecutionTrace', () => {
       expect(result.current.reconnecting).toBe(false)
     })
   })
+
+  describe('Options', () => {
+    it('should not connect when enabled is false', () => {
+      const { result } = renderHook(() =>
+        useExecutionTrace('exec-123', { enabled: false })
+      )
+
+      expect(result.current.connected).toBe(false)
+      expect(mockClientInstances).toHaveLength(0)
+    })
+
+    it('should not set current execution ID when disabled', () => {
+      renderHook(() => useExecutionTrace('exec-123', { enabled: false }))
+
+      expect(mockStore.setCurrentExecutionId).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Event handling - execution.completed', () => {
+    it('should add timeline event on execution.completed', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'execution.completed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            nodeId: 'execution',
+            type: 'completed',
+            message: 'Execution completed successfully',
+          })
+        )
+      })
+    })
+  })
+
+  describe('Event handling - execution.failed', () => {
+    it('should add timeline event with error on execution.failed', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'execution.failed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        status: 'failed',
+        error: 'Workflow timeout',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            nodeId: 'execution',
+            type: 'failed',
+            message: expect.stringContaining('Workflow timeout'),
+            metadata: expect.objectContaining({
+              error: 'Workflow timeout',
+            }),
+          })
+        )
+      })
+    })
+
+    it('should handle execution.failed without error message', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'execution.failed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        status: 'failed',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'failed',
+            message: expect.stringContaining('Unknown error'),
+          })
+        )
+      })
+    })
+  })
+
+  describe('Event handling - missing data', () => {
+    it('should ignore step.started without step data', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.started',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      // Should not call setNodeStatus without step data
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(mockStore.setNodeStatus).not.toHaveBeenCalled()
+    })
+
+    it('should ignore step.completed without step data', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.completed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(mockStore.setNodeStatus).not.toHaveBeenCalled()
+      expect(mockStore.addStepLog).not.toHaveBeenCalled()
+    })
+
+    it('should ignore step.failed without step data', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.failed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(mockStore.setNodeStatus).not.toHaveBeenCalled()
+    })
+
+    it('should ignore execution.progress without progress data', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const initialCallCount = mockStore.addTimelineEvent.mock.calls.length
+
+      const event: ExecutionEvent = {
+        type: 'execution.progress',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      // Should not add new timeline event
+      expect(mockStore.addTimelineEvent.mock.calls.length).toBe(initialCallCount)
+    })
+  })
+
+  describe('Reconnect functionality', () => {
+    it('should provide reconnect function', async () => {
+      const { result } = renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      expect(typeof result.current.reconnect).toBe('function')
+    })
+
+    it('should be able to call reconnect', async () => {
+      const { result } = renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      // Should not throw when calling reconnect
+      act(() => {
+        result.current.reconnect()
+      })
+    })
+  })
+
+  describe('Event handling - execution.started with progress', () => {
+    it('should include progress metadata when available', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'execution.started',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        status: 'running',
+        progress: {
+          total_steps: 5,
+          completed_steps: 0,
+          percentage: 0,
+        },
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'started',
+            metadata: expect.objectContaining({
+              total_steps: 5,
+            }),
+          })
+        )
+      })
+    })
+  })
+
+  describe('Event handling - step.completed with duration', () => {
+    it('should include duration metadata when available', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.completed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        step: {
+          step_id: 'step-1',
+          node_id: 'node-1',
+          node_type: 'action:http',
+          status: 'completed',
+          duration_ms: 1234,
+        },
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'completed',
+            metadata: expect.objectContaining({
+              duration_ms: 1234,
+            }),
+          })
+        )
+      })
+    })
+  })
+
+  describe('Event handling - step.failed with error metadata', () => {
+    it('should include error metadata when available', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.failed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        step: {
+          step_id: 'step-1',
+          node_id: 'node-1',
+          node_type: 'action:http',
+          status: 'failed',
+          error: 'HTTP 500 Internal Server Error',
+        },
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'failed',
+            metadata: expect.objectContaining({
+              error: 'HTTP 500 Internal Server Error',
+            }),
+          })
+        )
+      })
+    })
+
+    it('should handle step.failed without error message', async () => {
+      renderHook(() => useExecutionTrace('exec-123'))
+
+      await openConnection()
+
+      const event: ExecutionEvent = {
+        type: 'step.failed',
+        execution_id: 'exec-123',
+        workflow_id: 'wf-456',
+        tenant_id: 'tenant-1',
+        step: {
+          step_id: 'step-1',
+          node_id: 'node-1',
+          node_type: 'action:http',
+          status: 'failed',
+        },
+        timestamp: new Date().toISOString(),
+      }
+
+      mockClientInstances[0].simulateMessage(event)
+
+      await waitFor(() => {
+        expect(mockStore.addTimelineEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'failed',
+            message: expect.stringContaining('Unknown error'),
+          })
+        )
+      })
+    })
+  })
 })

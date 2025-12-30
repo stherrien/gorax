@@ -201,4 +201,192 @@ describe('ScheduleList', () => {
     expect(scheduleNames[0]).toBe('Daily Backup')
     expect(scheduleNames[1]).toBe('Hourly Sync')
   })
+
+  it('should sort schedules by last run time', () => {
+    const schedulesWithLastRun: Schedule[] = [
+      {
+        ...mockSchedules[0],
+        lastRunAt: '2025-01-15T00:00:00Z',
+      },
+      {
+        ...mockSchedules[1],
+        lastRunAt: '2025-01-18T00:00:00Z',
+      },
+    ]
+
+    renderWithRouter(
+      <ScheduleList
+        schedules={schedulesWithLastRun}
+        workflows={[]}
+        sortBy="lastRun"
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    const scheduleNames = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+
+    // Most recent last run should be first
+    expect(scheduleNames[0]).toBe('Hourly Sync')
+    expect(scheduleNames[1]).toBe('Daily Backup')
+  })
+
+  it('should handle schedules with missing nextRunAt in sort', () => {
+    const schedulesWithMissingNext: Schedule[] = [
+      {
+        ...mockSchedules[0],
+        nextRunAt: undefined,
+      },
+      {
+        ...mockSchedules[1],
+        nextRunAt: '2025-01-20T01:00:00Z',
+      },
+    ]
+
+    renderWithRouter(
+      <ScheduleList
+        schedules={schedulesWithMissingNext}
+        workflows={[]}
+        sortBy="nextRun"
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    const scheduleNames = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+
+    // Schedule with nextRunAt should come first
+    expect(scheduleNames[0]).toBe('Hourly Sync')
+    expect(scheduleNames[1]).toBe('Daily Backup')
+  })
+
+  it('should handle schedules with missing lastRunAt in sort', () => {
+    const schedulesWithMissingLast: Schedule[] = [
+      {
+        ...mockSchedules[0],
+        lastRunAt: '2025-01-15T00:00:00Z',
+      },
+      {
+        ...mockSchedules[1],
+        lastRunAt: undefined,
+      },
+    ]
+
+    renderWithRouter(
+      <ScheduleList
+        schedules={schedulesWithMissingLast}
+        workflows={[]}
+        sortBy="lastRun"
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    const scheduleNames = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+
+    // Schedule with lastRunAt should come first
+    expect(scheduleNames[0]).toBe('Daily Backup')
+    expect(scheduleNames[1]).toBe('Hourly Sync')
+  })
+
+  it('should pass disabled prop to schedule cards', () => {
+    renderWithRouter(
+      <ScheduleList
+        schedules={mockSchedules}
+        workflows={[]}
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        disabled={true}
+      />
+    )
+
+    // When disabled, all toggle switches should be disabled
+    const toggleButtons = screen.getAllByRole('switch')
+    toggleButtons.forEach((toggle) => {
+      expect(toggle).toBeDisabled()
+    })
+  })
+
+  it('should render correct number of schedule cards', () => {
+    renderWithRouter(
+      <ScheduleList
+        schedules={mockSchedules}
+        workflows={[]}
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    const scheduleCards = screen.getAllByRole('heading', { level: 3 })
+    expect(scheduleCards).toHaveLength(2)
+  })
+
+  it('should handle single schedule', () => {
+    renderWithRouter(
+      <ScheduleList
+        schedules={[mockSchedules[0]]}
+        workflows={[{ id: 'wf-1', name: 'Workflow 1' }]}
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Daily Backup')).toBeInTheDocument()
+    expect(screen.getByText('Workflow 1')).toBeInTheDocument()
+    expect(screen.queryByText('Hourly Sync')).not.toBeInTheDocument()
+  })
+
+  it('should use default sortBy when not provided', () => {
+    // Default sortBy is 'nextRun'
+    const unsortedSchedules = [...mockSchedules].reverse()
+
+    renderWithRouter(
+      <ScheduleList
+        schedules={unsortedSchedules}
+        workflows={[]}
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    const scheduleNames = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+
+    // Should be sorted by nextRun (default)
+    expect(scheduleNames[0]).toBe('Daily Backup')
+    expect(scheduleNames[1]).toBe('Hourly Sync')
+  })
+
+  it('should not mutate original schedules array when sorting', () => {
+    const originalSchedules = [...mockSchedules].reverse()
+    const originalOrder = originalSchedules.map((s) => s.id)
+
+    renderWithRouter(
+      <ScheduleList
+        schedules={originalSchedules}
+        workflows={[]}
+        sortBy="name"
+        onToggle={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    )
+
+    // Original array should not be mutated
+    expect(originalSchedules.map((s) => s.id)).toEqual(originalOrder)
+  })
 })

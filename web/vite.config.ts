@@ -8,11 +8,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8181',
         changeOrigin: true,
       },
       '/webhooks': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8181',
         changeOrigin: true,
       },
     },
@@ -22,5 +22,18 @@ export default defineConfig({
     sourcemap: true,
     // Reduce chunk size warnings threshold
     chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // Code splitting: separate vendor chunks
+        manualChunks: {
+          // React core
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Data fetching and state
+          'vendor-query': ['@tanstack/react-query', 'zustand'],
+          // UI libraries
+          'vendor-ui': ['@xyflow/react', 'recharts'],
+        },
+      },
+    },
   },
 })

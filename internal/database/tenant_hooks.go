@@ -32,7 +32,7 @@ func (db *TenantDB) ExecContext(ctx context.Context, query string, args ...inter
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" && shouldInjectTenantID(query) {
 		// Set tenant context in session before executing query
-		_, err := db.DB.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err := db.DB.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to set tenant context: %w", err)
 		}
@@ -45,7 +45,7 @@ func (db *TenantDB) QueryContext(ctx context.Context, query string, args ...inte
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" && shouldInjectTenantID(query) {
 		// Set tenant context in session before executing query
-		_, err := db.DB.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err := db.DB.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to set tenant context: %w", err)
 		}
@@ -58,7 +58,7 @@ func (db *TenantDB) QueryRowContext(ctx context.Context, query string, args ...i
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" && shouldInjectTenantID(query) {
 		// Set tenant context in session before executing query
-		_, err := db.DB.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err := db.DB.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 		if err != nil {
 			// Return a row with the error
 			return db.DB.QueryRowxContext(ctx, "SELECT $1::text", err.Error())
@@ -72,7 +72,7 @@ func (db *TenantDB) GetContext(ctx context.Context, dest interface{}, query stri
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" && shouldInjectTenantID(query) {
 		// Set tenant context in session before executing query
-		_, err := db.DB.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err := db.DB.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 		if err != nil {
 			return fmt.Errorf("failed to set tenant context: %w", err)
 		}
@@ -85,7 +85,7 @@ func (db *TenantDB) SelectContext(ctx context.Context, dest interface{}, query s
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" && shouldInjectTenantID(query) {
 		// Set tenant context in session before executing query
-		_, err := db.DB.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err := db.DB.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 		if err != nil {
 			return fmt.Errorf("failed to set tenant context: %w", err)
 		}
@@ -100,10 +100,10 @@ func (db *TenantDB) BeginTxx(ctx context.Context, opts *driver.TxOptions) (*sqlx
 		return nil, err
 	}
 
-	// Set tenant context in transaction
+	// Set tenant context in transaction using set_config with is_local=true
 	tenantID := GetTenantIDFromContext(ctx)
 	if tenantID != "" {
-		_, err = tx.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+		_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
 		if err != nil {
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to set tenant context in transaction: %w", err)

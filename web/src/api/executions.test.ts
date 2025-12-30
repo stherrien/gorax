@@ -197,47 +197,30 @@ describe('Execution API', () => {
   })
 
   describe('getDashboardStats', () => {
-    it('should fetch dashboard statistics', async () => {
+    it('should fetch dashboard statistics from combined endpoints', async () => {
       const mockStats = {
-        totalExecutions: 1000,
-        executionsToday: 847,
-        failedToday: 3,
-        successRateToday: 99.6,
-        averageDuration: 45000,
-        activeWorkflows: 12,
+        total_count: 1000,
+        status_counts: {
+          completed: 847,
+          failed: 3,
+        },
+      }
+      const mockWorkflows = {
+        data: [{ id: 'wf-1' }],
+        total_count: 12,
       }
 
-      ;(apiClient.get as any).mockResolvedValueOnce(mockStats)
+      ;(apiClient.get as any)
+        .mockResolvedValueOnce(mockStats)
+        .mockResolvedValueOnce(mockWorkflows)
 
       const result = await executionAPI.getDashboardStats()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/executions/stats/dashboard', { params: {} })
-      expect(result).toEqual(mockStats)
-    })
-
-    it('should support date range for stats', async () => {
-      const mockStats = {
-        totalExecutions: 100,
-        executionsToday: 50,
-        failedToday: 2,
-        successRateToday: 96.0,
-        averageDuration: 50000,
-        activeWorkflows: 12,
-      }
-
-      ;(apiClient.get as any).mockResolvedValueOnce(mockStats)
-
-      await executionAPI.getDashboardStats({
-        startDate: '2025-01-01',
-        endDate: '2025-01-31',
-      })
-
-      expect(apiClient.get).toHaveBeenCalledWith('/executions/stats/dashboard', {
-        params: {
-          startDate: '2025-01-01',
-          endDate: '2025-01-31',
-        },
-      })
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/executions/stats')
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/workflows', { params: { limit: 1 } })
+      expect(result.totalExecutions).toBe(1000)
+      expect(result.failedToday).toBe(3)
+      expect(result.activeWorkflows).toBe(12)
     })
   })
 
@@ -246,12 +229,12 @@ describe('Execution API', () => {
       const recentExecutions = [mockExecution]
 
       ;(apiClient.get as any).mockResolvedValueOnce({
-        executions: recentExecutions,
+        data: recentExecutions,
       })
 
       const result = await executionAPI.getRecentExecutions()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/executions/recent', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/executions', {
         params: { limit: 10 },
       })
       expect(result.executions).toEqual(recentExecutions)
@@ -261,12 +244,12 @@ describe('Execution API', () => {
       const recentExecutions = [mockExecution]
 
       ;(apiClient.get as any).mockResolvedValueOnce({
-        executions: recentExecutions,
+        data: recentExecutions,
       })
 
       await executionAPI.getRecentExecutions(5)
 
-      expect(apiClient.get).toHaveBeenCalledWith('/executions/recent', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/executions', {
         params: { limit: 5 },
       })
     })

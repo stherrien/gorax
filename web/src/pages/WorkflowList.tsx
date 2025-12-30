@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorkflows, useWorkflowMutations } from '../hooks/useWorkflows'
+import { WorkflowSelectionProvider, useWorkflowSelection } from '../components/workflows/WorkflowSelectionContext'
+import { BulkActionsToolbar } from '../components/workflows/BulkActionsToolbar'
 
-export default function WorkflowList() {
+function WorkflowListContent() {
   const { workflows, loading, error, refetch } = useWorkflows()
   const { deleteWorkflow, executeWorkflow, deleting, executing } = useWorkflowMutations()
+  const {
+    selectedWorkflowIds,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    isSelected,
+  } = useWorkflowSelection()
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -44,6 +53,18 @@ export default function WorkflowList() {
     }
   }
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked && workflows) {
+      selectAll(workflows.map((w) => w.id))
+    } else {
+      clearSelection()
+    }
+  }
+
+  const workflowCount = workflows?.length ?? 0
+  const allSelected = workflowCount > 0 && selectedWorkflowIds.length === workflowCount
+  const someSelected = selectedWorkflowIds.length > 0 && selectedWorkflowIds.length < workflowCount
+
   // Loading state
   if (loading) {
     return (
@@ -66,7 +87,7 @@ export default function WorkflowList() {
   }
 
   // Empty state
-  if (workflows.length === 0) {
+  if (workflowCount === 0) {
     return (
       <div>
         <div className="flex justify-between items-center mb-6">
@@ -112,10 +133,30 @@ export default function WorkflowList() {
         </div>
       )}
 
+      <BulkActionsToolbar
+        selectedCount={selectedWorkflowIds.length}
+        selectedWorkflowIds={selectedWorkflowIds}
+        onClearSelection={clearSelection}
+        onOperationComplete={refetch}
+      />
+
       <div className="bg-gray-800 rounded-lg overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
+              <th className="px-6 py-4 w-12">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(input) => {
+                    if (input) {
+                      input.indeterminate = someSelected
+                    }
+                  }}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 bg-gray-700 border-gray-600 rounded text-primary-600 focus:ring-primary-500 focus:ring-2"
+                />
+              </th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Name</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Status</th>
               <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Version</th>
@@ -126,6 +167,15 @@ export default function WorkflowList() {
           <tbody>
             {workflows.map((workflow) => (
               <tr key={workflow.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                <td className="px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={isSelected(workflow.id)}
+                    onChange={() => toggleSelection(workflow.id)}
+                    className="w-4 h-4 bg-gray-700 border-gray-600 rounded text-primary-600 focus:ring-primary-500 focus:ring-2"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
                 <td className="px-6 py-4">
                   <Link to={`/workflows/${workflow.id}`} className="hover:text-primary-400">
                     <p className="text-white font-medium">{workflow.name}</p>
@@ -222,5 +272,13 @@ function StatusBadge({ status }: { status: string }) {
     >
       {status}
     </span>
+  )
+}
+
+export default function WorkflowList() {
+  return (
+    <WorkflowSelectionProvider>
+      <WorkflowListContent />
+    </WorkflowSelectionProvider>
   )
 }

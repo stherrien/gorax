@@ -364,4 +364,515 @@ describe('Schedules Page', () => {
     fireEvent.click(editButton)
     expect(editButton).toBeInTheDocument()
   })
+
+  describe('Delete confirmation', () => {
+    it('should show delete confirmation modal when delete clicked', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const deleteButton = screen.getByRole('button', { name: /delete/i })
+      fireEvent.click(deleteButton)
+
+      expect(screen.getByText('Delete Schedule')).toBeInTheDocument()
+      expect(screen.getByText(/are you sure you want to delete/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument()
+    })
+
+    it('should close modal when cancel clicked', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      // Open modal
+      const deleteButton = screen.getByRole('button', { name: /delete/i })
+      fireEvent.click(deleteButton)
+      expect(screen.getByText('Delete Schedule')).toBeInTheDocument()
+
+      // Click cancel
+      const cancelButton = screen.getByRole('button', { name: /cancel/i })
+      fireEvent.click(cancelButton)
+
+      expect(screen.queryByText('Delete Schedule')).not.toBeInTheDocument()
+    })
+
+    it('should call deleteSchedule and refetch on confirm', async () => {
+      const refetch = vi.fn()
+      const deleteSchedule = vi.fn().mockResolvedValue({})
+
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch,
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule: vi.fn(),
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule,
+        creating: false,
+        updating: false,
+        deleting: false,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      // Open modal and confirm
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(deleteSchedule).toHaveBeenCalledWith('sched-1')
+      })
+
+      await waitFor(() => {
+        expect(refetch).toHaveBeenCalled()
+      })
+    })
+
+    it('should show delete error in modal', async () => {
+      const deleteSchedule = vi.fn().mockRejectedValue(new Error('Delete failed'))
+
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule: vi.fn(),
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule,
+        creating: false,
+        updating: false,
+        deleting: false,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete failed')).toBeInTheDocument()
+      })
+    })
+
+    it('should disable buttons during delete operation', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule: vi.fn(),
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule: vi.fn(),
+        creating: false,
+        updating: false,
+        deleting: true,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      // All schedule actions should be disabled during delete operation
+      const toggleButton = screen.getByRole('switch')
+      expect(toggleButton).toBeDisabled()
+    })
+  })
+
+  describe('Toggle error handling', () => {
+    it('should show toggle error message', async () => {
+      const toggleSchedule = vi.fn().mockRejectedValue(new Error('Toggle failed'))
+
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule,
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule: vi.fn(),
+        creating: false,
+        updating: false,
+        deleting: false,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const toggleButton = screen.getByRole('switch')
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Toggle failed')).toBeInTheDocument()
+      })
+    })
+
+    it('should show generic toggle error for non-Error objects', async () => {
+      const toggleSchedule = vi.fn().mockRejectedValue('Unknown error')
+
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule,
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule: vi.fn(),
+        creating: false,
+        updating: false,
+        deleting: false,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      fireEvent.click(screen.getByRole('switch'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Toggle failed')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Search functionality', () => {
+    it('should update search query when typing', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const searchInput = screen.getByPlaceholderText(/search schedules/i)
+      fireEvent.change(searchInput, { target: { value: 'backup' } })
+
+      expect(searchInput).toHaveValue('backup')
+    })
+  })
+
+  describe('Sort functionality', () => {
+    it('should show sort dropdown in list view', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const sortDropdown = screen.getByLabelText(/sort by/i)
+      expect(sortDropdown).toBeInTheDocument()
+    })
+
+    it('should hide sort dropdown in calendar view', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      // Switch to calendar view
+      fireEvent.click(screen.getByText('Calendar View'))
+
+      expect(screen.queryByLabelText(/sort by/i)).not.toBeInTheDocument()
+    })
+
+    it('should change sort option', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const sortDropdown = screen.getByLabelText(/sort by/i)
+      fireEvent.change(sortDropdown, { target: { value: 'name' } })
+
+      expect(sortDropdown).toHaveValue('name')
+    })
+  })
+
+  describe('Error display', () => {
+    it('should show detailed error message', () => {
+      const error = new Error('Network connection timeout')
+
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: [],
+        total: 0,
+        loading: false,
+        error,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: [],
+        total: 0,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      expect(screen.getByText('Network connection timeout')).toBeInTheDocument()
+    })
+  })
+
+  describe('Filter parameters', () => {
+    it('should pass enabled filter to hook when enabled is selected', async () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const statusFilter = screen.getByLabelText(/status/i)
+      fireEvent.change(statusFilter, { target: { value: 'enabled' } })
+
+      await waitFor(() => {
+        expect(useSchedulesHook.useSchedules).toHaveBeenCalledWith(
+          expect.objectContaining({ enabled: true })
+        )
+      })
+    })
+
+    it('should pass disabled filter to hook when disabled is selected', async () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const statusFilter = screen.getByLabelText(/status/i)
+      fireEvent.change(statusFilter, { target: { value: 'disabled' } })
+
+      await waitFor(() => {
+        expect(useSchedulesHook.useSchedules).toHaveBeenCalledWith(
+          expect.objectContaining({ enabled: false })
+        )
+      })
+    })
+
+    it('should pass search param to hook when search query entered', async () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      const searchInput = screen.getByPlaceholderText(/search schedules/i)
+      fireEvent.change(searchInput, { target: { value: 'test' } })
+
+      await waitFor(() => {
+        expect(useSchedulesHook.useSchedules).toHaveBeenCalledWith(
+          expect.objectContaining({ search: 'test' })
+        )
+      })
+    })
+  })
+
+  describe('Disabled state during operations', () => {
+    it('should disable schedule list during update', () => {
+      vi.mocked(useSchedulesHook.useSchedules).mockReturnValue({
+        schedules: mockSchedules,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      vi.mocked(useSchedulesHook.useScheduleMutations).mockReturnValue({
+        toggleSchedule: vi.fn(),
+        createSchedule: vi.fn(),
+        updateSchedule: vi.fn(),
+        deleteSchedule: vi.fn(),
+        creating: false,
+        updating: true,
+        deleting: false,
+      })
+
+      vi.mocked(useWorkflowsHook.useWorkflows).mockReturnValue({
+        workflows: mockWorkflows,
+        total: 1,
+        loading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+
+      renderWithRouter(<Schedules />)
+
+      // Toggle should be disabled
+      const toggleButton = screen.getByRole('switch')
+      expect(toggleButton).toBeDisabled()
+    })
+  })
 })

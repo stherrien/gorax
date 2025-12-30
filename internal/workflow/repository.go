@@ -27,8 +27,10 @@ func NewRepository(db *sqlx.DB) *Repository {
 }
 
 // setTenantContext sets the tenant ID in the PostgreSQL session for RLS
+// Note: This only works within a transaction. For non-transactional queries,
+// the setting won't persist. Use set_config with is_local=false for session-level settings.
 func (r *Repository) setTenantContext(ctx context.Context, tenantID string) error {
-	_, err := r.db.ExecContext(ctx, "SET LOCAL app.current_tenant_id = $1", tenantID)
+	_, err := r.db.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, false)", tenantID)
 	return err
 }
 
