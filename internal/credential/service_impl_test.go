@@ -128,7 +128,7 @@ func TestServiceImpl_GetValue(t *testing.T) {
 			}
 
 			// Create service
-			service := NewServiceImpl(mockRepo, mockEncryption)
+			service := NewServiceImpl(mockRepo, mockEncryption, nil)
 
 			// Execute
 			ctx := context.Background()
@@ -184,7 +184,7 @@ func TestServiceImpl_GetValue_AccessLogging(t *testing.T) {
 		},
 	}
 
-	service := NewServiceImpl(mockRepo, mockEncryption)
+	service := NewServiceImpl(mockRepo, mockEncryption, nil)
 
 	_, err := service.GetValue(context.Background(), "tenant-123", "cred-123", "user-123")
 	require.NoError(t, err)
@@ -231,7 +231,7 @@ func TestServiceImpl_GetValue_UpdatesAccessTime(t *testing.T) {
 		},
 	}
 
-	service := NewServiceImpl(mockRepo, mockEncryption)
+	service := NewServiceImpl(mockRepo, mockEncryption, nil)
 
 	_, err := service.GetValue(context.Background(), "tenant-123", "cred-123", "user-123")
 	require.NoError(t, err)
@@ -244,7 +244,7 @@ func TestNewServiceImpl(t *testing.T) {
 	mockRepo := &MockRepository{}
 	mockEncryption := &MockEncryptionService{}
 
-	service := NewServiceImpl(mockRepo, mockEncryption)
+	service := NewServiceImpl(mockRepo, mockEncryption, nil)
 
 	require.NotNil(t, service)
 	assert.NotNil(t, service.(*ServiceImpl).repo)
