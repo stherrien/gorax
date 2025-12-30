@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import type { Credential, CredentialType } from '../../api/credentials'
+import { useThemeContext } from '../../contexts/ThemeContext'
 
 export interface CredentialListProps {
   credentials: Credential[]
@@ -50,8 +51,9 @@ export const CredentialList: React.FC<CredentialListProps> = ({
   onDelete,
   onTest,
 }) => {
+  const { isDark } = useThemeContext()
   const filteredAndSortedCredentials = useMemo(() => {
-    let filtered = credentials
+    let filtered = credentials || []
 
     // Apply search filter
     if (searchTerm) {
@@ -86,17 +88,17 @@ export const CredentialList: React.FC<CredentialListProps> = ({
     return sorted
   }, [credentials, searchTerm, filterType, sortBy])
 
-  if (loading && credentials.length === 0) {
+  if (loading && (!credentials || credentials.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading credentials...</div>
+        <div className={isDark ? 'text-gray-400' : 'text-gray-500'}>Loading credentials...</div>
       </div>
     )
   }
 
   if (filteredAndSortedCredentials.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+      <div className={`flex flex-col items-center justify-center h-64 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
         <div className="text-lg font-medium">No credentials found</div>
         <div className="text-sm mt-2">Create your first credential to get started</div>
       </div>
@@ -108,7 +110,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600 px-4">{countText}</div>
+      <div className={`text-sm px-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{countText}</div>
 
       <div className="space-y-2">
         {filteredAndSortedCredentials.map((credential) => {
@@ -120,8 +122,10 @@ export const CredentialList: React.FC<CredentialListProps> = ({
               key={credential.id}
               className={`border rounded-lg p-4 transition-colors ${
                 isSelected
-                  ? 'bg-blue-50 border-blue-300'
-                  : 'bg-white border-gray-200 hover:border-gray-300'
+                  ? 'bg-primary-600/20 border-primary-500'
+                  : isDark
+                    ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    : 'bg-white border-gray-200 hover:border-gray-300'
               } ${onSelect ? 'cursor-pointer' : ''}`}
               onClick={() => onSelect?.(credential.id)}
             >
@@ -129,32 +133,32 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3
-                      className="text-base font-medium text-gray-900 truncate"
+                      className={`text-base font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}
                       data-testid="credential-name"
                     >
                       {credential.name}
                     </h3>
                     <span
-                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}
                       data-testid="credential-type"
                     >
                       {formatCredentialType(credential.type)}
                     </span>
                     {expired && (
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'}`}>
                         Expired
                       </span>
                     )}
                   </div>
 
                   {credential.description && (
-                    <p className="text-sm text-gray-600 mt-1">{credential.description}</p>
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{credential.description}</p>
                   )}
 
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                  <div className={`flex items-center gap-4 mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                     <span>Created: {formatDate(credential.createdAt)}</span>
                     {credential.expiresAt && !expired && (
-                      <span className="text-orange-600">
+                      <span className={isDark ? 'text-orange-400' : 'text-orange-600'}>
                         Expires: {formatDate(credential.expiresAt)}
                       </span>
                     )}
@@ -168,7 +172,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                       onTest(credential.id)
                     }}
                     disabled={loading}
-                    className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`px-3 py-1 text-sm font-medium rounded disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-primary-400 hover:text-primary-300 hover:bg-primary-500/10' : 'text-primary-600 hover:text-primary-700 hover:bg-primary-50'}`}
                   >
                     Test
                   </button>
@@ -177,7 +181,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                       e.stopPropagation()
                       onEdit(credential.id)
                     }}
-                    className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded"
+                    className={`px-3 py-1 text-sm font-medium rounded ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
                   >
                     Edit
                   </button>
@@ -186,7 +190,7 @@ export const CredentialList: React.FC<CredentialListProps> = ({
                       e.stopPropagation()
                       onDelete(credential.id)
                     }}
-                    className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                    className={`px-3 py-1 text-sm font-medium rounded ${isDark ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                   >
                     Delete
                   </button>

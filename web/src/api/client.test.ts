@@ -137,7 +137,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 401,
-        json: async () => ({ error: 'Unauthorized' }),
+        text: async () => JSON.stringify({ error: 'Unauthorized' }),
       })
 
       await expect(client.get('/test')).rejects.toThrow(AuthError)
@@ -148,7 +148,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 403,
-        json: async () => ({ error: 'Forbidden' }),
+        text: async () => JSON.stringify({ error: 'Forbidden' }),
       })
 
       await expect(client.get('/test')).rejects.toThrow(AuthError)
@@ -158,7 +158,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 404,
-        json: async () => ({ error: 'Not found' }),
+        text: async () => JSON.stringify({ error: 'Not found' }),
       })
 
       await expect(client.get('/test')).rejects.toThrow(NotFoundError)
@@ -169,7 +169,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 400,
-        json: async () => ({ error: 'Invalid input' }),
+        text: async () => JSON.stringify({ error: 'Invalid input' }),
       })
 
       await expect(client.post('/test', {})).rejects.toThrow(ValidationError)
@@ -179,7 +179,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 422,
-        json: async () => ({ error: 'Validation failed' }),
+        text: async () => JSON.stringify({ error: 'Validation failed' }),
       })
 
       await expect(client.post('/test', {})).rejects.toThrow(ValidationError)
@@ -189,7 +189,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 500,
-        json: async () => ({ error: 'Internal server error' }),
+        text: async () => JSON.stringify({ error: 'Internal server error' }),
       })
 
       await expect(client.get('/test')).rejects.toThrow(ServerError)
@@ -199,7 +199,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 503,
-        json: async () => ({ error: 'Service unavailable' }),
+        text: async () => JSON.stringify({ error: 'Service unavailable' }),
       })
 
       await expect(client.get('/test')).rejects.toThrow(ServerError)
@@ -232,7 +232,7 @@ describe('APIClient', () => {
         .mockResolvedValueOnce({
           ok: false,
           status: 503,
-          json: async () => ({ error: 'Service unavailable' }),
+          text: async () => JSON.stringify({ error: 'Service unavailable' }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -250,7 +250,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: async () => ({ error: 'Not found' }),
+        text: async () => JSON.stringify({ error: 'Not found' }),
       })
 
       await expect(client.get('/test', { retries: 3 })).rejects.toThrow(NotFoundError)
@@ -261,7 +261,7 @@ describe('APIClient', () => {
       (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 503,
-        json: async () => ({ error: 'Service unavailable' }),
+        text: async () => JSON.stringify({ error: 'Service unavailable' }),
       })
 
       await expect(client.get('/test', { retries: 2 })).rejects.toThrow(ServerError)

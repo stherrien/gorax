@@ -15,8 +15,9 @@ export interface Credential {
 }
 
 export interface CredentialListResponse {
-  credentials: Credential[]
-  total: number
+  data: Credential[]
+  limit: number
+  offset: number
 }
 
 export interface CredentialListParams {
@@ -81,21 +82,24 @@ class CredentialAPI {
    * Get a single credential by ID
    */
   async get(id: string): Promise<Credential> {
-    return await apiClient.get(`/api/v1/credentials/${id}`)
+    const response = await apiClient.get(`/api/v1/credentials/${id}`)
+    return response.data
   }
 
   /**
    * Create a new credential
    */
   async create(credential: CredentialCreateInput): Promise<Credential> {
-    return await apiClient.post('/api/v1/credentials', credential)
+    const response = await apiClient.post('/api/v1/credentials', credential)
+    return response.data
   }
 
   /**
    * Update an existing credential (metadata only)
    */
   async update(id: string, updates: CredentialUpdateInput): Promise<Credential> {
-    return await apiClient.put(`/api/v1/credentials/${id}`, updates)
+    const response = await apiClient.put(`/api/v1/credentials/${id}`, updates)
+    return response.data
   }
 
   /**
@@ -109,14 +113,16 @@ class CredentialAPI {
    * Rotate credential value
    */
   async rotate(id: string, value: CredentialValue): Promise<Credential> {
-    return await apiClient.post(`/api/v1/credentials/${id}/rotate`, { value })
+    const response = await apiClient.post(`/api/v1/credentials/${id}/rotate`, { value })
+    return response.data
   }
 
   /**
    * Test credential connectivity
    */
   async test(id: string): Promise<CredentialTestResult> {
-    return await apiClient.post(`/api/v1/credentials/${id}/test`, {})
+    const response = await apiClient.post(`/api/v1/credentials/${id}/test`, {})
+    return response.data
   }
 }
 

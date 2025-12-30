@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -271,10 +272,21 @@ func (h *RBACHandler) GetCurrentUserPermissions(w http.ResponseWriter, r *http.R
 func (h *RBACHandler) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.Context().Value("tenant_id").(string)
 
-	// Parse pagination parameters
+	// Parse pagination parameters with defaults and bounds
 	limit := 50
 	offset := 0
-	// TODO: Parse from query params
+
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+			limit = parsedLimit
+		}
+	}
+
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil && parsedOffset >= 0 {
+			offset = parsedOffset
+		}
+	}
 
 	logs, err := h.service.GetAuditLogs(r.Context(), tenantID, limit, offset)
 	if err != nil {

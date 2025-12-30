@@ -57,9 +57,14 @@ func ValidateCORSConfig(cfg config.CORSConfig, env string) error {
 
 // NewCORSMiddleware creates a CORS middleware with the given configuration
 func NewCORSMiddleware(cfg config.CORSConfig, env string) (func(http.Handler) http.Handler, error) {
-	// Validate configuration
-	if err := ValidateCORSConfig(cfg, env); err != nil {
-		return nil, fmt.Errorf("invalid CORS configuration: %w", err)
+	// In development mode, allow all origins (skip validation)
+	isDev := env == "development"
+
+	// Validate configuration (skip in development)
+	if !isDev {
+		if err := ValidateCORSConfig(cfg, env); err != nil {
+			return nil, fmt.Errorf("invalid CORS configuration: %w", err)
+		}
 	}
 
 	// Build allowed origins map for fast lookup
@@ -78,22 +83,28 @@ func NewCORSMiddleware(cfg config.CORSConfig, env string) (func(http.Handler) ht
 	exposedHeaders := strings.Join(cfg.ExposedHeaders, ", ")
 	maxAge := fmt.Sprintf("%d", cfg.MaxAge)
 
+	if isDev {
+		slog.Info("CORS: development mode - allowing all origins")
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
 
-			// Check if origin is allowed
-			isAllowed := hasWildcard || allowedOriginsMap[origin]
+			// In development mode, allow any origin
+			// In production, check if origin is in allowed list
+			isAllowed := isDev || hasWildcard || allowedOriginsMap[origin]
 
-			if isAllowed {
-				// Set CORS headers for allowed origins
-				if hasWildcard {
-					w.Header().Set("Access-Control-Allow-Origin", "*")
-				} else {
+			if isAllowed && origin != "" {
+				// Set CORS headers - in dev mode, reflect the requesting origin
+				if isDev || !hasWildcard {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
+				} else {
+					w.Header().Set("Access-Control-Allow-Origin", "*")
 				}
 
-				if cfg.AllowCredentials {
+				// Always allow credentials in dev, or if configured
+				if isDev || cfg.AllowCredentials {
 					w.Header().Set("Access-Control-Allow-Credentials", "true")
 				}
 
