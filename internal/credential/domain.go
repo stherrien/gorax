@@ -1,9 +1,43 @@
 package credential
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"time"
 )
+
+// JSONMap is a custom type for storing JSON in PostgreSQL
+// Implements driver.Valuer and sql.Scanner for automatic serialization
+type JSONMap map[string]interface{}
+
+// Value implements driver.Valuer for database serialization
+func (j JSONMap) Value() (driver.Value, error) {
+	if j == nil {
+		return []byte("{}"), nil // Return empty JSON object instead of NULL
+	}
+	return json.Marshal(j)
+}
+
+// Scan implements sql.Scanner for database deserialization
+func (j *JSONMap) Scan(value interface{}) error {
+	if value == nil {
+		*j = nil
+		return nil
+	}
+
+	var data []byte
+	switch v := value.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return errors.New("unsupported type for JSONMap")
+	}
+
+	return json.Unmarshal(data, j)
+}
 
 // Common errors
 var (
@@ -25,10 +59,11 @@ func (e *ValidationError) Error() string {
 type CredentialType string
 
 const (
-	TypeAPIKey    CredentialType = "api_key"
-	TypeOAuth2    CredentialType = "oauth2"
-	TypeBasicAuth CredentialType = "basic_auth"
-	TypeCustom    CredentialType = "custom"
+	TypeAPIKey      CredentialType = "api_key"
+	TypeOAuth2      CredentialType = "oauth2"
+	TypeBasicAuth   CredentialType = "basic_auth"
+	TypeBearerToken CredentialType = "bearer_token"
+	TypeCustom      CredentialType = "custom"
 )
 
 // CredentialStatus represents the status of a credential
@@ -71,7 +106,7 @@ type Credential struct {
 	KMSKeyID     string `json:"-" db:"kms_key_id"`    // Never serialize
 
 	// Metadata stored as JSON
-	Metadata map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
+	Metadata JSONMap `json:"metadata,omitempty" db:"metadata"`
 }
 
 // IsExpired checks if the credential has expired
@@ -130,17 +165,17 @@ type CreateCredentialInput struct {
 	Type        CredentialType         `json:"type"`
 	Value       map[string]interface{} `json:"value"` // Will be encrypted
 	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Metadata    JSONMap                `json:"metadata,omitempty"`
 }
 
 // UpdateCredentialInput represents input for updating credential metadata
 // Note: This does NOT update the value - use Rotate for that
 type UpdateCredentialInput struct {
-	Name        *string                `json:"name,omitempty"`
-	Description *string                `json:"description,omitempty"`
-	Status      *CredentialStatus      `json:"status,omitempty"`
-	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string           `json:"name,omitempty"`
+	Description *string           `json:"description,omitempty"`
+	Status      *CredentialStatus `json:"status,omitempty"`
+	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
+	Metadata    JSONMap           `json:"metadata,omitempty"`
 }
 
 // RotateCredentialInput represents input for rotating a credential value
@@ -174,7 +209,7 @@ func (c *CreateCredentialInput) Validate() error {
 	if c.Type == "" {
 		return &ValidationError{Message: "type is required"}
 	}
-	if c.Type != TypeAPIKey && c.Type != TypeOAuth2 && c.Type != TypeBasicAuth && c.Type != TypeCustom {
+	if c.Type != TypeAPIKey && c.Type != TypeOAuth2 && c.Type != TypeBasicAuth && c.Type != TypeBearerToken && c.Type != TypeCustom {
 		return &ValidationError{Message: "invalid credential type"}
 	}
 	if len(c.Value) == 0 {
