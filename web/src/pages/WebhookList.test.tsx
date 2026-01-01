@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import WebhookList from './WebhookList'
@@ -19,14 +19,13 @@ vi.mock('../hooks/useWorkflows', () => ({
 import { useWebhooks, useWebhookMutations } from '../hooks/useWebhooks'
 import { useWorkflows } from '../hooks/useWorkflows'
 
-// Mock clipboard API
-const mockClipboardWriteText = vi.fn(() => Promise.resolve())
-Object.defineProperty(navigator, 'clipboard', {
-  value: {
+// Mock clipboard API - use vi.stubGlobal for better compatibility
+const mockClipboardWriteText = vi.fn().mockResolvedValue(undefined)
+vi.stubGlobal('navigator', {
+  ...navigator,
+  clipboard: {
     writeText: mockClipboardWriteText,
   },
-  writable: true,
-  configurable: true,
 })
 
 describe('WebhookList', () => {
@@ -474,10 +473,10 @@ describe('WebhookList', () => {
       expect(copyButtons.length).toBe(mockWebhooks.length)
     })
 
-    // Note: Skipping clipboard integration test due to jsdom limitations
-    // The clipboard API is difficult to mock properly with userEvent in jsdom
-    it.skip('should show copy success message after clicking copy', async () => {
-      const user = userEvent.setup()
+    it('should show copy success message after clicking copy', async () => {
+      mockClipboardWriteText.mockClear()
+      mockClipboardWriteText.mockResolvedValue(undefined)
+
       ;(useWebhooks as any).mockReturnValue({
         webhooks: [mockWebhooks[0]],
         total: 1,
@@ -493,7 +492,16 @@ describe('WebhookList', () => {
       )
 
       const copyButton = screen.getByRole('button', { name: /copy url/i })
-      await user.click(copyButton)
+
+      // Use act to handle async state updates from clipboard operation
+      await act(async () => {
+        fireEvent.click(copyButton)
+        // Allow the async clipboard operation to complete
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+
+      // Verify clipboard was called with the webhook URL
+      expect(mockClipboardWriteText).toHaveBeenCalledWith(mockWebhooks[0].url)
 
       // Wait for the success message to appear
       await waitFor(() => {

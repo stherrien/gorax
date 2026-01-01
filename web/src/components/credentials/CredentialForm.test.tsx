@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CredentialForm } from './CredentialForm'
+import { ThemeProvider } from '../../contexts/ThemeContext'
 import type { Credential, CredentialType } from '../../api/credentials'
+
+const renderWithTheme = (ui: React.ReactElement) => {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
 describe('CredentialForm', () => {
   const mockOnSubmit = vi.fn()
@@ -23,7 +28,7 @@ describe('CredentialForm', () => {
 
   describe('Create mode', () => {
     it('renders create form', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       expect(screen.getByText('Create Credential')).toBeInTheDocument()
       expect(screen.getByLabelText(/Name/i)).toBeInTheDocument()
@@ -32,7 +37,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows all credential type options', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.click(typeSelect)
@@ -44,7 +49,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows API key fields when type is api_key', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'api_key' } })
@@ -53,7 +58,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows OAuth2 fields when type is oauth2', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'oauth2' } })
@@ -65,7 +70,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows basic auth fields when type is basic_auth', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'basic_auth' } })
@@ -75,7 +80,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows bearer token field when type is bearer_token', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'bearer_token' } })
@@ -84,7 +89,7 @@ describe('CredentialForm', () => {
     })
 
     it('validates required name field', async () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const submitButton = screen.getByRole('button', { name: /Create/i })
       fireEvent.click(submitButton)
@@ -96,7 +101,7 @@ describe('CredentialForm', () => {
     })
 
     it('validates required credential value fields', async () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const nameInput = screen.getByLabelText(/Name/i)
       fireEvent.change(nameInput, { target: { value: 'Test' } })
@@ -114,7 +119,7 @@ describe('CredentialForm', () => {
     })
 
     it('submits valid API key credential', async () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'My API Key' } })
       fireEvent.change(screen.getByLabelText(/Description/i), {
@@ -137,7 +142,7 @@ describe('CredentialForm', () => {
     })
 
     it('submits valid OAuth2 credential', async () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'OAuth App' } })
       fireEvent.change(screen.getByLabelText(/Type/i), { target: { value: 'oauth2' } })
@@ -170,7 +175,7 @@ describe('CredentialForm', () => {
     })
 
     it('includes optional expiration date when provided', async () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Test' } })
       fireEvent.change(screen.getByLabelText(/Type/i), { target: { value: 'api_key' } })
@@ -192,7 +197,7 @@ describe('CredentialForm', () => {
     })
 
     it('calls onCancel when cancel button is clicked', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const cancelButton = screen.getByRole('button', { name: /Cancel/i })
       fireEvent.click(cancelButton)
@@ -202,7 +207,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows password strength indicator', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'basic_auth' } })
@@ -214,7 +219,7 @@ describe('CredentialForm', () => {
     })
 
     it('updates password strength indicator', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />)
 
       const typeSelect = screen.getByLabelText(/Type/i)
       fireEvent.change(typeSelect, { target: { value: 'basic_auth' } })
@@ -228,7 +233,7 @@ describe('CredentialForm', () => {
 
   describe('Edit mode', () => {
     it('renders edit form with existing credential data', () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -243,7 +248,7 @@ describe('CredentialForm', () => {
     })
 
     it('disables type selection in edit mode', () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -256,7 +261,7 @@ describe('CredentialForm', () => {
     })
 
     it('does not show credential value fields in edit mode', () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -269,7 +274,7 @@ describe('CredentialForm', () => {
     })
 
     it('shows rotate credential link in edit mode', () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -281,7 +286,7 @@ describe('CredentialForm', () => {
     })
 
     it('submits updated metadata only', async () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -306,7 +311,7 @@ describe('CredentialForm', () => {
     })
 
     it('allows updating expiration date', async () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           credential={mockExistingCredential}
           onSubmit={mockOnSubmit}
@@ -333,14 +338,14 @@ describe('CredentialForm', () => {
 
   describe('Loading state', () => {
     it('disables form during submission', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} loading={true} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} loading={true} />)
 
       expect(screen.getByLabelText(/Name/i)).toBeDisabled()
       expect(screen.getByRole('button', { name: /Creating/i })).toBeDisabled()
     })
 
     it('shows loading text on submit button', () => {
-      render(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} loading={true} />)
+      renderWithTheme(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} loading={true} />)
 
       expect(screen.getByRole('button', { name: /Creating/i })).toBeInTheDocument()
     })
@@ -348,7 +353,7 @@ describe('CredentialForm', () => {
 
   describe('Error handling', () => {
     it('displays error message when provided', () => {
-      render(
+      renderWithTheme(
         <CredentialForm
           onSubmit={mockOnSubmit}
           onCancel={mockOnCancel}
@@ -360,7 +365,7 @@ describe('CredentialForm', () => {
     })
 
     it('dismisses error message', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithTheme(
         <CredentialForm
           onSubmit={mockOnSubmit}
           onCancel={mockOnCancel}
@@ -370,7 +375,11 @@ describe('CredentialForm', () => {
 
       expect(screen.getByText('Failed to create credential')).toBeInTheDocument()
 
-      rerender(<CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} error={null} />)
+      rerender(
+        <ThemeProvider>
+          <CredentialForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} error={null} />
+        </ThemeProvider>
+      )
 
       expect(screen.queryByText('Failed to create credential')).not.toBeInTheDocument()
     })

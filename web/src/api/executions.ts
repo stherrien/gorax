@@ -155,16 +155,40 @@ export const executionAPI = {
 
   /**
    * Get dashboard statistics
+   * Uses the existing stats endpoint and transforms to dashboard format
    */
-  async getDashboardStats(params?: DashboardStatsParams): Promise<DashboardStats> {
-    return apiClient.get('/executions/stats/dashboard', { params: params || {} })
+  async getDashboardStats(_params?: DashboardStatsParams): Promise<DashboardStats> {
+    // Fetch stats and workflows count in parallel
+    const [stats, workflowsResponse] = await Promise.all([
+      apiClient.get('/api/v1/executions/stats'),
+      apiClient.get('/api/v1/workflows', { params: { limit: 1 } }),
+    ])
+
+    const statusCounts = stats.status_counts || {}
+    const completed = statusCounts.completed || 0
+    const failed = statusCounts.failed || 0
+    const total = stats.total_count || 0
+    const workflows = workflowsResponse.data || []
+
+    return {
+      totalExecutions: total,
+      executionsToday: completed + failed, // Approximate - would need date filtering
+      failedToday: failed,
+      successRateToday: total > 0 ? (completed / total) * 100 : 100,
+      averageDuration: 0, // Not available from this endpoint
+      activeWorkflows: workflows.length > 0 ? (workflowsResponse.total_count || workflows.length) : 0,
+    }
   },
 
   /**
    * Get recent executions (for dashboard)
+   * Uses the list endpoint with a limit
    */
   async getRecentExecutions(limit: number = 10): Promise<RecentExecutionsResponse> {
-    return apiClient.get('/executions/recent', { params: { limit } })
+    const response = await apiClient.get('/api/v1/executions', { params: { limit } })
+    return {
+      executions: response.data || [],
+    }
   },
 
   /**

@@ -73,8 +73,9 @@ const metricsApi = {
     if (params?.endDate) queryParams.append('endDate', params.endDate);
     if (params?.groupBy) queryParams.append('groupBy', params.groupBy);
 
-    const response = await apiClient.get(`/metrics/trends?${queryParams.toString()}`);
-    return response.data;
+    const query = queryParams.toString();
+    const response = await apiClient.get(`/api/v1/metrics/trends${query ? `?${query}` : ''}`);
+    return response;
   },
 
   getDurationStats: async (params?: MetricsQueryParams): Promise<DurationStatsResponse> => {
@@ -83,8 +84,9 @@ const metricsApi = {
     if (params?.startDate) queryParams.append('startDate', params.startDate);
     if (params?.endDate) queryParams.append('endDate', params.endDate);
 
-    const response = await apiClient.get(`/metrics/duration?${queryParams.toString()}`);
-    return response.data;
+    const query = queryParams.toString();
+    const response = await apiClient.get(`/api/v1/metrics/duration${query ? `?${query}` : ''}`);
+    return response;
   },
 
   getTopFailures: async (params?: MetricsQueryParams): Promise<TopFailuresResponse> => {
@@ -94,8 +96,9 @@ const metricsApi = {
     if (params?.endDate) queryParams.append('endDate', params.endDate);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
-    const response = await apiClient.get(`/metrics/failures?${queryParams.toString()}`);
-    return response.data;
+    const query = queryParams.toString();
+    const response = await apiClient.get(`/api/v1/metrics/failures${query ? `?${query}` : ''}`);
+    return response;
   },
 
   getTriggerBreakdown: async (params?: MetricsQueryParams): Promise<TriggerBreakdownResponse> => {
@@ -104,8 +107,9 @@ const metricsApi = {
     if (params?.startDate) queryParams.append('startDate', params.startDate);
     if (params?.endDate) queryParams.append('endDate', params.endDate);
 
-    const response = await apiClient.get(`/metrics/trigger-breakdown?${queryParams.toString()}`);
-    return response.data;
+    const query = queryParams.toString();
+    const response = await apiClient.get(`/api/v1/metrics/trigger-breakdown${query ? `?${query}` : ''}`);
+    return response;
   },
 };
 

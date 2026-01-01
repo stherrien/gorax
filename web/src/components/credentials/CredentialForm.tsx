@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Credential, CredentialType, CredentialCreateInput, CredentialUpdateInput } from '../../api/credentials'
+import { useThemeContext } from '../../contexts/ThemeContext'
 
 export interface CredentialFormProps {
   credential?: Credential
@@ -38,6 +39,7 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { isDark } = useThemeContext()
   const isEditMode = !!credential
 
   // Form state
@@ -167,24 +169,33 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
 
   const passwordStrength = password ? calculatePasswordStrength(password) : null
 
+  // Theme-aware class helpers
+  const labelClass = `block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`
+  const inputClass = `w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed ${
+    isDark
+      ? 'bg-gray-900 text-white border border-gray-700 disabled:bg-gray-800 disabled:text-gray-500'
+      : 'bg-white text-gray-900 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400'
+  }`
+  const errorClass = `mt-1 text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <h2 className={`text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {isEditMode ? 'Edit Credential' : 'Create Credential'}
         </h2>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className={`rounded-md p-4 ${isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200'}`}>
+          <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-800'}`}>{error}</p>
         </div>
       )}
 
       <div className="space-y-4">
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="name" className={labelClass}>
             Name *
           </label>
           <input
@@ -193,15 +204,15 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className={inputClass}
             placeholder="My API Credential"
           />
-          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+          {errors.name && <p className={errorClass}>{errors.name}</p>}
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="description" className={labelClass}>
             Description
           </label>
           <textarea
@@ -210,14 +221,14 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             disabled={loading}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className={inputClass}
             placeholder="Optional description"
           />
         </div>
 
         {/* Type */}
         <div>
-          <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="type" className={labelClass}>
             Type *
           </label>
           <select
@@ -225,7 +236,7 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
             value={type}
             onChange={(e) => setType(e.target.value as CredentialType)}
             disabled={loading || isEditMode}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className={inputClass}
           >
             {CREDENTIAL_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -237,12 +248,12 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
 
         {/* Credential Value Fields (Create mode only) */}
         {!isEditMode && (
-          <div className="border-t border-gray-200 pt-4 mt-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Credential Details</h3>
+          <div className={`border-t pt-4 mt-4 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h3 className={`text-lg font-medium mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Credential Details</h3>
 
             {type === 'api_key' && (
               <div>
-                <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="apiKey" className={labelClass}>
                   API Key *
                 </label>
                 <input
@@ -251,17 +262,17 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={inputClass}
                   placeholder="sk-..."
                 />
-                {errors.apiKey && <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>}
+                {errors.apiKey && <p className={errorClass}>{errors.apiKey}</p>}
               </div>
             )}
 
             {type === 'oauth2' && (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="clientId" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="clientId" className={labelClass}>
                     Client ID *
                   </label>
                   <input
@@ -270,13 +281,13 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                   />
-                  {errors.clientId && <p className="mt-1 text-sm text-red-600">{errors.clientId}</p>}
+                  {errors.clientId && <p className={errorClass}>{errors.clientId}</p>}
                 </div>
 
                 <div>
-                  <label htmlFor="clientSecret" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="clientSecret" className={labelClass}>
                     Client Secret *
                   </label>
                   <input
@@ -285,13 +296,13 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={clientSecret}
                     onChange={(e) => setClientSecret(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                   />
-                  {errors.clientSecret && <p className="mt-1 text-sm text-red-600">{errors.clientSecret}</p>}
+                  {errors.clientSecret && <p className={errorClass}>{errors.clientSecret}</p>}
                 </div>
 
                 <div>
-                  <label htmlFor="authUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="authUrl" className={labelClass}>
                     Auth URL *
                   </label>
                   <input
@@ -300,14 +311,14 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={authUrl}
                     onChange={(e) => setAuthUrl(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                     placeholder="https://auth.example.com"
                   />
-                  {errors.authUrl && <p className="mt-1 text-sm text-red-600">{errors.authUrl}</p>}
+                  {errors.authUrl && <p className={errorClass}>{errors.authUrl}</p>}
                 </div>
 
                 <div>
-                  <label htmlFor="tokenUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="tokenUrl" className={labelClass}>
                     Token URL *
                   </label>
                   <input
@@ -316,10 +327,10 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={tokenUrl}
                     onChange={(e) => setTokenUrl(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                     placeholder="https://token.example.com"
                   />
-                  {errors.tokenUrl && <p className="mt-1 text-sm text-red-600">{errors.tokenUrl}</p>}
+                  {errors.tokenUrl && <p className={errorClass}>{errors.tokenUrl}</p>}
                 </div>
               </div>
             )}
@@ -327,7 +338,7 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
             {type === 'basic_auth' && (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="username" className={labelClass}>
                     Username *
                   </label>
                   <input
@@ -336,13 +347,13 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                   />
-                  {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}
+                  {errors.username && <p className={errorClass}>{errors.username}</p>}
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="password" className={labelClass}>
                     Password *
                   </label>
                   <input
@@ -351,21 +362,21 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className={inputClass}
                   />
-                  {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+                  {errors.password && <p className={errorClass}>{errors.password}</p>}
 
                   {passwordStrength && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-600">Strength:</span>
+                        <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Strength:</span>
                         <span
                           className={`text-xs font-medium ${
                             passwordStrength === 'Strong'
-                              ? 'text-green-600'
+                              ? isDark ? 'text-green-400' : 'text-green-600'
                               : passwordStrength === 'Medium'
-                              ? 'text-yellow-600'
-                              : 'text-red-600'
+                              ? isDark ? 'text-yellow-400' : 'text-yellow-600'
+                              : isDark ? 'text-red-400' : 'text-red-600'
                           }`}
                         >
                           {passwordStrength}
@@ -379,7 +390,7 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
 
             {type === 'bearer_token' && (
               <div>
-                <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="token" className={labelClass}>
                   Token *
                 </label>
                 <input
@@ -388,10 +399,10 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={inputClass}
                   placeholder="Bearer token"
                 />
-                {errors.token && <p className="mt-1 text-sm text-red-600">{errors.token}</p>}
+                {errors.token && <p className={errorClass}>{errors.token}</p>}
               </div>
             )}
           </div>
@@ -399,10 +410,10 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
 
         {/* Rotate credential link (Edit mode only) */}
         {isEditMode && (
-          <div className="border-t border-gray-200 pt-4 mt-4">
-            <p className="text-sm text-gray-600">
+          <div className={`border-t pt-4 mt-4 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               To update the credential value, use the{' '}
-              <button type="button" className="text-blue-600 hover:text-blue-700 font-medium">
+              <button type="button" className={`font-medium ${isDark ? 'text-primary-400 hover:text-primary-300' : 'text-primary-600 hover:text-primary-700'}`}>
                 Rotate credential
               </button>{' '}
               feature.
@@ -412,7 +423,7 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
 
         {/* Expiration Date */}
         <div>
-          <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="expiresAt" className={labelClass}>
             Expiration Date (Optional)
           </label>
           <input
@@ -421,25 +432,25 @@ export const CredentialForm: React.FC<CredentialFormProps> = ({
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className={`${inputClass} ${isDark ? '[color-scheme:dark]' : ''}`}
           />
         </div>
       </div>
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+      <div className={`flex items-center justify-end gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <button
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-gray-300 bg-gray-700 border border-gray-600 hover:bg-gray-600' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (isEditMode ? 'Saving...' : 'Creating...') : isEditMode ? 'Save' : 'Create'}
         </button>
