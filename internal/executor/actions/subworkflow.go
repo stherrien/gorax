@@ -176,7 +176,7 @@ func (a *SubWorkflowAction) executeAsynchronous(ctx context.Context, execution *
 	if a.executor != nil {
 		go func() {
 			// Use background context to avoid cancellation
-			_ = a.executor.Execute(context.Background(), execution)
+			_ = a.executor.Execute(context.Background(), execution) //nolint:errcheck // async fire-and-forget
 		}()
 	}
 

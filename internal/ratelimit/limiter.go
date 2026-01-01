@@ -74,8 +74,11 @@ func (l *SlidingWindowLimiter) Allow(ctx context.Context, tenantID string, limit
 	}
 
 	// Result is 1 if allowed, 0 if blocked
-	allowed := result.(int64) == 1
-	return allowed, nil
+	resultInt, ok := result.(int64)
+	if !ok {
+		return false, fmt.Errorf("unexpected result type from rate limit script")
+	}
+	return resultInt == 1, nil
 }
 
 // GetUsage returns the current usage count within the window

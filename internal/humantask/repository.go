@@ -120,7 +120,10 @@ func (r *repository) List(ctx context.Context, filter TaskFilter) ([]*HumanTask,
 
 	if filter.Assignee != nil {
 		query += fmt.Sprintf(" AND assignees @> $%d::jsonb", argPos)
-		assigneeJSON, _ := json.Marshal([]string{*filter.Assignee})
+		assigneeJSON, err := json.Marshal([]string{*filter.Assignee})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal assignee filter: %w", err)
+		}
 		args = append(args, assigneeJSON)
 		argPos++
 	}
@@ -251,9 +254,12 @@ func (r *repository) CountPendingByAssignee(ctx context.Context, tenantID uuid.U
 			AND assignees @> $3::jsonb
 	`
 
-	assigneeJSON, _ := json.Marshal([]string{assignee})
+	assigneeJSON, err := json.Marshal([]string{assignee})
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal assignee: %w", err)
+	}
 
-	err := r.db.GetContext(ctx, &count, query, tenantID, StatusPending, assigneeJSON)
+	err = r.db.GetContext(ctx, &count, query, tenantID, StatusPending, assigneeJSON)
 	if err != nil {
 		return 0, fmt.Errorf("count pending tasks: %w", err)
 	}
@@ -262,7 +268,7 @@ func (r *repository) CountPendingByAssignee(ctx context.Context, tenantID uuid.U
 }
 
 // buildFilterQuery builds a SQL query with dynamic filters
-func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{}) {
+func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{}, error) {
 	var conditions []string
 	var args []interface{}
 	argPos := 1
@@ -291,7 +297,10 @@ func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{
 
 	if filter.Assignee != nil {
 		conditions = append(conditions, fmt.Sprintf("assignees @> $%d::jsonb", argPos))
-		assigneeJSON, _ := json.Marshal([]string{*filter.Assignee})
+		assigneeJSON, err := json.Marshal([]string{*filter.Assignee})
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to marshal assignee filter: %w", err)
+		}
 		args = append(args, assigneeJSON)
 		argPos++
 	}
@@ -312,5 +321,5 @@ func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	return query, args
+	return query, args, nil
 }

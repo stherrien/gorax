@@ -142,13 +142,13 @@ func migrateUp(db *sql.DB, migrationsDir string) error {
 		// Execute migration
 		log.Printf("Applying %s...", version)
 		if _, err := tx.Exec(string(content)); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // Best effort rollback on error
 			return fmt.Errorf("failed to apply migration %s: %w", version, err)
 		}
 
 		// Record migration
 		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ($1)", version); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // Best effort rollback on error
 			return fmt.Errorf("failed to record migration %s: %w", version, err)
 		}
 
@@ -193,7 +193,7 @@ func migrateDown(db *sql.DB, migrationsDir string) error {
 
 	// Remove migration record
 	if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = $1", latest); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback() // Best effort rollback on error
 		return fmt.Errorf("failed to remove migration record: %w", err)
 	}
 

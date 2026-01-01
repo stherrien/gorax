@@ -66,7 +66,7 @@ func (t *NodeTemplate) Validate() error {
 func (t *NodeTemplate) ToGeneratedNode(nodeID string) *GeneratedNode {
 	var config json.RawMessage
 	if t.ExampleConfig != nil {
-		configBytes, _ := json.Marshal(t.ExampleConfig)
+		configBytes, _ := json.Marshal(t.ExampleConfig) //nolint:errcheck // known config types
 		config = configBytes
 	}
 
@@ -197,7 +197,7 @@ func (r *NodeRegistry) BuildLLMContext() string {
 			sb.WriteString(fmt.Sprintf("%s\n\n", t.LLMDescription))
 
 			if t.ExampleConfig != nil {
-				configJSON, _ := json.MarshalIndent(t.ExampleConfig, "", "  ")
+				configJSON, _ := json.MarshalIndent(t.ExampleConfig, "", "  ") //nolint:errcheck // known config types
 				sb.WriteString(fmt.Sprintf("Example config:\n```json\n%s\n```\n\n", string(configJSON)))
 			}
 		}
@@ -207,6 +207,8 @@ func (r *NodeRegistry) BuildLLMContext() string {
 }
 
 // DefaultNodeRegistry creates a registry with all default node types
+//
+//nolint:errcheck // registration of builtin templates cannot fail
 func DefaultNodeRegistry() *NodeRegistry {
 	registry := NewNodeRegistry()
 

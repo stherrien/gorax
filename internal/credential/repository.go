@@ -63,7 +63,7 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, cre
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -123,7 +123,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Credent
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -164,7 +164,7 @@ func (r *Repository) GetByName(ctx context.Context, tenantID, name string) (*Cre
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -260,7 +260,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input *Upd
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -306,7 +306,7 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -348,7 +348,7 @@ func (r *Repository) List(ctx context.Context, tenantID string, filter Credentia
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -415,7 +415,7 @@ func (r *Repository) UpdateLastUsedAt(ctx context.Context, tenantID, id string) 
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
@@ -477,7 +477,7 @@ func (r *Repository) LogAccess(ctx context.Context, log *AccessLog) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Set tenant context for RLS within transaction using set_config
 	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", log.TenantID)

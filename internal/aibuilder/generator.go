@@ -160,7 +160,7 @@ func (g *WorkflowGenerator) buildGeneratePrompt(request *BuildRequest) string {
 
 // buildRefinePrompt creates the prompt for workflow refinement
 func (g *WorkflowGenerator) buildRefinePrompt(workflow *GeneratedWorkflow, feedback string) string {
-	workflowJSON, _ := json.MarshalIndent(workflow, "", "  ")
+	workflowJSON, _ := json.MarshalIndent(workflow, "", "  ") //nolint:errcheck // known struct type
 
 	return fmt.Sprintf(`Refine the following workflow based on user feedback:
 

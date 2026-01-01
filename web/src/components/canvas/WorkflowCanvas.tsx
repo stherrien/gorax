@@ -145,7 +145,7 @@ function WorkflowCanvasInner({
     setNodes((nds) => [...nds, newNode])
   }, [setNodes])
 
-  const validateWorkflow = (): string | null => {
+  const validateWorkflow = useCallback((): string | null => {
     // Check if workflow has at least one node
     if (nodes.length === 0) {
       return 'Workflow must have at least one node'
@@ -164,7 +164,7 @@ function WorkflowCanvasInner({
     }
 
     return null
-  }
+  }, [nodes, edges])
 
   const handleSave = useCallback(() => {
     setValidationError(null)
@@ -178,7 +178,7 @@ function WorkflowCanvasInner({
     if (onSave) {
       onSave({ nodes, edges })
     }
-  }, [nodes, edges, onSave])
+  }, [nodes, edges, onSave, validateWorkflow])
 
   return (
     <div className="w-full h-full flex flex-col">
