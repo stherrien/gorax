@@ -100,6 +100,37 @@ export interface DryRunInput {
   testData?: Record<string, unknown>
 }
 
+export interface BulkOperationResult {
+  success_count: number
+  failures: Array<{
+    workflow_id: string
+    error: string
+  }>
+}
+
+export interface WorkflowExport {
+  workflows: Array<{
+    id: string
+    name: string
+    description: string
+    definition: WorkflowDefinition
+    status: string
+    version: number
+  }>
+  exported_at: string
+  version: string
+}
+
+export interface BulkExportResponse {
+  export: WorkflowExport
+  result: BulkOperationResult
+}
+
+export interface BulkCloneResponse {
+  clones: Workflow[]
+  result: BulkOperationResult
+}
+
 class WorkflowAPI {
   /**
    * List all workflows
@@ -227,6 +258,56 @@ class WorkflowAPI {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
+  }
+
+  /**
+   * Bulk delete workflows
+   */
+  async bulkDelete(workflowIds: string[]): Promise<BulkOperationResult> {
+    const response = await apiClient.post('/api/v1/workflows/bulk/delete', {
+      workflow_ids: workflowIds
+    })
+    return response
+  }
+
+  /**
+   * Bulk enable workflows
+   */
+  async bulkEnable(workflowIds: string[]): Promise<BulkOperationResult> {
+    const response = await apiClient.post('/api/v1/workflows/bulk/enable', {
+      workflow_ids: workflowIds
+    })
+    return response
+  }
+
+  /**
+   * Bulk disable workflows
+   */
+  async bulkDisable(workflowIds: string[]): Promise<BulkOperationResult> {
+    const response = await apiClient.post('/api/v1/workflows/bulk/disable', {
+      workflow_ids: workflowIds
+    })
+    return response
+  }
+
+  /**
+   * Bulk export workflows
+   */
+  async bulkExport(workflowIds: string[]): Promise<BulkExportResponse> {
+    const response = await apiClient.post('/api/v1/workflows/bulk/export', {
+      workflow_ids: workflowIds
+    })
+    return response
+  }
+
+  /**
+   * Bulk clone workflows
+   */
+  async bulkClone(workflowIds: string[]): Promise<BulkCloneResponse> {
+    const response = await apiClient.post('/api/v1/workflows/bulk/clone', {
+      workflow_ids: workflowIds
+    })
+    return response
   }
 }
 

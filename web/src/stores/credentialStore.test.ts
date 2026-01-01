@@ -60,8 +60,7 @@ describe('credentialStore', () => {
   describe('fetchCredentials', () => {
     it('should fetch and set credentials', async () => {
       const mockResponse = {
-        credentials: [mockCredential, mockCredential2],
-        total: 2,
+        data: [mockCredential, mockCredential2],
       }
       ;(credentialAPI.list as any).mockResolvedValueOnce(mockResponse)
 
@@ -107,7 +106,7 @@ describe('credentialStore', () => {
     })
 
     it('should support filter parameters', async () => {
-      const mockResponse = { credentials: [mockCredential], total: 1 }
+      const mockResponse = { data: [mockCredential] }
       ;(credentialAPI.list as any).mockResolvedValueOnce(mockResponse)
 
       const { result } = renderHook(() => useCredentialStore())
@@ -160,8 +159,7 @@ describe('credentialStore', () => {
 
       ;(credentialAPI.create as any).mockResolvedValueOnce(mockCredential)
       ;(credentialAPI.list as any).mockResolvedValueOnce({
-        credentials: [mockCredential],
-        total: 1,
+        data: [mockCredential],
       })
 
       const { result } = renderHook(() => useCredentialStore())
@@ -202,8 +200,7 @@ describe('credentialStore', () => {
       const updatedCredential = { ...mockCredential, ...updates }
       ;(credentialAPI.update as any).mockResolvedValueOnce(updatedCredential)
       ;(credentialAPI.list as any).mockResolvedValueOnce({
-        credentials: [updatedCredential],
-        total: 1,
+        data: [updatedCredential],
       })
 
       const { result } = renderHook(() => useCredentialStore())
@@ -234,8 +231,7 @@ describe('credentialStore', () => {
     it('should delete credential', async () => {
       (credentialAPI.delete as any).mockResolvedValueOnce(undefined)
       ;(credentialAPI.list as any).mockResolvedValueOnce({
-        credentials: [],
-        total: 0,
+        data: [],
       })
 
       const { result } = renderHook(() => useCredentialStore())
@@ -272,8 +268,7 @@ describe('credentialStore', () => {
 
       ;(credentialAPI.rotate as any).mockResolvedValueOnce(rotatedCredential)
       ;(credentialAPI.list as any).mockResolvedValueOnce({
-        credentials: [rotatedCredential],
-        total: 1,
+        data: [rotatedCredential],
       })
 
       const { result } = renderHook(() => useCredentialStore())
@@ -443,8 +438,7 @@ describe('credentialStore', () => {
   describe('reset', () => {
     it('should reset store to initial state', async () => {
       const mockResponse = {
-        credentials: [mockCredential],
-        total: 1,
+        data: [mockCredential],
       }
       ;(credentialAPI.list as any).mockResolvedValueOnce(mockResponse)
 

@@ -1,0 +1,28 @@
+# gqlgen configuration for Gorax GraphQL API
+
+# Where the GraphQL schema is located
+schema:
+  - internal/graphql/schema.graphql
+
+# Where should generated server code go
+exec:
+  filename: internal/graphql/generated/generated.go
+  package: generated
+
+# Where should generated models code go
+model:
+  filename: internal/graphql/generated/models_gen.go
+  package: generated
+
+# Where should the resolver implementations go
+resolver:
+  layout: follow-schema
+  dir: internal/graphql
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+
+# Disable autobind to have more control
+autobind: []
+
+# Skip validation of errors in runtime
+skip_validation: false

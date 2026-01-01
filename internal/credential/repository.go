@@ -42,7 +42,7 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, cre
 	}
 
 	// Validate credential type
-	if cred.Type != TypeAPIKey && cred.Type != TypeOAuth2 && cred.Type != TypeBasicAuth && cred.Type != TypeCustom {
+	if cred.Type != TypeAPIKey && cred.Type != TypeOAuth2 && cred.Type != TypeBasicAuth && cred.Type != TypeBearerToken && cred.Type != TypeCustom {
 		return nil, ErrInvalidCredentialType
 	}
 
@@ -58,6 +58,19 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, cre
 		cred.Status = StatusActive
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `
 		INSERT INTO credentials (
 			id, tenant_id, name, type, description, status,
@@ -71,7 +84,7 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, cre
 	`
 
 	var created Credential
-	err := r.db.QueryRowxContext(
+	err = tx.QueryRowxContext(
 		ctx, query,
 		cred.ID, tenantID, cred.Name, cred.Type, cred.Description, cred.Status,
 		cred.EncryptedDEK, cred.Ciphertext, cred.Nonce, cred.AuthTag, cred.KMSKeyID,
@@ -85,7 +98,11 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, cre
 				return nil, ErrDuplicateCredential
 			}
 		}
-		return nil, fmt.Errorf("failed to create credential: %w", err)
+		return nil, fmt.Errorf("database insert failed: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &created, nil
@@ -101,15 +118,32 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Credent
 		return nil, ErrInvalidCredentialID
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `SELECT * FROM credentials WHERE id = $1 AND tenant_id = $2`
 
 	var cred Credential
-	err := r.db.GetContext(ctx, &cred, query, id, tenantID)
+	err = tx.GetContext(ctx, &cred, query, id, tenantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to get credential: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &cred, nil
@@ -125,15 +159,32 @@ func (r *Repository) GetByName(ctx context.Context, tenantID, name string) (*Cre
 		return nil, ErrInvalidCredentialName
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `SELECT * FROM credentials WHERE name = $1 AND tenant_id = $2`
 
 	var cred Credential
-	err := r.db.GetContext(ctx, &cred, query, name, tenantID)
+	err = tx.GetContext(ctx, &cred, query, name, tenantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to get credential: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &cred, nil
@@ -204,6 +255,19 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input *Upd
 	// Add WHERE clause parameters
 	args = append(args, id, tenantID)
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := fmt.Sprintf(`
 		UPDATE credentials
 		SET %s
@@ -212,12 +276,16 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input *Upd
 	`, joinUpdates(updates), argIndex, argIndex+1)
 
 	var updated Credential
-	err = r.db.QueryRowxContext(ctx, query, args...).StructScan(&updated)
+	err = tx.QueryRowxContext(ctx, query, args...).StructScan(&updated)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to update credential: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &updated, nil
@@ -233,9 +301,22 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
 		return ErrInvalidCredentialID
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `DELETE FROM credentials WHERE id = $1 AND tenant_id = $2`
 
-	result, err := r.db.ExecContext(ctx, query, id, tenantID)
+	result, err := tx.ExecContext(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete credential: %w", err)
 	}
@@ -249,6 +330,10 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
 		return ErrNotFound
 	}
 
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }
 
@@ -256,6 +341,19 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
 func (r *Repository) List(ctx context.Context, tenantID string, filter CredentialListFilter) ([]*Credential, error) {
 	if tenantID == "" {
 		return nil, ErrInvalidTenantID
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
 	query := `SELECT * FROM credentials WHERE tenant_id = $1`
@@ -286,9 +384,13 @@ func (r *Repository) List(ctx context.Context, tenantID string, filter Credentia
 	query += " ORDER BY created_at DESC"
 
 	var credentials []*Credential
-	err := r.db.SelectContext(ctx, &credentials, query, args...)
+	err = tx.SelectContext(ctx, &credentials, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list credentials: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	if credentials == nil {
@@ -308,13 +410,26 @@ func (r *Repository) UpdateLastUsedAt(ctx context.Context, tenantID, id string) 
 		return ErrInvalidCredentialID
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `
 		UPDATE credentials
 		SET last_used_at = $1
 		WHERE id = $2 AND tenant_id = $3
 	`
 
-	result, err := r.db.ExecContext(ctx, query, time.Now(), id, tenantID)
+	result, err := tx.ExecContext(ctx, query, time.Now(), id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to update last_used_at: %w", err)
 	}
@@ -326,6 +441,10 @@ func (r *Repository) UpdateLastUsedAt(ctx context.Context, tenantID, id string) 
 
 	if rows == 0 {
 		return ErrNotFound
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -353,6 +472,19 @@ func (r *Repository) LogAccess(ctx context.Context, log *AccessLog) error {
 		log.ID = uuid.NewString()
 	}
 
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", log.TenantID)
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
 	query := `
 		INSERT INTO credential_access_log (
 			id, credential_id, tenant_id, accessed_by, access_type,
@@ -364,7 +496,7 @@ func (r *Repository) LogAccess(ctx context.Context, log *AccessLog) error {
 
 	now := time.Now()
 
-	_, err := r.db.ExecContext(
+	_, err = tx.ExecContext(
 		ctx, query,
 		log.ID, log.CredentialID, log.TenantID, log.AccessedBy, log.AccessType,
 		now, log.IPAddress, log.UserAgent, log.Success, log.ErrorMessage,
@@ -372,6 +504,10 @@ func (r *Repository) LogAccess(ctx context.Context, log *AccessLog) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to log access: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

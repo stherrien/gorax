@@ -24,6 +24,7 @@ type Config struct {
 	CORS           CORSConfig
 	SecurityHeader SecurityHeaderConfig
 	AIBuilder      AIBuilderConfig
+	WebSocket      WebSocketConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -344,6 +345,7 @@ func Load() (*Config, error) {
 			MaxTokens:   getEnvAsInt("AI_BUILDER_MAX_TOKENS", 4096),
 			Temperature: getEnvAsFloat("AI_BUILDER_TEMPERATURE", 0.7),
 		},
+		WebSocket: loadWebSocketConfig(),
 	}
 
 	return cfg, nil
@@ -359,6 +361,15 @@ func getEnv(key, defaultValue string) string {
 func getEnvAsInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsInt64(key string, defaultValue int64) int64 {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 			return intValue
 		}
 	}
