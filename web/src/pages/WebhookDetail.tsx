@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useWebhook, useWebhookEvents, useWebhookMutations } from '../hooks/useWebhooks'
 import { useWorkflows } from '../hooks/useWorkflows'
 import type { WebhookAuthType } from '../api/webhooks'
+import FilterBuilder from '../components/webhooks/FilterBuilder'
 
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>()
@@ -246,6 +247,18 @@ export default function WebhookDetail() {
               )}
             </div>
           )}
+
+          {/* Event Filters */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white mb-2">Event Filters</h2>
+              <p className="text-gray-400 text-sm">
+                Configure filters to control which webhook events trigger workflow execution. Events
+                that don't match all filters will be ignored.
+              </p>
+            </div>
+            <FilterBuilder webhookId={webhook.id} />
+          </div>
 
           {/* Event History */}
           <div className="bg-gray-800 rounded-lg p-6">
