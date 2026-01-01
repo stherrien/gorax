@@ -212,7 +212,7 @@ func createCICDNotificationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -319,7 +319,7 @@ func createDeploymentApprovalTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -429,7 +429,7 @@ func createInfraAlertHandlerTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -535,7 +535,7 @@ func createCustomerOnboardingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -621,7 +621,7 @@ func createApprovalRequestTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -733,7 +733,7 @@ func createDocumentProcessingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -854,7 +854,7 @@ func createSlackToJiraTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -964,7 +964,7 @@ func createEmailToTaskTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1064,7 +1064,7 @@ func createCalendarReminderTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1174,7 +1174,7 @@ func createDataSyncTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1304,7 +1304,7 @@ func createReportGenerationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1456,7 +1456,7 @@ func createDataValidationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1585,7 +1585,7 @@ func createSlackAlertNotificationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1748,7 +1748,7 @@ func createGitHubPRAutomationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1940,7 +1940,7 @@ func createDataBackupWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2119,7 +2119,7 @@ func createErrorMonitoringWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2297,7 +2297,7 @@ func createMultiStepUserOnboardingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2504,7 +2504,7 @@ func createAPIHealthCheckWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2725,7 +2725,7 @@ func createScheduledReportGenerationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2905,7 +2905,7 @@ func createDataETLSyncWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3074,7 +3074,7 @@ func createScheduledReportingWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3307,7 +3307,7 @@ func createMultiStepApprovalWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3494,7 +3494,7 @@ func createErrorNotificationWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3737,7 +3737,7 @@ func createAPIOrchestrationWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3842,7 +3842,7 @@ func createKubernetesDeploymentMonitorTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3963,7 +3963,7 @@ func createContainerRegistryCleanupTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4094,7 +4094,7 @@ func createSalesforceLeadSyncTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4210,7 +4210,7 @@ func createServiceNowIncidentTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4371,7 +4371,7 @@ func createSecurityAlertTriageTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4513,7 +4513,7 @@ func createVulnerabilityResponseTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4654,7 +4654,7 @@ func createAccessReviewAutomationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,

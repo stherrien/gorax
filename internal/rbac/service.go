@@ -406,5 +406,5 @@ func (s *Service) auditLog(ctx context.Context, tenantID, userID, action, target
 	}
 
 	// Best effort - don't fail if audit logging fails
-	_ = s.repo.CreateAuditLog(ctx, log)
+	_ = s.repo.CreateAuditLog(ctx, log) //nolint:errcheck
 }

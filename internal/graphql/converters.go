@@ -313,7 +313,7 @@ func toGraphQLTemplate(t *template.Template) (*generated.Template, error) {
 		Definition:  defStr,
 		Tags:        t.Tags,
 		IsPublic:    t.IsPublic,
-		UsageCount:  0, // TODO: Add usage count tracking
+		UsageCount:  t.UsageCount,
 		CreatedBy:   t.CreatedBy,
 		CreatedAt:   t.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:   t.UpdatedAt.Format("2006-01-02T15:04:05Z"),

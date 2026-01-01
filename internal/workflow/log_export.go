@@ -39,15 +39,19 @@ func (e *LogExporter) ExportJSON(execution *Execution, steps []*StepExecution) [
 }
 
 // ExportCSV exports logs in CSV format
-func (e *LogExporter) ExportCSV(execution *Execution, steps []*StepExecution) []byte {
+func (e *LogExporter) ExportCSV(execution *Execution, steps []*StepExecution) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
-	writeCSVHeader(writer)
-	writeStepsCSV(writer, steps)
+	if err := writeCSVHeader(writer); err != nil {
+		return nil, fmt.Errorf("failed to write CSV header: %w", err)
+	}
+	if err := writeStepsCSV(writer, steps); err != nil {
+		return nil, fmt.Errorf("failed to write CSV rows: %w", err)
+	}
 
 	writer.Flush()
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
 // writeHeader writes execution header information
@@ -203,8 +207,8 @@ func convertStepToJSON(step *StepExecution) map[string]interface{} {
 }
 
 // writeCSVHeader writes CSV header row
-func writeCSVHeader(writer *csv.Writer) {
-	writer.Write([]string{
+func writeCSVHeader(writer *csv.Writer) error {
+	return writer.Write([]string{
 		"step_id",
 		"node_id",
 		"node_type",
@@ -217,14 +221,17 @@ func writeCSVHeader(writer *csv.Writer) {
 }
 
 // writeStepsCSV writes steps in CSV format
-func writeStepsCSV(writer *csv.Writer, steps []*StepExecution) {
+func writeStepsCSV(writer *csv.Writer, steps []*StepExecution) error {
 	for _, step := range steps {
-		writeStepCSV(writer, step)
+		if err := writeStepCSV(writer, step); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // writeStepCSV writes a single step in CSV format
-func writeStepCSV(writer *csv.Writer, step *StepExecution) {
+func writeStepCSV(writer *csv.Writer, step *StepExecution) error {
 	row := []string{
 		step.ID,
 		step.NodeID,
@@ -236,7 +243,7 @@ func writeStepCSV(writer *csv.Writer, step *StepExecution) {
 		formatStringCSV(step.ErrorMessage),
 	}
 
-	writer.Write(row)
+	return writer.Write(row)
 }
 
 // formatTimeCSV formats time for CSV
