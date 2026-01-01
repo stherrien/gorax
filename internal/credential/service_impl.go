@@ -3,6 +3,7 @@ package credential
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -22,13 +23,18 @@ type ServiceRepositoryInterface interface {
 type ServiceImpl struct {
 	repo       ServiceRepositoryInterface
 	encryption EncryptionServiceInterface
+	logger     *slog.Logger
 }
 
 // NewServiceImpl creates a new credential service implementation
-func NewServiceImpl(repo ServiceRepositoryInterface, encryption EncryptionServiceInterface) Service {
+func NewServiceImpl(repo ServiceRepositoryInterface, encryption EncryptionServiceInterface, logger *slog.Logger) Service {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	return &ServiceImpl{
 		repo:       repo,
 		encryption: encryption,
+		logger:     logger,
 	}
 }
 
@@ -116,8 +122,22 @@ func (s *ServiceImpl) Create(ctx context.Context, tenantID, userID string, input
 	// Store in repository
 	created, err := s.repo.Create(ctx, tenantID, userID, cred)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create credential: %w", err)
+		s.logger.Error("credential creation failed",
+			"error", err,
+			"tenant_id", tenantID,
+			"user_id", userID,
+			"credential_name", input.Name,
+			"credential_type", input.Type,
+		)
+		return nil, fmt.Errorf("failed to store credential: %w", err)
 	}
+
+	s.logger.Info("credential created",
+		"credential_id", created.ID,
+		"tenant_id", tenantID,
+		"user_id", userID,
+		"credential_type", created.Type,
+	)
 
 	return created, nil
 }
