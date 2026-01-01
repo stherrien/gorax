@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
@@ -19,8 +20,10 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/gorax/gorax/internal/aibuilder"
+	"github.com/gorax/gorax/internal/analytics"
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/collaboration"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
 	"github.com/gorax/gorax/internal/errortracking"
@@ -30,14 +33,22 @@ import (
 	"github.com/gorax/gorax/internal/llm/providers/anthropic"
 	"github.com/gorax/gorax/internal/llm/providers/bedrock"
 	"github.com/gorax/gorax/internal/llm/providers/openai"
+	"github.com/gorax/gorax/internal/marketplace"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/suggestions"
+	"github.com/gorax/gorax/internal/template"
 	"github.com/gorax/gorax/internal/tenant"
 	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
+
+	// GraphQL
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
+	goraxGraphQL "github.com/gorax/gorax/internal/graphql"
+	"github.com/gorax/gorax/internal/graphql/generated"
 )
 
 var llmProvidersOnce sync.Once
@@ -75,19 +86,25 @@ type App struct {
 	errorTracker *errortracking.Tracker
 
 	// Services
-	tenantService     *tenant.Service
-	workflowService   *workflow.Service
-	webhookService    *webhook.Service
-	scheduleService   *schedule.Service
-	eventTypeService  *eventtypes.Service
-	credentialService credential.Service
+	tenantService       *tenant.Service
+	workflowService     *workflow.Service
+	workflowBulkService *workflow.BulkService
+	webhookService      *webhook.Service
+	scheduleService     *schedule.Service
+	eventTypeService    *eventtypes.Service
+	credentialService   credential.Service
+	templateService     *template.Service
+	marketplaceService  *marketplace.Service
+	collabService       *collaboration.Service
 
 	// WebSocket
-	wsHub *websocket.Hub
+	wsHub     *websocket.Hub
+	collabHub *collaboration.Hub
 
 	// Handlers
 	healthHandler            *handlers.HealthHandler
 	workflowHandler          *handlers.WorkflowHandler
+	workflowBulkHandler      *handlers.WorkflowBulkHandler
 	webhookHandler           *handlers.WebhookHandler
 	webhookManagementHandler *handlers.WebhookManagementHandler
 	webhookReplayHandler     *handlers.WebhookReplayHandler
@@ -102,6 +119,9 @@ type App struct {
 	eventTypesHandler        *handlers.EventTypesHandler
 	suggestionsHandler       *handlers.SuggestionsHandler
 	aiBuilderHandler         *handlers.AIBuilderHandler
+	marketplaceHandler       *handlers.MarketplaceHandler
+	analyticsHandler         *handlers.AnalyticsHandler
+	collaborationHandler     *handlers.CollaborationHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -150,17 +170,29 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	webhookRepo := webhook.NewRepository(db)
 	scheduleRepo := schedule.NewRepository(db)
 	eventTypeRepo := eventtypes.NewRepository(db)
+	templateRepo := template.NewRepository(db)
+	marketplaceRepo := marketplace.NewRepository(db)
 
 	// Initialize services
 	app.tenantService = tenant.NewService(tenantRepo, logger)
 	app.workflowService = workflow.NewService(workflowRepo, logger)
 	app.webhookService = webhook.NewService(webhookRepo, logger)
+	app.workflowBulkService = workflow.NewBulkService(workflowRepo, app.webhookService, logger)
 	app.scheduleService = schedule.NewService(scheduleRepo, logger)
 	app.eventTypeService = eventtypes.NewService(eventTypeRepo, logger)
+	app.templateService = template.NewService(templateRepo, logger)
+
+	// Initialize marketplace service with workflow service adapter
+	workflowServiceForMarketplace := &workflowServiceMarketplaceAdapter{workflowService: app.workflowService}
+	app.marketplaceService = marketplace.NewService(marketplaceRepo, workflowServiceForMarketplace, logger)
 
 	// Initialize WebSocket hub
 	app.wsHub = websocket.NewHub(logger)
 	go app.wsHub.Run() // Start hub in background
+
+	// Initialize collaboration service and hub
+	app.collabService = collaboration.NewService()
+	app.collabHub = collaboration.NewHub(app.collabService, app.wsHub, logger)
 
 	// Initialize executor with WebSocket broadcaster
 	broadcaster := websocket.NewHubBroadcaster(app.wsHub)
@@ -177,6 +209,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize handlers
 	app.healthHandler = handlers.NewHealthHandler(db, app.redis)
 	app.workflowHandler = handlers.NewWorkflowHandler(app.workflowService, logger)
+	app.workflowBulkHandler = handlers.NewWorkflowBulkHandler(app.workflowBulkService, logger)
 	app.webhookHandler = handlers.NewWebhookHandler(app.workflowService, app.webhookService, logger)
 	app.webhookManagementHandler = handlers.NewWebhookManagementHandler(app.webhookService, logger)
 
@@ -239,7 +272,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 		logger.Warn("Credential encryption initialized", "mode", "simple", "warning", "Use KMS in production")
 	}
 
-	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService)
+	app.credentialService = credential.NewServiceImpl(credentialRepo, encryptionService, logger)
 	app.credentialHandler = handlers.NewCredentialHandler(app.credentialService, logger)
 
 	// Initialize quota tracker
@@ -332,8 +365,31 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	)
 	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
 
+	// Initialize marketplace handler
+	app.marketplaceHandler = handlers.NewMarketplaceHandler(app.marketplaceService, logger)
+
+	// Initialize collaboration handler
+	app.collaborationHandler = handlers.NewCollaborationHandler(app.collabHub, app.wsHub, cfg.WebSocket, logger)
+
+	// Initialize analytics service and handler
+	analyticsRepo := analytics.NewRepository(db)
+	analyticsService := analytics.NewService(analyticsRepo)
+	app.analyticsHandler = handlers.NewAnalyticsHandler(analyticsService, logger)
+
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
+
+	// Start collaboration cleanup goroutine
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			cleaned := app.collabService.CleanupInactiveSessions(30 * time.Minute)
+			if cleaned > 0 {
+				logger.Info("cleaned up inactive collaboration sessions", "count", cleaned)
+			}
+		}
+	}()
 
 	// Setup router
 	app.setupRouter()
@@ -449,6 +505,15 @@ func (a *App) setupRouter() {
 				r.Post("/{workflowID}/execute", a.workflowHandler.Execute)
 				r.Post("/{workflowID}/dry-run", a.workflowHandler.DryRun)
 
+				// Bulk operations
+				r.Route("/bulk", func(r chi.Router) {
+					r.Post("/delete", a.workflowBulkHandler.BulkDelete)
+					r.Post("/enable", a.workflowBulkHandler.BulkEnable)
+					r.Post("/disable", a.workflowBulkHandler.BulkDisable)
+					r.Post("/export", a.workflowBulkHandler.BulkExport)
+					r.Post("/clone", a.workflowBulkHandler.BulkClone)
+				})
+
 				// Version routes for a specific workflow
 				r.Route("/{workflowID}/versions", func(r chi.Router) {
 					r.Get("/", a.workflowHandler.ListVersions)
@@ -461,6 +526,9 @@ func (a *App) setupRouter() {
 					r.Get("/", a.scheduleHandler.List)
 					r.Post("/", a.scheduleHandler.Create)
 				})
+
+				// Collaboration WebSocket route for a specific workflow
+				r.Get("/{id}/collaborate", a.collaborationHandler.HandleWorkflowCollaboration)
 			})
 
 			// Execution routes
@@ -572,6 +640,55 @@ func (a *App) setupRouter() {
 					r.Post("/{id}/abandon", a.aiBuilderHandler.Abandon)
 				})
 			})
+
+			// Marketplace routes
+			r.Route("/marketplace", func(r chi.Router) {
+				r.Get("/templates", a.marketplaceHandler.ListTemplates)
+				r.Get("/templates/{id}", a.marketplaceHandler.GetTemplate)
+				r.Post("/templates", a.marketplaceHandler.PublishTemplate)
+				r.Post("/templates/{id}/install", a.marketplaceHandler.InstallTemplate)
+				r.Post("/templates/{id}/rate", a.marketplaceHandler.RateTemplate)
+				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
+				r.Delete("/templates/{id}/reviews/{reviewId}", a.marketplaceHandler.DeleteReview)
+				r.Get("/trending", a.marketplaceHandler.GetTrending)
+				r.Get("/popular", a.marketplaceHandler.GetPopular)
+				r.Get("/categories", a.marketplaceHandler.GetCategories)
+			})
+
+			// Analytics routes
+			r.Route("/analytics", func(r chi.Router) {
+				r.Get("/overview", a.analyticsHandler.GetTenantOverview)
+				r.Get("/workflows/{workflowID}", a.analyticsHandler.GetWorkflowStats)
+				r.Get("/trends", a.analyticsHandler.GetExecutionTrends)
+				r.Get("/top-workflows", a.analyticsHandler.GetTopWorkflows)
+				r.Get("/errors", a.analyticsHandler.GetErrorBreakdown)
+				r.Get("/workflows/{workflowID}/nodes", a.analyticsHandler.GetNodePerformance)
+			})
+		})
+
+		// GraphQL API endpoint (with authentication and tenant context)
+		r.Group(func(r chi.Router) {
+			// Create GraphQL resolver with services
+			resolver := &goraxGraphQL.Resolver{
+				WorkflowService: a.workflowService,
+				WebhookService:  a.webhookService,
+				ScheduleService: a.scheduleService,
+				TemplateService: a.templateService,
+				Logger:          a.logger,
+			}
+
+			// Create GraphQL server
+			graphqlServer := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+				Resolvers: resolver,
+			}))
+
+			// GraphQL endpoint
+			r.Handle("/graphql", graphqlServer)
+
+			// GraphQL Playground (only in development)
+			if a.config.Server.Env == "development" {
+				r.Handle("/graphql/playground", playground.Handler("GraphQL Playground", "/api/v1/graphql"))
+			}
 		})
 	})
 
@@ -675,6 +792,24 @@ func (w *workflowCreatorAdapter) CreateWorkflow(ctx context.Context, tenantID, u
 	}
 
 	// Create the workflow
+	created, err := w.workflowService.Create(ctx, tenantID, userID, input)
+	if err != nil {
+		return "", err
+	}
+	return created.ID, nil
+}
+
+// workflowServiceMarketplaceAdapter adapts workflow.Service to marketplace.WorkflowService interface
+type workflowServiceMarketplaceAdapter struct {
+	workflowService *workflow.Service
+}
+
+func (w *workflowServiceMarketplaceAdapter) CreateFromTemplate(ctx context.Context, tenantID, userID, templateID, workflowName string, definition json.RawMessage) (string, error) {
+	input := workflow.CreateWorkflowInput{
+		Name:       workflowName,
+		Definition: definition,
+	}
+
 	created, err := w.workflowService.Create(ctx, tenantID, userID, input)
 	if err != nil {
 		return "", err
