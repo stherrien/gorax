@@ -284,21 +284,93 @@ func (g *WorkflowGenerator) assignPositions(workflow *GeneratedWorkflow) {
 	const (
 		startX   = 250.0
 		startY   = 50.0
-		spacingY = 120.0
+		spacingX = 300.0 // Horizontal spacing between parallel branches
+		spacingY = 150.0 // Vertical spacing between levels
 	)
 
-	// Build adjacency list for topological ordering
+	// Build graph structure
 	nodeIndex := make(map[string]int)
 	for i, node := range workflow.Definition.Nodes {
 		nodeIndex[node.ID] = i
 	}
 
-	// Simple linear positioning based on order
-	// TODO: More sophisticated graph layout for branching workflows
-	for i := range workflow.Definition.Nodes {
-		workflow.Definition.Nodes[i].Position = &NodePosition{
-			X: startX,
-			Y: startY + float64(i)*spacingY,
+	// Build adjacency list (forward edges)
+	adjList := make(map[string][]string)
+	inDegree := make(map[string]int)
+
+	for _, node := range workflow.Definition.Nodes {
+		inDegree[node.ID] = 0
+	}
+
+	for _, edge := range workflow.Definition.Edges {
+		adjList[edge.Source] = append(adjList[edge.Source], edge.Target)
+		inDegree[edge.Target]++
+	}
+
+	// Perform topological sort to determine levels (BFS-based)
+	levels := make(map[string]int)
+	queue := []string{}
+
+	// Find root nodes (in-degree = 0)
+	for nodeID := range inDegree {
+		if inDegree[nodeID] == 0 {
+			levels[nodeID] = 0
+			queue = append(queue, nodeID)
+		}
+	}
+
+	// BFS to assign levels
+	for len(queue) > 0 {
+		currentID := queue[0]
+		queue = queue[1:]
+
+		currentLevel := levels[currentID]
+
+		for _, neighborID := range adjList[currentID] {
+			// Assign level only if not assigned or needs update
+			if existingLevel, exists := levels[neighborID]; !exists || currentLevel+1 > existingLevel {
+				levels[neighborID] = currentLevel + 1
+			}
+
+			inDegree[neighborID]--
+			if inDegree[neighborID] == 0 {
+				queue = append(queue, neighborID)
+			}
+		}
+	}
+
+	// Nodes that aren't connected (isolated nodes) get level 0
+	for _, node := range workflow.Definition.Nodes {
+		if _, exists := levels[node.ID]; !exists {
+			levels[node.ID] = 0
+		}
+	}
+
+	// Group nodes by level
+	levelNodes := make(map[int][]string)
+	maxLevel := 0
+	for nodeID, level := range levels {
+		levelNodes[level] = append(levelNodes[level], nodeID)
+		if level > maxLevel {
+			maxLevel = level
+		}
+	}
+
+	// Position nodes: center each level horizontally
+	for level := 0; level <= maxLevel; level++ {
+		nodes := levelNodes[level]
+		nodesCount := len(nodes)
+
+		// Calculate starting X to center the nodes at this level
+		totalWidth := float64(nodesCount-1) * spacingX
+		levelStartX := startX - (totalWidth / 2)
+
+		for i, nodeID := range nodes {
+			idx := nodeIndex[nodeID]
+			workflow.Definition.Nodes[idx].Position = &NodePosition{
+				X: levelStartX + float64(i)*spacingX,
+				Y: startY + float64(level)*spacingY,
+			}
 		}
 	}
 }
