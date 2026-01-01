@@ -13,12 +13,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorax/gorax/internal/api/middleware"
-	"github.com/gorax/gorax/internal/marketplace"
-	"github.com/gorax/gorax/internal/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/marketplace"
+	"github.com/gorax/gorax/internal/tenant"
 )
 
 // MockMarketplaceService is a mock implementation of MarketplaceService

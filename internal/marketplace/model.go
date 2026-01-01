@@ -10,23 +10,23 @@ import (
 
 // MarketplaceTemplate represents a template in the marketplace
 type MarketplaceTemplate struct {
-	ID              string          `db:"id" json:"id"`
-	Name            string          `db:"name" json:"name"`
-	Description     string          `db:"description" json:"description"`
-	Category        string          `db:"category" json:"category"`
-	Definition      json.RawMessage `db:"definition" json:"definition"`
-	Tags            pq.StringArray  `db:"tags" json:"tags"`
-	AuthorID        string          `db:"author_id" json:"author_id"`
-	AuthorName      string          `db:"author_name" json:"author_name"`
-	Version         string          `db:"version" json:"version"`
-	DownloadCount   int             `db:"download_count" json:"download_count"`
-	AverageRating   float64         `db:"average_rating" json:"average_rating"`
-	TotalRatings    int             `db:"total_ratings" json:"total_ratings"`
-	IsVerified      bool            `db:"is_verified" json:"is_verified"`
-	SourceTenantID  *string         `db:"source_tenant_id" json:"source_tenant_id,omitempty"`
-	SourceTemplateID *string        `db:"source_template_id" json:"source_template_id,omitempty"`
-	PublishedAt     time.Time       `db:"published_at" json:"published_at"`
-	UpdatedAt       time.Time       `db:"updated_at" json:"updated_at"`
+	ID               string          `db:"id" json:"id"`
+	Name             string          `db:"name" json:"name"`
+	Description      string          `db:"description" json:"description"`
+	Category         string          `db:"category" json:"category"`
+	Definition       json.RawMessage `db:"definition" json:"definition"`
+	Tags             pq.StringArray  `db:"tags" json:"tags"`
+	AuthorID         string          `db:"author_id" json:"author_id"`
+	AuthorName       string          `db:"author_name" json:"author_name"`
+	Version          string          `db:"version" json:"version"`
+	DownloadCount    int             `db:"download_count" json:"download_count"`
+	AverageRating    float64         `db:"average_rating" json:"average_rating"`
+	TotalRatings     int             `db:"total_ratings" json:"total_ratings"`
+	IsVerified       bool            `db:"is_verified" json:"is_verified"`
+	SourceTenantID   *string         `db:"source_tenant_id" json:"source_tenant_id,omitempty"`
+	SourceTemplateID *string         `db:"source_template_id" json:"source_template_id,omitempty"`
+	PublishedAt      time.Time       `db:"published_at" json:"published_at"`
+	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
 }
 
 // TemplateVersion represents a version of a marketplace template
@@ -42,15 +42,15 @@ type TemplateVersion struct {
 
 // TemplateReview represents a user review for a marketplace template
 type TemplateReview struct {
-	ID         string     `db:"id" json:"id"`
-	TemplateID string     `db:"template_id" json:"template_id"`
-	TenantID   string     `db:"tenant_id" json:"tenant_id"`
-	UserID     string     `db:"user_id" json:"user_id"`
-	UserName   string     `db:"user_name" json:"user_name"`
-	Rating     int        `db:"rating" json:"rating"`
-	Comment    string     `db:"comment" json:"comment"`
-	CreatedAt  time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time  `db:"updated_at" json:"updated_at"`
+	ID         string    `db:"id" json:"id"`
+	TemplateID string    `db:"template_id" json:"template_id"`
+	TenantID   string    `db:"tenant_id" json:"tenant_id"`
+	UserID     string    `db:"user_id" json:"user_id"`
+	UserName   string    `db:"user_name" json:"user_name"`
+	Rating     int       `db:"rating" json:"rating"`
+	Comment    string    `db:"comment" json:"comment"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // TemplateInstallation tracks template installations
@@ -113,14 +113,14 @@ type RateTemplateInput struct {
 
 // SearchFilter represents search filters for marketplace templates
 type SearchFilter struct {
-	Category      string   `json:"category,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	SearchQuery   string   `json:"search_query,omitempty"`
-	MinRating     *float64 `json:"min_rating,omitempty"`
-	IsVerified    *bool    `json:"is_verified,omitempty"`
-	SortBy        string   `json:"sort_by,omitempty"` // popular, recent, rating
-	Page          int      `json:"page,omitempty"`
-	Limit         int      `json:"limit,omitempty"`
+	Category    string   `json:"category,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	SearchQuery string   `json:"search_query,omitempty"`
+	MinRating   *float64 `json:"min_rating,omitempty"`
+	IsVerified  *bool    `json:"is_verified,omitempty"`
+	SortBy      string   `json:"sort_by,omitempty"` // popular, recent, rating
+	Page        int      `json:"page,omitempty"`
+	Limit       int      `json:"limit,omitempty"`
 }
 
 // InstallTemplateResult represents the result of template installation

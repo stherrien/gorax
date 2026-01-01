@@ -44,9 +44,9 @@ import (
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
 
-	// GraphQL
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+
 	goraxGraphQL "github.com/gorax/gorax/internal/graphql"
 	"github.com/gorax/gorax/internal/graphql/generated"
 )
