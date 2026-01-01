@@ -83,7 +83,7 @@ describe('Credential API', () => {
 
   describe('get', () => {
     it('should fetch single credential by ID', async () => {
-      (apiClient.get as any).mockResolvedValueOnce(mockCredential)
+      (apiClient.get as any).mockResolvedValueOnce({ data: mockCredential })
 
       const result = await credentialAPI.get('cred-123')
 
@@ -112,7 +112,7 @@ describe('Credential API', () => {
       }
 
       const createdCredential = { ...mockCredential, ...createInput }
-      ;(apiClient.post as any).mockResolvedValueOnce(createdCredential)
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: createdCredential })
 
       const result = await credentialAPI.create(createInput)
 
@@ -133,7 +133,7 @@ describe('Credential API', () => {
         },
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce({ ...mockCredential, ...createInput })
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: { ...mockCredential, ...createInput } })
 
       const result = await credentialAPI.create(createInput)
 
@@ -150,7 +150,7 @@ describe('Credential API', () => {
         },
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce({ ...mockCredential, ...createInput })
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: { ...mockCredential, ...createInput } })
 
       const result = await credentialAPI.create(createInput)
 
@@ -179,7 +179,7 @@ describe('Credential API', () => {
         expiresAt: '2025-12-31T23:59:59Z',
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce({ ...mockCredential, ...createInput })
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: { ...mockCredential, ...createInput } })
 
       const result = await credentialAPI.create(createInput)
 
@@ -195,7 +195,7 @@ describe('Credential API', () => {
       }
 
       const updatedCredential = { ...mockCredential, ...updates }
-      ;(apiClient.put as any).mockResolvedValueOnce(updatedCredential)
+      ;(apiClient.put as any).mockResolvedValueOnce({ data: updatedCredential })
 
       const result = await credentialAPI.update('cred-123', updates)
 
@@ -210,7 +210,7 @@ describe('Credential API', () => {
       }
 
       const updatedCredential = { ...mockCredential, ...updates }
-      ;(apiClient.put as any).mockResolvedValueOnce(updatedCredential)
+      ;(apiClient.put as any).mockResolvedValueOnce({ data: updatedCredential })
 
       const result = await credentialAPI.update('cred-123', updates)
 
@@ -223,7 +223,7 @@ describe('Credential API', () => {
         name: 'Test',
       }
 
-      ;(apiClient.put as any).mockResolvedValueOnce({ ...mockCredential, ...updates })
+      ;(apiClient.put as any).mockResolvedValueOnce({ data: { ...mockCredential, ...updates } })
 
       const result = await credentialAPI.update('cred-123', updates)
 
@@ -270,7 +270,7 @@ describe('Credential API', () => {
         ...mockCredential,
         updatedAt: '2024-01-16T10:00:00Z',
       }
-      ;(apiClient.post as any).mockResolvedValueOnce(rotatedCredential)
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: rotatedCredential })
 
       const result = await credentialAPI.rotate('cred-123', newValue)
 
@@ -288,7 +288,7 @@ describe('Credential API', () => {
         tokenUrl: 'https://token.example.com',
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce({ ...mockCredential, type: 'oauth2' })
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: { ...mockCredential, type: 'oauth2' } })
 
       const result = await credentialAPI.rotate('cred-123', newValue)
 
@@ -306,7 +306,7 @@ describe('Credential API', () => {
         testedAt: '2024-01-15T10:00:00Z',
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce(testResult)
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: testResult })
 
       const result = await credentialAPI.test('cred-123')
 
@@ -322,7 +322,7 @@ describe('Credential API', () => {
         testedAt: '2024-01-15T10:00:00Z',
       }
 
-      ;(apiClient.post as any).mockResolvedValueOnce(testResult)
+      ;(apiClient.post as any).mockResolvedValueOnce({ data: testResult })
 
       const result = await credentialAPI.test('cred-123')
 

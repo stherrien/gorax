@@ -220,7 +220,7 @@ func TestCORSMiddleware(t *testing.T) {
 			expectStatus:  http.StatusOK,
 		},
 		{
-			name: "wildcard origin in development",
+			name: "wildcard origin in development reflects origin",
 			cfg: config.CORSConfig{
 				AllowedOrigins: []string{"*"},
 				AllowedMethods: []string{"GET"},
@@ -230,7 +230,7 @@ func TestCORSMiddleware(t *testing.T) {
 			requestOrigin: "http://localhost:3000",
 			requestMethod: "GET",
 			isPreflight:   false,
-			expectOrigin:  "*",
+			expectOrigin:  "http://localhost:3000", // Dev mode reflects origin (needed for credentials)
 			expectStatus:  http.StatusOK,
 		},
 	}

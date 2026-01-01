@@ -5,9 +5,11 @@ import { suggestionsApi } from '../api/suggestions'
 import {
   useSuggestions,
   useSuggestion,
+  useAnalyzeError,
   useApplySuggestion,
   useDismissSuggestion,
   useSuggestionActions,
+  useSuggestionsPanel,
   groupSuggestionsByCategory,
   sortSuggestionsByConfidence,
 } from './useSuggestions'
@@ -247,5 +249,305 @@ describe('sortSuggestionsByConfidence', () => {
 
     expect(suggestions[0].confidence).toBe('low')
     expect(sorted).not.toBe(suggestions)
+  })
+})
+
+describe('useAnalyzeError', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should analyze an execution error', async () => {
+    const mockResult = { suggestionId: 'sugg-new' }
+    vi.mocked(suggestionsApi.analyze).mockResolvedValue(mockResult)
+
+    const { result } = renderHook(() => useAnalyzeError('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        errorMessage: 'Connection refused',
+        errorType: 'network',
+        nodeId: 'node-1',
+      })
+    })
+
+    expect(suggestionsApi.analyze).toHaveBeenCalledWith('exec-123', {
+      errorMessage: 'Connection refused',
+      errorType: 'network',
+      nodeId: 'node-1',
+    })
+  })
+
+  it('should handle analysis errors', async () => {
+    const mockError = new Error('Analysis failed')
+    vi.mocked(suggestionsApi.analyze).mockRejectedValue(mockError)
+
+    const { result } = renderHook(() => useAnalyzeError('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          errorMessage: 'Error',
+          errorType: 'unknown',
+          nodeId: 'node-1',
+        })
+      })
+    ).rejects.toThrow('Analysis failed')
+  })
+})
+
+describe('useSuggestions error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should handle fetch errors', async () => {
+    const mockError = new Error('Failed to fetch')
+    vi.mocked(suggestionsApi.list).mockRejectedValue(mockError)
+
+    const { result } = renderHook(() => useSuggestions('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(result.current.error).toEqual(mockError)
+    expect(result.current.data).toBeUndefined()
+  })
+})
+
+describe('useSuggestion error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should handle fetch errors', async () => {
+    const mockError = new Error('Suggestion not found')
+    vi.mocked(suggestionsApi.get).mockRejectedValue(mockError)
+
+    const { result } = renderHook(() => useSuggestion('sugg-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(result.current.error).toEqual(mockError)
+    expect(result.current.data).toBeUndefined()
+  })
+})
+
+// Note: Error handling for mutations is implicitly tested via query error handling tests
+// The mutation hooks simply propagate errors from the API calls
+
+describe('useSuggestionsPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should fetch suggestions for an execution', async () => {
+    const mockSuggestions = [
+      createTestSuggestion({ id: '1', status: 'pending' }),
+      createTestSuggestion({ id: '2', status: 'applied' }),
+      createTestSuggestion({ id: '3', status: 'dismissed' }),
+    ]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.suggestions).toEqual(mockSuggestions)
+    expect(result.current.pendingSuggestions).toHaveLength(1)
+    expect(result.current.appliedSuggestions).toHaveLength(1)
+    expect(result.current.dismissedSuggestions).toHaveLength(1)
+  })
+
+  it('should return empty arrays when no executionId', async () => {
+    const { result } = renderHook(() => useSuggestionsPanel(undefined), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.suggestions).toEqual([])
+    expect(result.current.pendingSuggestions).toEqual([])
+    expect(result.current.appliedSuggestions).toEqual([])
+    expect(result.current.dismissedSuggestions).toEqual([])
+    expect(suggestionsApi.list).not.toHaveBeenCalled()
+  })
+
+  it('should handle selection state', async () => {
+    const mockSuggestions = [createTestSuggestion({ id: 'sugg-1' })]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Initial state - no selection
+    expect(result.current.selectedSuggestionId).toBeNull()
+    expect(result.current.selectedSuggestion).toBeUndefined()
+
+    // Select a suggestion
+    act(() => {
+      result.current.setSelectedSuggestionId('sugg-1')
+    })
+
+    expect(result.current.selectedSuggestionId).toBe('sugg-1')
+    expect(result.current.selectedSuggestion).toEqual(mockSuggestions[0])
+  })
+
+  it('should apply suggestion and clear selection', async () => {
+    const mockSuggestions = [createTestSuggestion({ id: 'sugg-1' })]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+    vi.mocked(suggestionsApi.apply).mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Select and apply
+    act(() => {
+      result.current.setSelectedSuggestionId('sugg-1')
+    })
+
+    await act(async () => {
+      await result.current.apply('sugg-1')
+    })
+
+    expect(suggestionsApi.apply).toHaveBeenCalledWith('sugg-1')
+    expect(result.current.selectedSuggestionId).toBeNull()
+  })
+
+  it('should dismiss suggestion and clear selection', async () => {
+    const mockSuggestions = [createTestSuggestion({ id: 'sugg-1' })]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+    vi.mocked(suggestionsApi.dismiss).mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Select and dismiss
+    act(() => {
+      result.current.setSelectedSuggestionId('sugg-1')
+    })
+
+    await act(async () => {
+      await result.current.dismiss('sugg-1')
+    })
+
+    expect(suggestionsApi.dismiss).toHaveBeenCalledWith('sugg-1')
+    expect(result.current.selectedSuggestionId).toBeNull()
+  })
+
+  it('should not clear selection when applying different suggestion', async () => {
+    const mockSuggestions = [
+      createTestSuggestion({ id: 'sugg-1' }),
+      createTestSuggestion({ id: 'sugg-2' }),
+    ]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+    vi.mocked(suggestionsApi.apply).mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Select sugg-1, apply sugg-2
+    act(() => {
+      result.current.setSelectedSuggestionId('sugg-1')
+    })
+
+    await act(async () => {
+      await result.current.apply('sugg-2')
+    })
+
+    // Selection should remain on sugg-1
+    expect(result.current.selectedSuggestionId).toBe('sugg-1')
+  })
+
+  it('should handle multiple pending suggestions', async () => {
+    const mockSuggestions = [
+      createTestSuggestion({ id: '1', status: 'pending', confidence: 'high' }),
+      createTestSuggestion({ id: '2', status: 'pending', confidence: 'medium' }),
+      createTestSuggestion({ id: '3', status: 'pending', confidence: 'low' }),
+      createTestSuggestion({ id: '4', status: 'applied' }),
+    ]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.pendingSuggestions).toHaveLength(3)
+    expect(result.current.appliedSuggestions).toHaveLength(1)
+  })
+
+  it('should provide refetch function', async () => {
+    const mockSuggestions1 = [createTestSuggestion({ id: '1' })]
+    const mockSuggestions2 = [
+      createTestSuggestion({ id: '1' }),
+      createTestSuggestion({ id: '2' }),
+    ]
+
+    vi.mocked(suggestionsApi.list)
+      .mockResolvedValueOnce(mockSuggestions1)
+      .mockResolvedValueOnce(mockSuggestions2)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.suggestions).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    await waitFor(() => expect(result.current.suggestions).toHaveLength(2))
+  })
+
+  it('should track loading states for apply and dismiss', async () => {
+    const mockSuggestions = [createTestSuggestion({ id: 'sugg-1' })]
+    vi.mocked(suggestionsApi.list).mockResolvedValue(mockSuggestions)
+    vi.mocked(suggestionsApi.apply).mockResolvedValue(undefined)
+    vi.mocked(suggestionsApi.dismiss).mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useSuggestionsPanel('exec-123'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Initial states should be false
+    expect(result.current.isApplying).toBe(false)
+    expect(result.current.isDismissing).toBe(false)
+
+    // After apply completes
+    await act(async () => {
+      await result.current.apply('sugg-1')
+    })
+    expect(result.current.isApplying).toBe(false)
+
+    // After dismiss completes
+    await act(async () => {
+      await result.current.dismiss('sugg-1')
+    })
+    expect(result.current.isDismissing).toBe(false)
   })
 })

@@ -161,7 +161,7 @@ export default function Dashboard() {
       <div className="bg-gray-800 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Recent Executions</h2>
 
-        {recentExecutions.length === 0 ? (
+        {!recentExecutions || recentExecutions.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             No recent executions found
           </div>

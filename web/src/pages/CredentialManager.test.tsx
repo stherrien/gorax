@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CredentialManager } from './CredentialManager'
 import { useCredentialStore } from '../stores/credentialStore'
+import { ThemeProvider } from '../contexts/ThemeContext'
 import type { Credential } from '../api/credentials'
 
 vi.mock('../stores/credentialStore')
+
+const renderWithTheme = (ui: React.ReactElement) => {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
 describe('CredentialManager', () => {
   const mockCredentials: Credential[] = [
@@ -47,7 +52,7 @@ describe('CredentialManager', () => {
   })
 
   it('renders credential manager page', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByText('Credentials')).toBeInTheDocument()
     expect(screen.getByText('Production API Key')).toBeInTheDocument()
@@ -55,19 +60,19 @@ describe('CredentialManager', () => {
   })
 
   it('fetches credentials on mount', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(mockStore.fetchCredentials).toHaveBeenCalled()
   })
 
   it('shows create credential button', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByRole('button', { name: /Create Credential/i })).toBeInTheDocument()
   })
 
   it('opens create form when create button is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const createButton = screen.getByRole('button', { name: /Create Credential/i })
     fireEvent.click(createButton)
@@ -76,7 +81,7 @@ describe('CredentialManager', () => {
   })
 
   it('closes create form when cancel is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const createButton = screen.getByRole('button', { name: /Create Credential/i })
     fireEvent.click(createButton)
@@ -96,7 +101,7 @@ describe('CredentialManager', () => {
   it('creates credential when form is submitted', async () => {
     mockStore.createCredential.mockResolvedValueOnce(undefined)
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const createButton = screen.getByRole('button', { name: /Create Credential/i })
     fireEvent.click(createButton)
@@ -119,7 +124,7 @@ describe('CredentialManager', () => {
   })
 
   it('shows edit form when edit button is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const editButtons = screen.getAllByText('Edit')
     fireEvent.click(editButtons[0])
@@ -131,7 +136,7 @@ describe('CredentialManager', () => {
   it('updates credential when edit form is submitted', async () => {
     mockStore.updateCredential.mockResolvedValueOnce(undefined)
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const editButtons = screen.getAllByText('Edit')
     fireEvent.click(editButtons[0])
@@ -150,7 +155,7 @@ describe('CredentialManager', () => {
   })
 
   it('shows delete confirmation when delete button is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const deleteButtons = screen.getAllByText('Delete')
     fireEvent.click(deleteButtons[0])
@@ -162,7 +167,7 @@ describe('CredentialManager', () => {
   it('deletes credential when confirmed', async () => {
     mockStore.deleteCredential.mockResolvedValueOnce(undefined)
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const deleteButtons = screen.getAllByText('Delete')
     fireEvent.click(deleteButtons[0])
@@ -176,7 +181,7 @@ describe('CredentialManager', () => {
   })
 
   it('cancels delete when cancel is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const deleteButtons = screen.getAllByText('Delete')
     fireEvent.click(deleteButtons[0])
@@ -194,7 +199,7 @@ describe('CredentialManager', () => {
       testedAt: '2024-01-15T10:00:00Z',
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const testButtons = screen.getAllByText('Test')
     fireEvent.click(testButtons[0])
@@ -213,7 +218,7 @@ describe('CredentialManager', () => {
       testedAt: '2024-01-15T10:00:00Z',
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const testButtons = screen.getAllByText('Test')
     fireEvent.click(testButtons[0])
@@ -224,13 +229,13 @@ describe('CredentialManager', () => {
   })
 
   it('shows search input', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByPlaceholderText(/Search credentials/i)).toBeInTheDocument()
   })
 
   it('filters credentials by search term', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const searchInput = screen.getByPlaceholderText(/Search credentials/i)
     fireEvent.change(searchInput, { target: { value: 'OAuth' } })
@@ -240,13 +245,13 @@ describe('CredentialManager', () => {
   })
 
   it('shows type filter', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByLabelText(/Filter by type/i)).toBeInTheDocument()
   })
 
   it('filters credentials by type', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const typeFilter = screen.getByLabelText(/Filter by type/i)
     fireEvent.change(typeFilter, { target: { value: 'oauth2' } })
@@ -256,13 +261,13 @@ describe('CredentialManager', () => {
   })
 
   it('shows sort options', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByLabelText(/Sort by/i)).toBeInTheDocument()
   })
 
   it('sorts credentials', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const sortSelect = screen.getByLabelText(/Sort by/i)
     fireEvent.change(sortSelect, { target: { value: 'name' } })
@@ -279,7 +284,7 @@ describe('CredentialManager', () => {
       credentials: [],
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByText(/Loading/i)).toBeInTheDocument()
   })
@@ -290,7 +295,7 @@ describe('CredentialManager', () => {
       error: 'Failed to fetch credentials',
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByText('Failed to fetch credentials')).toBeInTheDocument()
   })
@@ -301,7 +306,7 @@ describe('CredentialManager', () => {
       error: 'Failed to fetch credentials',
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const dismissButton = screen.getByRole('button', { name: /dismiss/i })
     fireEvent.click(dismissButton)
@@ -315,19 +320,19 @@ describe('CredentialManager', () => {
       credentials: [],
     })
 
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByText(/No credentials found/i)).toBeInTheDocument()
   })
 
   it('shows credential count', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     expect(screen.getByText(/2 credentials/i)).toBeInTheDocument()
   })
 
   it('refreshes credentials when refresh button is clicked', () => {
-    render(<CredentialManager />)
+    renderWithTheme(<CredentialManager />)
 
     const refreshButton = screen.getByRole('button', { name: /Refresh/i })
     fireEvent.click(refreshButton)

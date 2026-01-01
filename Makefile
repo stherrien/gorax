@@ -1,6 +1,6 @@
 .PHONY: all build run test clean deps docker-up docker-down migrate help \
 	kill-api kill-web kill-worker kill-all \
-	dev-start dev-restart dev-attach status
+	dev-start dev-restart dev-attach status dev-all
 
 # Variables
 BINARY_API=gorax-api
@@ -126,7 +126,7 @@ dev-simple-down:
 # Development environment (full stack with Kratos)
 dev: docker-up
 	@echo "Development environment started"
-	@echo "API: http://localhost:8080"
+	@echo "API: http://localhost:8181"
 	@echo "Kratos Public: http://localhost:4433"
 	@echo "Kratos Admin: http://localhost:4434"
 	@echo "MailSlurper: http://localhost:4437"
@@ -236,8 +236,11 @@ dev-full:
 	@echo "Starting frontend..."
 	cd web && npm run dev &
 	@echo "Full stack is running!"
-	@echo "API: http://localhost:8080"
+	@echo "API: http://localhost:8181"
 	@echo "Web: http://localhost:5173"
+
+# Development: API + Web in tmux (alias for dev-start)
+dev-all: dev-start
 
 # Generate API documentation
 docs:
@@ -284,8 +287,9 @@ help:
 	@echo "  make web-dev       - Start dev server"
 	@echo "  make web-build     - Build for production"
 	@echo ""
-	@echo "🚦 Dev Environment (tmux split-screen):"
-	@echo "  make dev-start     - Start API + web side-by-side and attach"
+	@echo "🚦 Dev Environment:"
+	@echo "  make dev-all       - Start API + web in tmux (same as dev-start)"
+	@echo "  make dev-start     - Start API + web in tmux split-screen"
 	@echo "  make dev-restart   - Kill all and restart"
 	@echo "  make dev-attach    - Attach to running session"
 	@echo "  make kill-all      - Kill all processes"

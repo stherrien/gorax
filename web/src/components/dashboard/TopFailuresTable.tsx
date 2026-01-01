@@ -60,7 +60,7 @@ const TopFailuresTable: React.FC<TopFailuresTableProps> = ({
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      ) : failures.length === 0 ? (
+      ) : !failures || failures.length === 0 ? (
         <div className="flex items-center justify-center h-64 text-gray-500">
           <div className="text-center">
             <svg
@@ -165,7 +165,7 @@ const TopFailuresTable: React.FC<TopFailuresTableProps> = ({
         </div>
       )}
 
-      {failures.length > 0 && (
+      {failures && failures.length > 0 && (
         <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-sm">
           <div className="flex">
             <div className="flex-shrink-0">
