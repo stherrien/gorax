@@ -17,7 +17,7 @@ export const useExecutionTrends = (params?: MetricsQueryParams) => {
       setLoading(true);
       setError(null);
       const response = await metricsApi.getExecutionTrends(params);
-      setTrends(response.trends);
+      setTrends(response.trends || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch trends');
     } finally {
@@ -42,7 +42,7 @@ export const useDurationStats = (params?: MetricsQueryParams) => {
       setLoading(true);
       setError(null);
       const response = await metricsApi.getDurationStats(params);
-      setStats(response.stats);
+      setStats(response.stats || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch duration stats');
     } finally {
@@ -67,7 +67,7 @@ export const useTopFailures = (params?: MetricsQueryParams) => {
       setLoading(true);
       setError(null);
       const response = await metricsApi.getTopFailures(params);
-      setFailures(response.failures);
+      setFailures(response.failures || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch failures');
     } finally {
@@ -92,7 +92,7 @@ export const useTriggerBreakdown = (params?: MetricsQueryParams) => {
       setLoading(true);
       setError(null);
       const response = await metricsApi.getTriggerBreakdown(params);
-      setBreakdown(response.breakdown);
+      setBreakdown(response.breakdown || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch trigger breakdown');
     } finally {

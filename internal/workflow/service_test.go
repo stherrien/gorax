@@ -72,6 +72,11 @@ func (m *MockRepository) GetExecutionByID(ctx context.Context, tenantID, id stri
 	return args.Get(0).(*Execution), args.Error(1)
 }
 
+func (m *MockRepository) UpdateExecutionStatus(ctx context.Context, id string, status ExecutionStatus, outputData []byte, errorMessage *string) error {
+	args := m.Called(ctx, id, status, outputData, errorMessage)
+	return args.Error(0)
+}
+
 func (m *MockRepository) GetStepExecutionsByExecutionID(ctx context.Context, executionID string) ([]*StepExecution, error) {
 	args := m.Called(ctx, executionID)
 	if args.Get(0) == nil {

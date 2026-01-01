@@ -28,6 +28,7 @@ type RepositoryInterface interface {
 	List(ctx context.Context, tenantID string, limit, offset int) ([]*Workflow, error)
 	CreateExecution(ctx context.Context, tenantID, workflowID string, workflowVersion int, triggerType string, triggerData []byte) (*Execution, error)
 	GetExecutionByID(ctx context.Context, tenantID, id string) (*Execution, error)
+	UpdateExecutionStatus(ctx context.Context, id string, status ExecutionStatus, outputData []byte, errorMessage *string) error
 	GetStepExecutionsByExecutionID(ctx context.Context, executionID string) ([]*StepExecution, error)
 	ListExecutions(ctx context.Context, tenantID string, workflowID string, limit, offset int) ([]*Execution, error)
 	ListExecutionsAdvanced(ctx context.Context, tenantID string, filter ExecutionFilter, cursor string, limit int) (*ExecutionListResult, error)
@@ -329,6 +330,33 @@ func (s *Service) ListExecutions(ctx context.Context, tenantID, workflowID strin
 	}
 
 	return s.repo.ListExecutions(ctx, tenantID, workflowID, limit, offset)
+}
+
+// CancelExecution cancels a running execution
+func (s *Service) CancelExecution(ctx context.Context, tenantID, executionID string) (*Execution, error) {
+	// Get the execution first to verify it exists and belongs to tenant
+	execution, err := s.repo.GetExecutionByID(ctx, tenantID, executionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if execution is in a cancellable state
+	if execution.Status == string(ExecutionStatusCompleted) || execution.Status == string(ExecutionStatusFailed) || execution.Status == string(ExecutionStatusCancelled) {
+		return nil, &ValidationError{Message: fmt.Sprintf("cannot cancel execution in %s state", execution.Status)}
+	}
+
+	// Update execution status to cancelled
+	cancelMsg := "execution cancelled by user"
+	err = s.repo.UpdateExecutionStatus(ctx, executionID, ExecutionStatusCancelled, nil, &cancelMsg)
+	if err != nil {
+		s.logger.Error("failed to cancel execution", "error", err, "execution_id", executionID)
+		return nil, fmt.Errorf("failed to cancel execution: %w", err)
+	}
+
+	s.logger.Info("execution cancelled", "execution_id", executionID, "tenant_id", tenantID)
+
+	// Return updated execution
+	return s.repo.GetExecutionByID(ctx, tenantID, executionID)
 }
 
 // ListExecutionsAdvanced retrieves executions with advanced filtering and cursor-based pagination

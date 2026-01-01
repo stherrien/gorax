@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useCredentialStore } from '../stores/credentialStore'
 import { CredentialList } from '../components/credentials/CredentialList'
 import { CredentialForm } from '../components/credentials/CredentialForm'
+import { useThemeContext } from '../contexts/ThemeContext'
 import type { Credential, CredentialType, CredentialCreateInput, CredentialUpdateInput } from '../api/credentials'
 
 type ViewMode = 'list' | 'create' | 'edit'
 
 export const CredentialManager: React.FC = () => {
+  const { isDark } = useThemeContext()
   const {
     credentials,
     loading,
@@ -69,7 +71,7 @@ export const CredentialManager: React.FC = () => {
   }
 
   const handleEdit = (id: string) => {
-    const credential = credentials.find((c) => c.id === id)
+    const credential = (credentials || []).find((c) => c.id === id)
     if (credential) {
       setEditingCredential(credential)
       setViewMode('edit')
@@ -89,19 +91,19 @@ export const CredentialManager: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Credentials</h1>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Credentials</h1>
           {viewMode === 'list' && (
             <div className="flex gap-2">
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-gray-300 bg-gray-800 border border-gray-700 hover:bg-gray-700' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
               >
                 Refresh
               </button>
               <button
                 onClick={() => setViewMode('create')}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
               >
                 Create Credential
               </button>
@@ -110,11 +112,11 @@ export const CredentialManager: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start justify-between">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className={`rounded-md p-4 flex items-start justify-between ${isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200'}`}>
+            <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-800'}`}>{error}</p>
             <button
               onClick={clearError}
-              className="text-red-600 hover:text-red-800"
+              className={isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'}
               aria-label="Dismiss error"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -132,13 +134,15 @@ export const CredentialManager: React.FC = () => {
           <div
             className={`border rounded-md p-4 ${
               testResult.success
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
+                ? isDark ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'
+                : isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
             }`}
           >
             <p
               className={`text-sm ${
-                testResult.success ? 'text-green-800' : 'text-red-800'
+                testResult.success
+                  ? isDark ? 'text-green-400' : 'text-green-800'
+                  : isDark ? 'text-red-400' : 'text-red-800'
               }`}
             >
               {testResult.message}
@@ -150,10 +154,10 @@ export const CredentialManager: React.FC = () => {
       {viewMode === 'list' && (
         <div>
           {/* Filters and Search */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+          <div className={`rounded-lg p-4 mb-6 ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="search" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Search
                 </label>
                 <input
@@ -162,19 +166,19 @@ export const CredentialManager: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search credentials..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${isDark ? 'bg-gray-900 text-white border border-gray-700 placeholder-gray-500' : 'bg-white text-gray-900 border border-gray-300 placeholder-gray-400'}`}
                 />
               </div>
 
               <div>
-                <label htmlFor="filterType" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="filterType" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Filter by type
                 </label>
                 <select
                   id="filterType"
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value as CredentialType | '')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${isDark ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'}`}
                 >
                   <option value="">All types</option>
                   <option value="api_key">API Key</option>
@@ -185,14 +189,14 @@ export const CredentialManager: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="sortBy" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Sort by
                 </label>
                 <select
                   id="sortBy"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'name' | 'created' | 'type')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${isDark ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-300'}`}
                 >
                   <option value="created">Created date</option>
                   <option value="name">Name</option>
@@ -204,7 +208,7 @@ export const CredentialManager: React.FC = () => {
 
           {/* Credential List */}
           <CredentialList
-            credentials={credentials}
+            credentials={credentials || []}
             loading={loading}
             searchTerm={searchTerm}
             filterType={filterType || undefined}
@@ -212,7 +216,7 @@ export const CredentialManager: React.FC = () => {
             onSelect={() => {}}
             onEdit={handleEdit}
             onDelete={(id) => {
-              const credential = credentials.find((c) => c.id === id)
+              const credential = (credentials || []).find((c) => c.id === id)
               if (credential) {
                 setDeletingCredential(credential)
               }
@@ -223,7 +227,7 @@ export const CredentialManager: React.FC = () => {
       )}
 
       {viewMode === 'create' && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
           <CredentialForm
             loading={loading}
             error={error}
@@ -234,7 +238,7 @@ export const CredentialManager: React.FC = () => {
       )}
 
       {viewMode === 'edit' && editingCredential && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
           <CredentialForm
             credential={editingCredential}
             loading={loading}
@@ -247,10 +251,10 @@ export const CredentialManager: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {deletingCredential && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Credential</h3>
-            <p className="text-sm text-gray-600 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className={`rounded-lg p-6 max-w-md w-full mx-4 ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Delete Credential</h3>
+            <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Are you sure you want to delete the credential "{deletingCredential.name}"? This action
               cannot be undone.
             </p>
@@ -258,7 +262,7 @@ export const CredentialManager: React.FC = () => {
               <button
                 onClick={() => setDeletingCredential(null)}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-gray-300 bg-gray-700 border border-gray-600 hover:bg-gray-600' : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'}`}
               >
                 Cancel
               </button>

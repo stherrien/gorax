@@ -135,12 +135,13 @@ export class APIClient {
     }
 
     // Handle error responses
+    // Read body as text first, then try to parse as JSON
+    // (avoids "body stream already read" error)
     let errorData: any
+    const text = await response.text()
     try {
-      errorData = await response.json()
+      errorData = JSON.parse(text)
     } catch {
-      // If JSON parsing fails, use text
-      const text = await response.text()
       errorData = { error: text || response.statusText }
     }
 
@@ -246,5 +247,7 @@ export class APIClient {
 }
 
 // Default API client instance
-const apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+// In development, use empty base URL so requests go through Vite proxy
+// In production, use VITE_API_URL or fallback to same-origin
+const apiBaseURL = import.meta.env.VITE_API_URL || ''
 export const apiClient = new APIClient(apiBaseURL)

@@ -1,0 +1,255 @@
+# GraphQL schema for Gorax workflow automation platform
+# For MVP, using String for JSON and Time types for simplicity
+
+type Query {
+  # Workflows
+  workflows(limit: Int, offset: Int): WorkflowConnection!
+  workflow(id: ID!): Workflow
+
+  # Executions
+  executions(workflowId: ID, status: String, limit: Int, offset: Int): ExecutionConnection!
+  execution(id: ID!): Execution
+
+  # Webhooks
+  webhooks(limit: Int, offset: Int): [Webhook!]!
+  webhook(id: ID!): Webhook
+
+  # Schedules
+  schedules(workflowId: ID, limit: Int, offset: Int): [Schedule!]!
+  schedule(id: ID!): Schedule
+
+  # Templates
+  templates(category: String, limit: Int, offset: Int): [Template!]!
+  template(id: ID!): Template
+}
+
+type Mutation {
+  # Workflow mutations
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
+  executeWorkflow(id: ID!, input: String): Execution!
+
+  # Execution mutations
+  cancelExecution(id: ID!): Execution!
+
+  # Webhook mutations
+  createWebhook(input: CreateWebhookInput!): Webhook!
+  updateWebhook(id: ID!, input: UpdateWebhookInput!): Webhook!
+  deleteWebhook(id: ID!): Boolean!
+  regenerateWebhookSecret(id: ID!): Webhook!
+
+  # Schedule mutations
+  createSchedule(workflowId: ID!, input: CreateScheduleInput!): Schedule!
+  updateSchedule(id: ID!, input: UpdateScheduleInput!): Schedule!
+  deleteSchedule(id: ID!): Boolean!
+
+  # Template mutations
+  createTemplate(input: CreateTemplateInput!): Template!
+  updateTemplate(id: ID!, input: UpdateTemplateInput!): Template!
+  deleteTemplate(id: ID!): Boolean!
+}
+
+type Subscription {
+  # Execution subscriptions
+  executionUpdated(workflowId: ID): Execution!
+}
+
+# Workflow types
+type Workflow {
+  id: ID!
+  tenantId: String!
+  name: String!
+  description: String!
+  definition: String!
+  status: String!
+  version: Int!
+  createdBy: String!
+  createdAt: String!
+  updatedAt: String!
+  executions(limit: Int): [Execution!]
+  schedules: [Schedule!]
+  webhooks: [Webhook!]
+}
+
+type WorkflowConnection {
+  data: [Workflow!]!
+  totalCount: Int!
+  hasMore: Boolean!
+}
+
+input CreateWorkflowInput {
+  name: String!
+  description: String
+  definition: String!
+}
+
+input UpdateWorkflowInput {
+  name: String
+  description: String
+  definition: String
+  status: String
+}
+
+# Execution types
+type Execution {
+  id: ID!
+  tenantId: String!
+  workflowId: String!
+  workflowVersion: Int!
+  status: String!
+  triggerType: String!
+  triggerData: String
+  outputData: String
+  errorMessage: String
+  parentExecutionId: String
+  executionDepth: Int!
+  startedAt: String
+  completedAt: String
+  createdAt: String!
+  workflow: Workflow
+  steps: [StepExecution!]
+}
+
+type ExecutionConnection {
+  data: [Execution!]!
+  totalCount: Int!
+  hasMore: Boolean!
+  cursor: String
+}
+
+type StepExecution {
+  id: ID!
+  executionId: String!
+  nodeId: String!
+  nodeType: String!
+  status: String!
+  inputData: String
+  outputData: String
+  errorMessage: String
+  retryCount: Int!
+  startedAt: String
+  completedAt: String
+  durationMs: Int
+}
+
+# Webhook types
+type Webhook {
+  id: ID!
+  tenantId: String!
+  workflowId: String!
+  nodeId: String!
+  name: String!
+  path: String!
+  secret: String!
+  authType: String!
+  description: String!
+  priority: Int!
+  enabled: Boolean!
+  triggerCount: Int!
+  lastTriggeredAt: String
+  createdAt: String!
+  updatedAt: String!
+  workflow: Workflow
+  events(limit: Int): [WebhookEvent!]
+}
+
+type WebhookEvent {
+  id: ID!
+  tenantId: String!
+  webhookId: String!
+  executionId: String
+  requestMethod: String!
+  requestHeaders: String!
+  requestBody: String!
+  responseStatus: Int
+  processingTimeMs: Int
+  status: String!
+  errorMessage: String
+  filteredReason: String
+  replayCount: Int!
+  sourceEventId: String
+  metadata: String
+  createdAt: String!
+}
+
+input CreateWebhookInput {
+  workflowId: ID!
+  nodeId: String!
+  name: String!
+  authType: String
+  description: String
+}
+
+input UpdateWebhookInput {
+  name: String
+  authType: String
+  description: String
+  enabled: Boolean
+}
+
+# Schedule types
+type Schedule {
+  id: ID!
+  tenantId: String!
+  workflowId: String!
+  name: String!
+  cronExpression: String!
+  timezone: String!
+  enabled: Boolean!
+  nextRunAt: String
+  lastRunAt: String
+  lastExecutionId: String
+  createdBy: String!
+  createdAt: String!
+  updatedAt: String!
+  workflow: Workflow
+}
+
+input CreateScheduleInput {
+  name: String!
+  cronExpression: String!
+  timezone: String
+  enabled: Boolean
+}
+
+input UpdateScheduleInput {
+  name: String
+  cronExpression: String
+  timezone: String
+  enabled: Boolean
+}
+
+# Template types
+type Template {
+  id: ID!
+  tenantId: String
+  name: String!
+  description: String!
+  category: String!
+  definition: String!
+  tags: [String!]
+  isPublic: Boolean!
+  usageCount: Int!
+  createdBy: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateTemplateInput {
+  name: String!
+  description: String
+  category: String!
+  definition: String!
+  tags: [String!]
+  isPublic: Boolean
+}
+
+input UpdateTemplateInput {
+  name: String
+  description: String
+  category: String
+  definition: String
+  tags: [String!]
+  isPublic: Boolean
+}

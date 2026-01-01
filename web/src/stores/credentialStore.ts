@@ -42,7 +42,7 @@ export const useCredentialStore = create<CredentialState>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await credentialAPI.list(params)
-      set({ credentials: response.credentials, loading: false })
+      set({ credentials: response.data || [], loading: false })
     } catch (error: any) {
       set({ error: error.message, loading: false })
     }
