@@ -145,8 +145,13 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
+
+	// Configure connection pool for optimal performance
+	// See docs/POST_DEPLOYMENT_CHECKLIST.md for calculation details
+	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.Database.ConnMaxIdleTime)
 	app.db = db
 
 	// Initialize Redis client

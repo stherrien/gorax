@@ -66,12 +66,16 @@ type ServerConfig struct {
 
 // DatabaseConfig holds PostgreSQL configuration
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host              string
+	Port              int
+	User              string
+	Password          string
+	DBName            string
+	SSLMode           string
+	MaxOpenConns      int
+	MaxIdleConns      int
+	ConnMaxLifetime   time.Duration
+	ConnMaxIdleTime   time.Duration
 }
 
 // ConnectionString returns the PostgreSQL connection string
@@ -253,12 +257,16 @@ func Load() (*Config, error) {
 			Env:     getEnv("APP_ENV", "development"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5433),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "postgres"),
-			DBName:   getEnv("DB_NAME", "gorax"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+			Host:             getEnv("DB_HOST", "localhost"),
+			Port:             getEnvAsInt("DB_PORT", 5433),
+			User:             getEnv("DB_USER", "postgres"),
+			Password:         getEnv("DB_PASSWORD", "postgres"),
+			DBName:           getEnv("DB_NAME", "gorax"),
+			SSLMode:          getEnv("DB_SSLMODE", "disable"),
+			MaxOpenConns:     getEnvAsInt("DB_MAX_OPEN_CONNS", 150),
+			MaxIdleConns:     getEnvAsInt("DB_MAX_IDLE_CONNS", 25),
+			ConnMaxLifetime:  getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+			ConnMaxIdleTime:  getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
 		},
 		Redis: RedisConfig{
 			Address:  getEnv("REDIS_ADDRESS", "localhost:6379"),
