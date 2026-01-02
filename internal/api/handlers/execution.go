@@ -36,7 +36,24 @@ func NewExecutionHandler(service ExecutionService, logger *slog.Logger) *Executi
 }
 
 // ListExecutionsAdvanced returns executions with advanced filtering and cursor pagination
-// GET /api/v1/executions
+// @Summary List workflow executions with advanced filtering
+// @Description Returns paginated workflow executions with support for filtering by status, trigger type, workflow, and date range
+// @Tags Executions
+// @Accept json
+// @Produce json
+// @Param workflow_id query string false "Filter by workflow ID"
+// @Param status query string false "Filter by status (pending, running, completed, failed)" Enums(pending, running, completed, failed)
+// @Param trigger_type query string false "Filter by trigger type (manual, webhook, schedule)" Enums(manual, webhook, schedule)
+// @Param from query string false "Start date (RFC3339 format)"
+// @Param to query string false "End date (RFC3339 format)"
+// @Param cursor query string false "Cursor for pagination"
+// @Param limit query int false "Maximum results" default(20)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} workflow.ExecutionListResult "List of executions with cursor"
+// @Failure 400 {object} map[string]string "Invalid filter parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/executions [get]
 func (h *ExecutionHandler) ListExecutionsAdvanced(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -71,7 +88,19 @@ func (h *ExecutionHandler) ListExecutionsAdvanced(w http.ResponseWriter, r *http
 }
 
 // GetExecutionWithSteps retrieves an execution with all its step executions
-// GET /api/v1/executions/:executionID/steps
+// @Summary Get execution with detailed steps
+// @Description Retrieves complete execution details including all step executions, inputs, outputs, and errors
+// @Tags Executions
+// @Accept json
+// @Produce json
+// @Param executionID path string true "Execution ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} workflow.ExecutionWithSteps "Execution with step details"
+// @Failure 400 {object} map[string]string "Invalid execution ID"
+// @Failure 404 {object} map[string]string "Execution not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/executions/{executionID}/steps [get]
 func (h *ExecutionHandler) GetExecutionWithSteps(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {

@@ -87,6 +87,15 @@ import (
 // @tag.name Event Types
 // @tag.description Event type registry for webhooks
 
+// @tag.name Analytics
+// @tag.description Workflow execution analytics and reporting
+
+// @tag.name Marketplace
+// @tag.description Template marketplace for sharing and installing workflows
+
+// @tag.name RBAC
+// @tag.description Role-based access control and permissions management
+
 func main() {
 	// Initialize structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

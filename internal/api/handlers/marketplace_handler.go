@@ -46,6 +46,24 @@ func NewMarketplaceHandler(service MarketplaceService, logger *slog.Logger) *Mar
 }
 
 // ListTemplates returns all marketplace templates with optional filters
+// @Summary List marketplace templates
+// @Description Search and filter marketplace templates by category, tags, rating, and verification status
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param category query string false "Filter by category"
+// @Param search query string false "Search query for template name or description"
+// @Param tags query string false "Comma-separated list of tags"
+// @Param min_rating query number false "Minimum rating (0-5)"
+// @Param is_verified query boolean false "Filter by verification status"
+// @Param sort_by query string false "Sort field (created_at, updated_at, rating, installs)" Enums(created_at, updated_at, rating, installs)
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Results per page" default(20)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {array} marketplace.MarketplaceTemplate "List of templates"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates [get]
 func (h *MarketplaceHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	filter := marketplace.SearchFilter{
 		Category:    r.URL.Query().Get("category"),
@@ -90,6 +108,18 @@ func (h *MarketplaceHandler) ListTemplates(w http.ResponseWriter, r *http.Reques
 }
 
 // GetTemplate retrieves a single marketplace template
+// @Summary Get marketplace template
+// @Description Retrieves detailed information about a specific marketplace template
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} marketplace.MarketplaceTemplate "Template details"
+// @Failure 404 {object} map[string]string "Template not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id} [get]
 func (h *MarketplaceHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 	templateID := chi.URLParam(r, "id")
 
@@ -107,6 +137,19 @@ func (h *MarketplaceHandler) GetTemplate(w http.ResponseWriter, r *http.Request)
 }
 
 // PublishTemplate publishes a new template to the marketplace
+// @Summary Publish template to marketplace
+// @Description Publishes a workflow as a reusable template in the marketplace
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param template body marketplace.PublishTemplateInput true "Template publication data"
+// @Security TenantID
+// @Security UserID
+// @Success 201 {object} marketplace.MarketplaceTemplate "Published template"
+// @Failure 400 {object} map[string]string "Invalid request or validation error"
+// @Failure 409 {object} map[string]string "Template already exists"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates [post]
 func (h *MarketplaceHandler) PublishTemplate(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	userName := h.getUserName(r)
@@ -140,6 +183,21 @@ func (h *MarketplaceHandler) PublishTemplate(w http.ResponseWriter, r *http.Requ
 }
 
 // InstallTemplate installs a template as a workflow
+// @Summary Install marketplace template
+// @Description Installs a marketplace template as a workflow in the tenant's account
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Param installation body marketplace.InstallTemplateInput true "Installation configuration"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} marketplace.InstallTemplateResult "Installation result with workflow ID"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 404 {object} map[string]string "Template not found"
+// @Failure 409 {object} map[string]string "Template already installed"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id}/install [post]
 func (h *MarketplaceHandler) InstallTemplate(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	userID := middleware.GetUserID(r)
@@ -174,6 +232,19 @@ func (h *MarketplaceHandler) InstallTemplate(w http.ResponseWriter, r *http.Requ
 }
 
 // RateTemplate adds or updates a rating for a template
+// @Summary Rate marketplace template
+// @Description Submits or updates a rating and review for a marketplace template
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Param rating body marketplace.RateTemplateInput true "Rating data (1-5 stars and optional comment)"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} marketplace.TemplateReview "Submitted review"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id}/rate [post]
 func (h *MarketplaceHandler) RateTemplate(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	userID := middleware.GetUserID(r)
@@ -205,6 +276,19 @@ func (h *MarketplaceHandler) RateTemplate(w http.ResponseWriter, r *http.Request
 }
 
 // GetReviews retrieves reviews for a template
+// @Summary Get template reviews
+// @Description Retrieves paginated reviews and ratings for a marketplace template
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Param limit query int false "Maximum results" default(10)
+// @Param offset query int false "Pagination offset" default(0)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {array} marketplace.TemplateReview "List of reviews"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id}/reviews [get]
 func (h *MarketplaceHandler) GetReviews(w http.ResponseWriter, r *http.Request) {
 	templateID := chi.URLParam(r, "id")
 
@@ -232,6 +316,19 @@ func (h *MarketplaceHandler) GetReviews(w http.ResponseWriter, r *http.Request) 
 }
 
 // DeleteReview deletes a review
+// @Summary Delete template review
+// @Description Deletes a review (only allowed for review author or admin)
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Param reviewId path string true "Review ID"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Review deleted successfully"
+// @Failure 404 {object} map[string]string "Review not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id}/reviews/{reviewId} [delete]
 func (h *MarketplaceHandler) DeleteReview(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	templateID := chi.URLParam(r, "id")
@@ -250,6 +347,17 @@ func (h *MarketplaceHandler) DeleteReview(w http.ResponseWriter, r *http.Request
 }
 
 // GetTrending retrieves trending templates
+// @Summary Get trending templates
+// @Description Returns templates that are currently trending based on recent installs and views
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param limit query int false "Maximum results" default(10)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {array} marketplace.MarketplaceTemplate "Trending templates"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/trending [get]
 func (h *MarketplaceHandler) GetTrending(w http.ResponseWriter, r *http.Request) {
 	limit := 10
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -268,6 +376,17 @@ func (h *MarketplaceHandler) GetTrending(w http.ResponseWriter, r *http.Request)
 }
 
 // GetPopular retrieves popular templates
+// @Summary Get popular templates
+// @Description Returns the most popular templates based on total installs and ratings
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param limit query int false "Maximum results" default(10)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {array} marketplace.MarketplaceTemplate "Popular templates"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/popular [get]
 func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) {
 	limit := 10
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -286,6 +405,13 @@ func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) 
 }
 
 // GetCategories retrieves all available template categories
+// @Summary Get template categories
+// @Description Returns the list of all available template categories
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Success 200 {array} string "List of category names"
+// @Router /api/v1/marketplace/categories [get]
 func (h *MarketplaceHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories := h.service.GetCategories()
 	h.respondJSON(w, http.StatusOK, categories)
