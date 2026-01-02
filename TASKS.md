@@ -1148,4 +1148,190 @@ PASS: TestMongoAggregateAction_Execute
 
 ---
 
-Last Updated: 2024-12-30
+### Comprehensive Documentation Suite (2026-01-01)
+
+**Objective:** Create complete documentation for contributors, developers, and operators
+
+**Completed Items:**
+
+**Priority 1 - Critical Documentation:**
+
+1. ✅ **CONTRIBUTING.md** (589 lines)
+   - Code of Conduct and community guidelines
+   - Complete local development setup instructions
+   - Git Flow process (branch naming: `<ticket>-<description>`)
+   - TDD requirements (Red-Green-Refactor mandatory)
+   - Pull request process with template
+   - Coding standards (SOLID, clean code, complexity < 15)
+   - Testing requirements (80%+ business logic coverage)
+   - Documentation guidelines and security reporting
+
+2. ✅ **docs/getting-started.md** (expanded from 198 to 1,054 lines)
+   - Comprehensive onboarding for new developers
+   - Multiple installation methods (Docker, manual, dev mode)
+   - 80+ environment variables documented
+   - Platform-specific instructions (macOS, Linux, Windows/WSL2)
+   - Troubleshooting guide (7 common issues)
+   - Quick start guides for all components
+   - Verification commands and health checks
+
+3. ✅ **docs/architecture.md** (890 lines)
+   - System overview with multi-layer architecture diagrams
+   - Clean Architecture and SOLID principles
+   - Complete component breakdown (Go backend + React frontend)
+   - Data flow documentation (workflow execution, webhooks, collaboration, credentials)
+   - Full technology stack reference
+   - 10 design patterns with code examples (Factory, Repository, Visitor, etc.)
+   - Deployment architectures (dev, production, HA, Kubernetes)
+   - Security architecture (defense in depth, encryption)
+   - Scalability strategies and performance targets
+   - Observability (Prometheus metrics, structured logging, OpenTelemetry tracing)
+
+4. ✅ **docs/DEPLOYMENT.md** (890 lines)
+   - Infrastructure requirements and resource sizing
+   - Docker deployment with production docker-compose.yml
+   - Complete Kubernetes manifests (Deployment, Service, HPA, Ingress)
+   - Database setup (PostgreSQL migrations, backups, replication)
+   - Redis configuration (Sentinel, Cluster modes)
+   - 80+ environment variables documented
+   - Load balancer and ingress configuration
+   - Monitoring stack setup (Prometheus, Grafana, OpenTelemetry, Sentry)
+   - CI/CD pipeline with GitHub Actions
+   - Pre/post deployment checklists
+   - Scaling strategies and troubleshooting
+
+5. ✅ **docs/README.md** (updated)
+   - Fixed all dead links (11 moved to "Planned Documentation")
+   - Corrected file paths (../CONTRIBUTING.md, API_REFERENCE.md)
+   - Added "Collaboration & Real-time Features" section
+   - All 19 working links verified
+   - Better organization reflecting current documentation state
+
+**Priority 2 - Developer & Operations Guides:**
+
+6. ✅ **docs/FRONTEND_GUIDE.md** (1,000+ lines)
+   - Complete React/TypeScript development guide
+   - Frontend stack overview (React 18, Vite, Tailwind, ReactFlow, Zustand, TanStack Query)
+   - Clean architecture principles for frontend
+   - Component development patterns (functional, compound, render props)
+   - State management strategies (when to use Zustand vs TanStack Query)
+   - API integration with custom hooks
+   - Testing strategies (Vitest, Testing Library, 60%+ coverage target)
+   - Performance optimization (code splitting, memoization, virtualization)
+   - Common UI patterns (forms with React Hook Form + Zod, modals, tables, WebSocket)
+   - Build and deployment configuration
+   - Troubleshooting guide for frontend issues
+
+7. ✅ **docs/INTEGRATION_GUIDE.md** (1,100+ lines)
+   - How to extend Gorax with new integrations, actions, and connectors
+   - Action interface implementation and lifecycle
+   - Integration file organization and structure
+   - Common patterns (HTTP/REST, OAuth 2.0, webhooks, polling vs push)
+   - LLM provider integration (Provider interface, request/response mapping, token tracking)
+   - Credential management (template injection `{{credentials.name}}`, encryption, masking)
+   - Expression evaluation (CEL integration, context access)
+   - Real-world step-by-step examples:
+     - Complete Slack SendMessage integration
+     - Custom HTTP action implementation
+     - Adding new LLM provider (Cohere, Gemini)
+   - Testing with mocks and integration tests
+   - Marketplace template publishing process
+
+8. ✅ **docs/DATABASE_SCHEMA.md** (1,200+ lines)
+   - Complete PostgreSQL 15+ schema documentation
+   - 27 core tables with full SQL definitions and column descriptions
+   - Multi-tenancy model with Row-Level Security (RLS) policies
+   - Entity relationship diagrams (5 domains: Workflow, Credential, Webhook, Marketplace, RBAC)
+   - Index strategies (composite, partial, GIN) with examples
+   - Query optimization patterns (N+1 avoidance, cursor pagination)
+   - Migration patterns and zero-downtime migration strategies
+   - Partitioning strategy for high-volume tables (executions, webhook_events)
+   - Backup and recovery procedures (PITR, pg_dump, disaster recovery)
+   - Common queries for all major use cases (analytics, audit, performance)
+   - Performance tuning (connection pooling, query timeouts, EXPLAIN ANALYZE)
+   - Security considerations (RLS, envelope encryption, parameterized queries)
+
+9. ✅ **docs/TROUBLESHOOTING.md** (1,200+ lines)
+   - Operational troubleshooting for production issues
+   - Quick diagnostics (health checks, system status, log locations, error pattern recognition)
+   - 12 application issues (API 500 errors, workflows not executing, queue backlog, memory/CPU, slow responses, connection exhaustion)
+   - 8 database issues (connection pool, slow queries, lock contention, disk space, migrations, replication lag, table bloat, index corruption)
+   - Performance analysis tools (Prometheus queries, Grafana dashboards, Go pprof, Jaeger tracing)
+   - Worker/queue issues (stuck messages, DLQ analysis, crashes, concurrency limits, queue monitoring)
+   - Auth/authz problems (login failures, JWT tokens, RBAC, tenant isolation, sessions)
+   - Integration failures (LLM rate limits, external connectivity, credential expiration, OAuth refresh, webhook delivery)
+   - Monitoring setup (Prometheus alert rules, Grafana dashboards, Loki log aggregation, Sentry, Jaeger)
+   - Log analysis (structured logging, field-based filtering, correlation IDs)
+   - kubectl/Docker command reference (logs, exec, port-forward, scaling, restart strategies)
+   - Emergency procedures (incident response, database failover, rollback, circuit breaker, rate limiting)
+   - Post-mortem template for incident documentation
+
+**Files Created:**
+- `CONTRIBUTING.md` (589 lines)
+- `docs/getting-started.md` (expanded 198 → 1,054 lines)
+- `docs/architecture.md` (890 lines)
+- `docs/DEPLOYMENT.md` (890 lines)
+- `docs/FRONTEND_GUIDE.md` (1,000+ lines)
+- `docs/INTEGRATION_GUIDE.md` (1,100+ lines)
+- `docs/DATABASE_SCHEMA.md` (1,200+ lines)
+- `docs/TROUBLESHOOTING.md` (1,200+ lines)
+
+**Files Modified:**
+- `docs/README.md` (fixed dead links, added sections)
+
+**Documentation Statistics:**
+- Total lines written: ~11,000 lines
+- Total files created: 8 major documentation files
+- Coverage: Contributors, developers, operators, and end-users
+- All documentation follows project style and includes real code examples
+
+**Target Audiences:**
+- **Contributors**: CONTRIBUTING.md, getting-started.md
+- **Frontend Developers**: FRONTEND_GUIDE.md
+- **Backend Developers**: INTEGRATION_GUIDE.md, architecture.md
+- **Database Engineers**: DATABASE_SCHEMA.md
+- **DevOps/SRE**: DEPLOYMENT.md, TROUBLESHOOTING.md
+- **All Developers**: architecture.md, DEVELOPER_GUIDE.md
+
+**Quality Standards:**
+- Real code examples from codebase
+- Copy-paste ready commands and configurations
+- Comprehensive troubleshooting sections
+- Cross-referenced between documents
+- Platform-specific instructions where applicable
+- Security best practices included
+- Performance optimization guidance
+- Tested procedures and verified links
+
+**How to Use:**
+
+1. **New Contributors:**
+   - Start with CONTRIBUTING.md
+   - Follow getting-started.md for setup
+   - Review architecture.md for system overview
+
+2. **Frontend Development:**
+   - Read FRONTEND_GUIDE.md for React patterns
+   - Check existing components for examples
+   - Follow TDD workflow
+
+3. **Backend Development:**
+   - Read architecture.md for system design
+   - Use INTEGRATION_GUIDE.md for new integrations
+   - Refer to DATABASE_SCHEMA.md for data model
+
+4. **Production Operations:**
+   - Use DEPLOYMENT.md for deployment procedures
+   - Reference TROUBLESHOOTING.md for incident response
+   - Follow runbooks for common operations
+
+**Future Enhancements:**
+- Workflow specification documentation (JSON schema, node types, expressions)
+- API client SDK documentation (Go, TypeScript, Python)
+- Performance tuning guide (benchmarking, profiling, optimization)
+- Security audit guide (penetration testing, vulnerability scanning)
+- Disaster recovery runbook (detailed procedures)
+
+---
+
+Last Updated: 2026-01-01
