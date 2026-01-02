@@ -25,6 +25,7 @@ type Config struct {
 	SecurityHeader SecurityHeaderConfig
 	AIBuilder      AIBuilderConfig
 	WebSocket      WebSocketConfig
+	SSRF           SSRFConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -232,6 +233,18 @@ type SecurityHeaderConfig struct {
 	FrameOptions string
 }
 
+// SSRFConfig holds SSRF protection configuration
+type SSRFConfig struct {
+	// Enabled controls whether SSRF protection is active (default: true)
+	Enabled bool
+	// AllowedNetworks are CIDR ranges that are explicitly allowed (overrides blocklist)
+	// Example: "192.168.1.0/24" to allow internal network access
+	AllowedNetworks []string
+	// BlockedNetworks are additional CIDR ranges to block beyond defaults
+	// Example: "203.0.113.0/24" to block a specific public range
+	BlockedNetworks []string
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -346,6 +359,7 @@ func Load() (*Config, error) {
 			Temperature: getEnvAsFloat("AI_BUILDER_TEMPERATURE", 0.7),
 		},
 		WebSocket: loadWebSocketConfig(),
+		SSRF:      loadSSRFConfig(),
 	}
 
 	return cfg, nil
@@ -483,5 +497,18 @@ func loadSecurityHeaderConfig() SecurityHeaderConfig {
 		HSTSMaxAge:    getEnvAsInt("SECURITY_HEADER_HSTS_MAX_AGE", defaultHSTSMaxAge),
 		CSPDirectives: getEnv("SECURITY_HEADER_CSP_DIRECTIVES", defaultCSPDirectives),
 		FrameOptions:  getEnv("SECURITY_HEADER_FRAME_OPTIONS", defaultFrameOptions),
+	}
+}
+
+func loadSSRFConfig() SSRFConfig {
+	return SSRFConfig{
+		// SSRF protection is enabled by default for security
+		Enabled: getEnvAsBool("SSRF_PROTECTION_ENABLED", true),
+		// AllowedNetworks can be configured to allow specific internal networks
+		// Example: SSRF_ALLOWED_NETWORKS=192.168.1.0/24,10.0.0.0/8
+		AllowedNetworks: getEnvAsSlice("SSRF_ALLOWED_NETWORKS", []string{}),
+		// BlockedNetworks can be configured to block additional networks
+		// Example: SSRF_BLOCKED_NETWORKS=203.0.113.0/24
+		BlockedNetworks: getEnvAsSlice("SSRF_BLOCKED_NETWORKS", []string{}),
 	}
 }
