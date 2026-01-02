@@ -58,8 +58,12 @@ export interface UseExecutionUpdatesReturn {
  * const { connected, currentStatus, currentProgress } = useExecutionUpdates(
  *   executionId,
  *   {
- *     onStatusChange: (status) => console.log('Status changed:', status),
- *     onComplete: (output) => console.log('Execution completed:', output),
+ *     onStatusChange: (status) => {
+ *       // Handle status change
+ *     },
+ *     onComplete: (output) => {
+ *       // Handle completion
+ *     },
  *   }
  * )
  * ```
@@ -192,8 +196,9 @@ export function useExecutionUpdates(
       onClose: () => {
         setConnected(false)
       },
-      onError: (error) => {
-        console.error('WebSocket error:', error)
+      onError: () => {
+        // WebSocket error - could be logged to error tracking service
+        callbacksRef.current.onError?.('WebSocket connection error')
       },
       onReconnecting: (attempt) => {
         setReconnecting(true)

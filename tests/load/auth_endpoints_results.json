@@ -1,0 +1,651 @@
+{
+  "root_group": {
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "checks": [
+          {
+            "name": "login successful",
+            "path": "::Login::login successful",
+            "id": "0bc60ba16da01bc36f047375d97b7348",
+            "passes": 0,
+            "fails": 11
+          },
+          {
+            "id": "03621701f69eaba182fba52c8d09ec32",
+            "passes": 0,
+            "fails": 11,
+            "name": "token received",
+            "path": "::Login::token received"
+          },
+          {
+            "passes": 11,
+            "fails": 0,
+            "name": "login time < 300ms",
+            "path": "::Login::login time < 300ms",
+            "id": "a360083fe8891ab624f0c893f8c55629"
+          }
+        ],
+        "name": "Login",
+        "path": "::Login",
+        "id": "3be6f351497d03a0d837b765965c8d50",
+        "groups": []
+      },
+      {
+        "groups": [],
+        "checks": [
+            {
+              "name": "token valid",
+              "path": "::Token Validation::token valid",
+              "id": "24cc6076e2bca9a42e2ac5353210aab9",
+              "passes": 0,
+              "fails": 11
+            },
+            {
+              "name": "validation time < 100ms",
+              "path": "::Token Validation::validation time < 100ms",
+              "id": "752a68090bb4a4b817f01c508ff65b66",
+              "passes": 11,
+              "fails": 0
+            }
+          ],
+        "name": "Token Validation",
+        "path": "::Token Validation",
+        "id": "0d8ea3babaf0ac4dd4fe64425af8bb19"
+      },
+      {
+        "name": "Protected Endpoint Access",
+        "path": "::Protected Endpoint Access",
+        "id": "2e5444712aa50c8fbdc92deaa09dea52",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "protected endpoint accessible",
+              "path": "::Protected Endpoint Access::protected endpoint accessible",
+              "id": "855ccf3046da4ddd526280fd3ad50c34",
+              "passes": 11
+            },
+            {
+              "name": "response is valid",
+              "path": "::Protected Endpoint Access::response is valid",
+              "id": "876c77cc1ea04d62142fb2e940768259",
+              "passes": 11,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "id": "ca4c5628f496f08817b10ca3c7b78205",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 11,
+              "name": "invalid credentials rejected",
+              "path": "::Invalid Credentials::invalid credentials rejected",
+              "id": "49032ad4d7eb5ddf3afab7ef6bc550bf",
+              "passes": 0
+            },
+            {
+              "name": "error message present",
+              "path": "::Invalid Credentials::error message present",
+              "id": "dc8633eec5ff2eead629fef9215063f0",
+              "passes": 0,
+              "fails": 11
+            }
+          ],
+        "name": "Invalid Credentials",
+        "path": "::Invalid Credentials"
+      },
+      {
+        "groups": [],
+        "checks": [
+            {
+              "passes": 0,
+              "fails": 11,
+              "name": "invalid token rejected",
+              "path": "::Invalid Token::invalid token rejected",
+              "id": "a906ad0c2ac6ff118ee73fda904785bc"
+            }
+          ],
+        "name": "Invalid Token",
+        "path": "::Invalid Token",
+        "id": "e7aaa2f649f024f45904f819f537c4ef"
+      },
+      {
+        "name": "Missing Token",
+        "path": "::Missing Token",
+        "id": "e84a265707cb0c12c98efe3000fe3d2a",
+        "groups": [],
+        "checks": [
+            {
+              "name": "missing token rejected",
+              "path": "::Missing Token::missing token rejected",
+              "id": "347d72df0cac44084571c161160b704c",
+              "passes": 0,
+              "fails": 11
+            }
+          ]
+      },
+      {
+        "name": "Logout",
+        "path": "::Logout",
+        "id": "2958cd095d596e760ce0636ac19c8a6a",
+        "groups": [],
+        "checks": [
+            {
+              "name": "logout successful",
+              "path": "::Logout::logout successful",
+              "id": "37bb639ed779406e2d51c4bda45e9b0f",
+              "passes": 0,
+              "fails": 11
+            },
+            {
+              "fails": 0,
+              "name": "logout time < 200ms",
+              "path": "::Logout::logout time < 200ms",
+              "id": "6295374a37cd42571c3705862d967b71",
+              "passes": 11
+            }
+          ]
+      },
+      {
+        "name": "Post-Logout Validation",
+        "path": "::Post-Logout Validation",
+        "id": "3ff4bbdaf5a750ad766de496f7f44203",
+        "groups": [],
+        "checks": [
+            {
+              "path": "::Post-Logout Validation::token invalid after logout",
+              "id": "ec6108bf37a8073fcffcd3b373f9dc6a",
+              "passes": 0,
+              "fails": 11,
+              "name": "token invalid after logout"
+            }
+          ]
+      },
+      {
+        "path": "::Concurrent Logins",
+        "id": "87768891e6f6ece0a87eb84218eef6da",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 11,
+              "name": "all concurrent logins successful",
+              "path": "::Concurrent Logins::all concurrent logins successful",
+              "id": "a1662acff8afb9ac36400777f680902b",
+              "passes": 0
+            }
+          ],
+        "name": "Concurrent Logins"
+      }
+    ],
+    "checks": [],
+    "name": "",
+    "path": ""
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 60758.816
+  },
+  "metrics": {
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0.288583,
+        "med": 0.768125,
+        "max": 35.572625,
+        "p(90)": 2.5137584,
+        "p(95)": 4.3773997,
+        "avg": 1.767301767676767
+      }
+    },
+    "auth_throughput": {
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter"
+    },
+    "token_validation_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 1,
+        "p(95)": 1,
+        "avg": 0.5454545454545454,
+        "min": 0,
+        "med": 1,
+        "max": 1
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "ws_session_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "ws_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 121,
+        "rate": 1.9914805449796782
+      }
+    },
+    "logout_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0.49999999999999956,
+        "avg": 0.09090909090909091,
+        "min": 0,
+        "med": 0,
+        "max": 1,
+        "p(90)": 0
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 0.328,
+        "p(90)": 0.051,
+        "p(95)": 0.065,
+        "avg": 0.03802479338842972,
+        "min": 0.006,
+        "med": 0.032
+      }
+    },
+    "http_req_duration{endpoint:workflow_create}": {
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "iteration_duration": {
+      "values": {
+        "p(90)": 5525.051959,
+        "p(95)": 5546.8268335,
+        "avg": 5523.474541454546,
+        "min": 5515.065208,
+        "med": 5518.736458,
+        "max": 5568.601708
+      },
+      "thresholds": {
+        "p(95)<5000": {
+          "ok": false
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "data_sent": {
+      "values": {
+        "rate": 343.2588284801336,
+        "count": 20856
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "login_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 2,
+        "p(90)": 0,
+        "p(95)": 0.9999999999999991,
+        "avg": 0.18181818181818182,
+        "min": 0
+      },
+      "thresholds": {
+        "p(95)<300": {
+          "ok": true
+        },
+        "p(99)<500": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.6363636363636364,
+        "passes": 77,
+        "fails": 44
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": false
+        }
+      }
+    },
+    "ws_session_duration{endpoint:websocket}": {
+      "contains": "time",
+      "values": {
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0
+      },
+      "thresholds": {
+        "p(95)<60000": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0.004,
+        "max": 0.651,
+        "p(90)": 0.007,
+        "p(95)": 0.015,
+        "avg": 0.015545454545454498,
+        "min": 0.001
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 54978,
+        "rate": 904.8563421644029
+      }
+    },
+    "http_req_duration{endpoint:webhook_trigger}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      },
+      "thresholds": {
+        "p(95)<200": {
+          "ok": true
+        }
+      }
+    },
+    "auth_success_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.25,
+        "passes": 11,
+        "fails": 33
+      },
+      "thresholds": {
+        "rate>0.95": {
+          "ok": false
+        }
+      }
+    },
+    "iterations": {
+      "values": {
+        "count": 11,
+        "rate": 0.18104368590724348
+      },
+      "thresholds": {
+        "rate>0.5": {
+          "ok": false
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_duration{endpoint:auth_login}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.35520000000000007,
+        "min": 0.224,
+        "med": 0.341,
+        "max": 0.696,
+        "p(90)": 0.546,
+        "p(95)": 0.5647
+      },
+      "thresholds": {
+        "p(95)<300": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_connecting": {
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "avg": 0.006074380165289257,
+        "min": 0,
+        "med": 0,
+        "max": 0.293,
+        "p(90)": 0
+      },
+      "type": "trend"
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "auth_errors": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 44,
+        "rate": 0.7241747436289739
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1.3930909090909096,
+        "min": 0.213,
+        "med": 0.387,
+        "max": 35.458,
+        "p(90)": 2.126,
+        "p(95)": 2.635
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        },
+        "p(99)<1000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 3.2237272727272726,
+        "min": 1.121,
+        "med": 1.9175,
+        "max": 35.458,
+        "p(90)": 4.3144,
+        "p(95)": 8.568949999999992
+      }
+    },
+    "ws_connecting{endpoint:websocket}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{endpoint:workflow_execute}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0
+      },
+      "thresholds": {
+        "p(95)<2000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0.163,
+        "med": 0.327,
+        "max": 35.406,
+        "p(90)": 2.071,
+        "p(95)": 2.56,
+        "avg": 1.336727272727273
+      }
+    },
+    "token_refresh_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      },
+      "thresholds": {
+        "p(95)<200": {
+          "ok": true
+        },
+        "p(99)<400": {
+          "ok": true
+        }
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "min": 1,
+        "max": 1,
+        "value": 1
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 0.148,
+        "p(90)": 0.024,
+        "p(95)": 0.031,
+        "avg": 0.018338842975206597,
+        "min": 0.002,
+        "med": 0.016
+      }
+    },
+    "invalid_credentials_attempts": {
+      "values": {
+        "count": 11,
+        "rate": 0.18104368590724348
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 110,
+        "rate": 0.3333333333333333,
+        "passes": 55
+      }
+    }
+  },
+  "setup_data": {
+    "testUser": {
+      "email": "loadtest@example.com",
+      "password": "loadtest123"
+    }
+  }
+}

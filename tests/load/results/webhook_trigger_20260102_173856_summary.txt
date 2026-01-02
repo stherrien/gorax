@@ -1,0 +1,211 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {}
+    },
+    "metrics": {
+        "http_req_duration{endpoint:workflow_create}": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "thresholds": {
+                "p(95)<1000": false
+            }
+        },
+        "http_req_waiting": {
+            "avg": 0.142,
+            "min": 0.142,
+            "med": 0.142,
+            "max": 0.142,
+            "p(90)": 0.142,
+            "p(95)": 0.142
+        },
+        "ws_connecting": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "data_received": {
+            "count": 454,
+            "rate": 274652.14761040534
+        },
+        "iteration_duration": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "thresholds": {
+                "p(95)<5000": false
+            }
+        },
+        "ws_connecting{endpoint:websocket}": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "thresholds": {
+                "p(95)<500": false
+            }
+        },
+        "http_req_duration{endpoint:auth_login}": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "thresholds": {
+                "p(95)<300": false
+            }
+        },
+        "http_req_blocked": {
+            "p(95)": 1.126,
+            "avg": 1.126,
+            "min": 1.126,
+            "med": 1.126,
+            "max": 1.126,
+            "p(90)": 1.126
+        },
+        "http_req_connecting": {
+            "avg": 0.15,
+            "min": 0.15,
+            "med": 0.15,
+            "max": 0.15,
+            "p(90)": 0.15,
+            "p(95)": 0.15
+        },
+        "http_req_sending": {
+            "max": 0.028,
+            "p(90)": 0.028,
+            "p(95)": 0.028,
+            "avg": 0.028,
+            "min": 0.028,
+            "med": 0.028
+        },
+        "ws_session_duration": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_receiving": {
+            "min": 0.028,
+            "med": 0.028,
+            "max": 0.028,
+            "p(90)": 0.028,
+            "p(95)": 0.028,
+            "avg": 0.028
+        },
+        "http_req_failed": {
+            "fails": 0,
+            "passes": 1,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 1
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "webhook_success_rate": {
+            "passes": 0,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 0
+        },
+        "http_req_duration{endpoint:webhook_trigger}": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "thresholds": {
+                "p(95)<200": false
+            }
+        },
+        "webhook_ingestion_duration": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "thresholds": {
+                "p(99)<500": false,
+                "p(95)<200": false
+            }
+        },
+        "http_req_duration{endpoint:workflow_execute}": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_reqs": {
+            "count": 1,
+            "rate": 604.9606775559589
+        },
+        "ws_session_duration{endpoint:websocket}": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "thresholds": {
+                "p(95)<60000": false
+            }
+        },
+        "iterations": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "rate>0.5": true
+            }
+        },
+        "http_req_duration": {
+            "p(95)": 0.198,
+            "avg": 0.198,
+            "min": 0.198,
+            "med": 0.198,
+            "max": 0.198,
+            "p(90)": 0.198,
+            "thresholds": {
+                "p(99)<1000": false,
+                "p(95)<500": false
+            }
+        },
+        "data_sent": {
+            "count": 197,
+            "rate": 119177.2534785239
+        }
+    }
+}
