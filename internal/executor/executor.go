@@ -25,9 +25,39 @@ type Broadcaster interface {
 	BroadcastProgress(tenantID, workflowID, executionID string, completedSteps, totalSteps int)
 }
 
+// WorkflowRepository defines the interface for workflow data access
+// This interface allows for both real Repository and mock implementations
+type WorkflowRepository interface {
+	GetByID(ctx context.Context, tenantID, id string) (*workflow.Workflow, error)
+	UpdateExecutionStatus(ctx context.Context, id string, status string, outputData json.RawMessage, errorMsg *string) error
+	CreateStepExecution(ctx context.Context, executionID, nodeID, nodeType string, inputData []byte) (*workflow.StepExecution, error)
+	UpdateStepExecution(ctx context.Context, id, status string, outputData json.RawMessage, errorMsg *string) error
+}
+
+// workflowRepoAdapter adapts *workflow.Repository to WorkflowRepository interface
+type workflowRepoAdapter struct {
+	repo *workflow.Repository
+}
+
+func (a *workflowRepoAdapter) GetByID(ctx context.Context, tenantID, id string) (*workflow.Workflow, error) {
+	return a.repo.GetByID(ctx, tenantID, id)
+}
+
+func (a *workflowRepoAdapter) UpdateExecutionStatus(ctx context.Context, id string, status string, outputData json.RawMessage, errorMsg *string) error {
+	return a.repo.UpdateExecutionStatus(ctx, id, workflow.ExecutionStatus(status), []byte(outputData), errorMsg)
+}
+
+func (a *workflowRepoAdapter) CreateStepExecution(ctx context.Context, executionID, nodeID, nodeType string, inputData []byte) (*workflow.StepExecution, error) {
+	return a.repo.CreateStepExecution(ctx, executionID, nodeID, nodeType, inputData)
+}
+
+func (a *workflowRepoAdapter) UpdateStepExecution(ctx context.Context, id, status string, outputData json.RawMessage, errorMsg *string) error {
+	return a.repo.UpdateStepExecution(ctx, id, status, []byte(outputData), errorMsg)
+}
+
 // Executor handles workflow execution
 type Executor struct {
-	repo               *workflow.Repository
+	repo               WorkflowRepository
 	logger             *slog.Logger
 	broadcaster        Broadcaster
 	retryStrategy      *RetryStrategy
@@ -35,6 +65,14 @@ type Executor struct {
 	defaultRetryConfig NodeRetryConfig
 	credentialInjector *credential.Injector // Optional credential injector
 	credentialService  credential.Service   // Optional credential service for Slack actions
+	formulaEvaluator   FormulaEvaluator     // Optional cached formula evaluator
+}
+
+// FormulaEvaluator interface for formula evaluation (allows both cached and uncached)
+type FormulaEvaluator interface {
+	Evaluate(expression string, context map[string]interface{}) (interface{}, error)
+	ValidateExpression(expression string) error
+	GetAvailableFunctions() []string
 }
 
 // New creates a new executor without broadcasting
@@ -43,7 +81,7 @@ func New(repo *workflow.Repository, logger *slog.Logger) *Executor {
 	circuitConfig := DefaultCircuitBreakerConfig()
 
 	return &Executor{
-		repo:               repo,
+		repo:               &workflowRepoAdapter{repo: repo},
 		logger:             logger,
 		broadcaster:        nil,
 		retryStrategy:      NewRetryStrategy(retryConfig, logger),
@@ -58,7 +96,7 @@ func NewWithBroadcaster(repo *workflow.Repository, logger *slog.Logger, broadcas
 	circuitConfig := DefaultCircuitBreakerConfig()
 
 	return &Executor{
-		repo:               repo,
+		repo:               &workflowRepoAdapter{repo: repo},
 		logger:             logger,
 		broadcaster:        broadcaster,
 		retryStrategy:      NewRetryStrategy(retryConfig, logger),
@@ -73,7 +111,7 @@ func NewWithCredentials(repo *workflow.Repository, logger *slog.Logger, broadcas
 	circuitConfig := DefaultCircuitBreakerConfig()
 
 	return &Executor{
-		repo:               repo,
+		repo:               &workflowRepoAdapter{repo: repo},
 		logger:             logger,
 		broadcaster:        broadcaster,
 		retryStrategy:      NewRetryStrategy(retryConfig, logger),
@@ -81,6 +119,22 @@ func NewWithCredentials(repo *workflow.Repository, logger *slog.Logger, broadcas
 		defaultRetryConfig: DefaultNodeRetryConfig(),
 		credentialInjector: injector,
 		credentialService:  credService,
+	}
+}
+
+// NewWithCachedEvaluator creates a new executor with a cached formula evaluator
+func NewWithCachedEvaluator(repo WorkflowRepository, logger *slog.Logger, broadcaster Broadcaster, evaluator FormulaEvaluator) *Executor {
+	retryConfig := DefaultRetryConfig()
+	circuitConfig := DefaultCircuitBreakerConfig()
+
+	return &Executor{
+		repo:               repo,
+		logger:             logger,
+		broadcaster:        broadcaster,
+		retryStrategy:      NewRetryStrategy(retryConfig, logger),
+		circuitBreakers:    NewCircuitBreakerRegistry(circuitConfig, logger),
+		defaultRetryConfig: DefaultNodeRetryConfig(),
+		formulaEvaluator:   evaluator,
 	}
 }
 
@@ -139,7 +193,7 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 	)
 
 	// Update status to running
-	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, workflow.ExecutionStatusRunning, nil, nil); err != nil {
+	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, string(workflow.ExecutionStatusRunning), nil, nil); err != nil {
 		return err
 	}
 
@@ -283,7 +337,7 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 
 	// Mark execution as completed
 	outputData, _ := json.Marshal(execCtx.StepOutputs)
-	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, workflow.ExecutionStatusCompleted, outputData, nil); err != nil {
+	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, string(workflow.ExecutionStatusCompleted), outputData, nil); err != nil {
 		return err
 	}
 
@@ -499,7 +553,7 @@ func (e *Executor) failExecution(ctx context.Context, execution *workflow.Execut
 		errMsg = "execution failed"
 	}
 
-	e.repo.UpdateExecutionStatus(ctx, execution.ID, workflow.ExecutionStatusFailed, nil, &errMsg)
+	e.repo.UpdateExecutionStatus(ctx, execution.ID, string(workflow.ExecutionStatusFailed), nil, &errMsg)
 
 	// Broadcast execution failure
 	if e.broadcaster != nil {

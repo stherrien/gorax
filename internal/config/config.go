@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config holds all application configuration
@@ -26,6 +27,7 @@ type Config struct {
 	AIBuilder      AIBuilderConfig
 	WebSocket      WebSocketConfig
 	SSRF           SSRFConfig
+	FormulaCache   FormulaCacheConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -249,6 +251,17 @@ type SSRFConfig struct {
 	BlockedNetworks []string
 }
 
+// FormulaCacheConfig holds formula evaluator cache configuration
+type FormulaCacheConfig struct {
+	// Enabled controls whether formula caching is active (default: true)
+	Enabled bool
+	// Size is the maximum number of compiled expressions to cache (default: 1000)
+	Size int
+	// LogInterval is how often to log cache statistics (default: 0 = disabled)
+	// Format: "5m" for every 5 minutes, "1h" for every hour
+	LogInterval time.Duration
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -366,8 +379,9 @@ func Load() (*Config, error) {
 			MaxTokens:   getEnvAsInt("AI_BUILDER_MAX_TOKENS", 4096),
 			Temperature: getEnvAsFloat("AI_BUILDER_TEMPERATURE", 0.7),
 		},
-		WebSocket: loadWebSocketConfig(),
-		SSRF:      loadSSRFConfig(),
+		WebSocket:    loadWebSocketConfig(),
+		SSRF:         loadSSRFConfig(),
+		FormulaCache: loadFormulaCacheConfig(),
 	}
 
 	return cfg, nil
@@ -518,5 +532,27 @@ func loadSSRFConfig() SSRFConfig {
 		// BlockedNetworks can be configured to block additional networks
 		// Example: SSRF_BLOCKED_NETWORKS=203.0.113.0/24
 		BlockedNetworks: getEnvAsSlice("SSRF_BLOCKED_NETWORKS", []string{}),
+	}
+}
+
+// getEnvAsDuration parses an environment variable as a duration
+func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
+}
+
+func loadFormulaCacheConfig() FormulaCacheConfig {
+	return FormulaCacheConfig{
+		// Formula caching enabled by default for performance
+		Enabled: getEnvAsBool("FORMULA_CACHE_ENABLED", true),
+		// Default cache size of 1000 expressions
+		Size: getEnvAsInt("FORMULA_CACHE_SIZE", 1000),
+		// Log interval defaults to 0 (disabled)
+		// Set to "5m", "1h", etc. to enable periodic logging
+		LogInterval: getEnvAsDuration("FORMULA_CACHE_LOG_INTERVAL", 0),
 	}
 }

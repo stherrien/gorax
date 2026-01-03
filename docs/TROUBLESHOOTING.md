@@ -1855,21 +1855,210 @@ curl 'http://localhost:9090/api/v1/query?query=gorax_queue_depth'
 
 ---
 
+### Performance Monitoring Metrics
+
+**NEW: Enhanced Performance Metrics**
+
+Gorax now exposes comprehensive performance metrics for monitoring key system operations.
+
+#### 1. Formula Evaluation Metrics
+
+Monitor formula/expression evaluation performance and cache effectiveness:
+
+```promql
+# Cache hit rate (target: > 90%)
+sum(rate(gorax_formula_cache_hits_total[5m])) /
+(sum(rate(gorax_formula_cache_hits_total[5m])) +
+ sum(rate(gorax_formula_cache_misses_total[5m])))
+
+# Formula evaluation duration P99 (target: < 10ms)
+histogram_quantile(0.99,
+  rate(gorax_formula_evaluation_duration_seconds_bucket[5m])
+)
+
+# Formula evaluation error rate
+sum(rate(gorax_formula_evaluations_total{status="error"}[5m])) /
+sum(rate(gorax_formula_evaluations_total[5m]))
+
+# Formula evaluations per second
+rate(gorax_formula_evaluations_total[5m])
+```
+
+**Troubleshooting Low Cache Hit Rate:**
+- **Symptom**: Cache hit rate < 70%
+- **Check**: Unique formula variations using logs
+- **Action**: Increase cache size via `FORMULA_CACHE_SIZE` environment variable
+- **Default**: 1000 entries
+
+#### 2. Database Connection Pool Metrics
+
+Monitor database connection pool health and utilization:
+
+```promql
+# Connection pool utilization (target: < 80%)
+(gorax_db_connections_in_use / gorax_db_connections_open) * 100
+
+# Idle connections (should have some headroom)
+gorax_db_connections_idle
+
+# Open connections by pool
+gorax_db_connections_open{pool="main"}
+
+# Alert: High pool utilization (> 90%)
+(gorax_db_connections_in_use / gorax_db_connections_open) > 0.9
+```
+
+**Troubleshooting Connection Pool Exhaustion:**
+- **Symptom**: `gorax_db_connections_in_use` equals `gorax_db_connections_open`
+- **Check**: Look for connection leaks or slow queries
+- **Action 1**: Increase `DB_MAX_OPEN_CONNS` (current default: see app config)
+- **Action 2**: Review and optimize slow queries
+- **Action 3**: Check for missing `defer db.Close()` statements
+
+#### 3. Database Query Performance Metrics
+
+Track individual database operation performance:
+
+```promql
+# Slowest queries by table and operation (P99)
+topk(10, histogram_quantile(0.99,
+  rate(gorax_db_query_duration_seconds_bucket[5m])
+))
+
+# Query rate by table
+sum by (table, operation) (
+  rate(gorax_db_queries_total[5m])
+)
+
+# Query error rate by table
+sum by (table) (
+  rate(gorax_db_queries_total{status="error"}[5m])
+) /
+sum by (table) (
+  rate(gorax_db_queries_total[5m])
+)
+
+# Most frequently queried tables
+topk(10, sum by (table) (
+  rate(gorax_db_queries_total[5m])
+))
+```
+
+**Troubleshooting Slow Queries:**
+- **Symptom**: P99 query duration > 1 second
+- **Check 1**: Identify table from metric labels
+- **Check 2**: Review query patterns in code
+- **Action 1**: Add missing database indexes
+- **Action 2**: Optimize query (add WHERE clauses, reduce JOINs)
+- **Action 3**: Consider query result caching
+
+#### 4. Workflow Execution Metrics by Type
+
+Enhanced workflow metrics now include trigger type labels:
+
+```promql
+# Execution rate by trigger type
+sum by (trigger_type) (
+  rate(gorax_workflow_executions_total[5m])
+)
+
+# Success rate by trigger type
+sum by (trigger_type) (
+  rate(gorax_workflow_executions_total{status="completed"}[5m])
+) /
+sum by (trigger_type) (
+  rate(gorax_workflow_executions_total[5m])
+)
+
+# Average duration by trigger type
+sum by (trigger_type) (
+  rate(gorax_workflow_execution_duration_seconds_sum[5m])
+) /
+sum by (trigger_type) (
+  rate(gorax_workflow_execution_duration_seconds_count[5m])
+)
+
+# Slow workflows by trigger type (P99 > 30s)
+histogram_quantile(0.99,
+  sum by (trigger_type, le) (
+    rate(gorax_workflow_execution_duration_seconds_bucket[5m])
+  )
+) > 30
+```
+
+**Trigger Types:**
+- `webhook`: Triggered by incoming webhooks
+- `schedule`: Triggered by cron schedules
+- `manual`: Manually triggered by users
+- `event`: Triggered by system events
+
+**Troubleshooting by Trigger Type:**
+- **Webhook Slow**: Check external service response times
+- **Schedule Slow**: Review time-based data processing
+- **Manual Slow**: May indicate UI performance issues
+- **Event Slow**: Check event processing pipeline
+
+#### 5. API Endpoint Performance
+
+Enhanced HTTP metrics for detailed endpoint monitoring:
+
+```promql
+# Slowest endpoints (P99 latency)
+topk(10, histogram_quantile(0.99,
+  rate(gorax_http_request_duration_seconds_bucket[5m])
+))
+
+# Error rate by endpoint
+sum by (method, path) (
+  rate(gorax_http_requests_total{status=~"5.."}[5m])
+) /
+sum by (method, path) (
+  rate(gorax_http_requests_total[5m])
+)
+
+# Throughput by endpoint
+sum by (method, path) (
+  rate(gorax_http_requests_total[5m])
+)
+
+# 4xx error rate (client errors)
+sum(rate(gorax_http_requests_total{status=~"4.."}[5m])) /
+sum(rate(gorax_http_requests_total[5m]))
+```
+
+**Common Performance Issues:**
+
+| Issue | Symptom | Solution |
+|-------|---------|----------|
+| Slow API responses | P99 > 2s | Profile endpoint, check DB queries, add caching |
+| High error rate | 5xx rate > 5% | Check logs, review error tracking (Sentry) |
+| Connection pool exhaustion | Pool utilization > 90% | Increase pool size, fix connection leaks |
+| Low cache hit rate | Cache hit < 70% | Increase cache size, review cache keys |
+| Slow DB queries | P99 query > 1s | Add indexes, optimize queries, use EXPLAIN |
+
+**Performance Baselines:**
+
+See [PERFORMANCE_BASELINE.md](./PERFORMANCE_BASELINE.md) for expected performance metrics and thresholds.
+
+---
+
 ### Analyzing Grafana Dashboards
 
 **Pre-built Dashboards:**
 
-1. **Gorax Overview Dashboard:**
+1. **Gorax Performance Overview Dashboard** (`dashboards/gorax-performance-overview.json`):
+   - **Workflow Execution Performance**: Execution rates and durations by trigger type
+   - **Formula Evaluation Performance**: Cache hit rates and evaluation times
+   - **Database Performance**: Connection pool utilization and query performance
+   - **API Performance**: HTTP request rates and response times
+
+   This comprehensive dashboard provides real-time visibility into all key system operations.
+
+2. **Gorax Overview Dashboard:**
    - System health status
    - Request rate and error rate
    - Queue depth trends
    - Top workflows by execution count
-
-2. **Performance Dashboard:**
-   - P50/P95/P99 latency percentiles
-   - Slow endpoint identification
-   - Database query performance
-   - API throughput
 
 3. **Resource Dashboard:**
    - CPU/Memory usage by pod
@@ -1877,15 +2066,44 @@ curl 'http://localhost:9090/api/v1/query?query=gorax_queue_depth'
    - GC pause times
    - Connection pool usage
 
-**Dashboard Navigation:**
-```bash
-# Access Grafana
-# URL: http://localhost:3000
-# Default credentials: admin/admin
+**Dashboard Installation:**
 
-# Import dashboard
-# Dashboard > Import > Upload JSON file
+```bash
+# Option 1: Import via Grafana UI
+# 1. Open Grafana: http://localhost:3000
+# 2. Navigate to Dashboards > Import
+# 3. Upload JSON file from dashboards/ directory
+# 4. Select Prometheus data source
+# 5. Click Import
+
+# Option 2: Provisioning (Production)
+# Copy dashboards to provisioning directory
+cp dashboards/*.json /etc/grafana/provisioning/dashboards/
+
+# Create provider configuration
+cat > /etc/grafana/provisioning/dashboards/gorax.yml <<EOF
+apiVersion: 1
+providers:
+  - name: 'Gorax'
+    orgId: 1
+    folder: 'Gorax'
+    type: file
+    disableDeletion: false
+    options:
+      path: /etc/grafana/provisioning/dashboards
+EOF
+
+# Restart Grafana
+systemctl restart grafana-server
 ```
+
+**Dashboard Documentation:**
+
+See [dashboards/README.md](../dashboards/README.md) for:
+- Detailed dashboard descriptions
+- Example PromQL queries for troubleshooting
+- Alerting rule examples
+- Performance troubleshooting guides
 
 ---
 

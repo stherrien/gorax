@@ -76,8 +76,11 @@ func (e *Executor) executeFormulaAction(ctx context.Context, node workflow.Node,
 		return nil, fmt.Errorf("missing config for formula action")
 	}
 
-	// Create formula action
+	// Create formula action with evaluator from executor if available
 	action := &actions.FormulaAction{}
+	if e.formulaEvaluator != nil {
+		action.SetEvaluator(e.formulaEvaluator)
+	}
 
 	// Build execution context
 	context := buildInterpolationContext(execCtx)
