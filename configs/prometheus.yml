@@ -1,0 +1,177 @@
+# Prometheus Configuration for Gorax Monitoring
+# https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  # How frequently to scrape targets by default
+  scrape_interval: 15s
+
+  # How long until a scrape request times out
+  scrape_timeout: 10s
+
+  # How frequently to evaluate rules
+  evaluation_interval: 15s
+
+  # External labels to attach to any time series or alerts
+  external_labels:
+    cluster: 'gorax'
+    environment: 'dev'  # Override this per environment: dev, staging, production
+
+# Alertmanager configuration (optional - uncomment if using Alertmanager)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - 'alertmanager:9093'
+
+# Load alert rules from file
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Gorax API Server metrics
+  - job_name: 'gorax-api'
+    # Scrape interval override (optional - use default 15s if not specified)
+    # scrape_interval: 10s
+    # scrape_timeout: 5s
+
+    # Metrics path (default is /metrics)
+    metrics_path: '/metrics'
+
+    # Scheme defaults to 'http'
+    scheme: http
+
+    # Static targets for development
+    static_configs:
+      - targets: ['host.docker.internal:9091']  # For Docker Desktop on Mac/Windows
+        labels:
+          service: 'gorax-api'
+          component: 'backend'
+          environment: 'dev'
+
+    # Production example (commented out - uncomment and modify for production)
+    # static_configs:
+    #   - targets:
+    #       - 'gorax-api-1.example.com:9091'
+    #       - 'gorax-api-2.example.com:9091'
+    #       - 'gorax-api-3.example.com:9091'
+    #     labels:
+    #       service: 'gorax-api'
+    #       component: 'backend'
+    #       environment: 'production'
+
+    # Kubernetes service discovery example (commented out)
+    # kubernetes_sd_configs:
+    #   - role: pod
+    #     namespaces:
+    #       names:
+    #         - gorax
+    # relabel_configs:
+    #   - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+    #     action: keep
+    #     regex: true
+    #   - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+    #     action: replace
+    #     target_label: __metrics_path__
+    #     regex: (.+)
+    #   - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+    #     action: replace
+    #     regex: ([^:]+)(?::\d+)?;(\d+)
+    #     replacement: $1:$2
+    #     target_label: __address__
+    #   - source_labels: [__meta_kubernetes_pod_name]
+    #     action: replace
+    #     target_label: instance
+
+    # Metric relabeling (optional - modify labels after scraping)
+    # metric_relabel_configs:
+    #   # Drop high-cardinality labels
+    #   - source_labels: [__name__]
+    #     regex: 'gorax_http_request_duration_seconds_bucket'
+    #     target_label: user_id
+    #     replacement: ''
+    #
+    #   # Rename label
+    #   - source_labels: [old_label]
+    #     target_label: new_label
+    #     action: replace
+
+  # Gorax Worker metrics (if running separately)
+  # - job_name: 'gorax-worker'
+  #   static_configs:
+  #     - targets: ['localhost:9092']
+  #       labels:
+  #         service: 'gorax-worker'
+  #         component: 'worker'
+
+  # PostgreSQL Exporter (optional - for detailed database metrics)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  #       labels:
+  #         service: 'postgresql'
+  #         component: 'database'
+
+  # Redis Exporter (optional - for detailed cache metrics)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+  #       labels:
+  #         service: 'redis'
+  #         component: 'cache'
+
+  # Node Exporter (optional - for system metrics)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+  #       labels:
+  #         service: 'node-exporter'
+  #         component: 'system'
+
+# Storage configuration
+storage:
+  # TSDB settings
+  tsdb:
+    # Retention period (delete data older than this)
+    retention.time: 30d
+
+    # Maximum size of TSDB blocks (optional)
+    # retention.size: 10GB
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: 'http://thanos-receive:19291/api/v1/receive'
+#     queue_config:
+#       capacity: 10000
+#       max_shards: 50
+#       min_shards: 1
+#       max_samples_per_send: 5000
+#       batch_send_deadline: 5s
+
+# Remote read configuration (optional - for querying long-term storage)
+# remote_read:
+#   - url: 'http://thanos-query:19191/api/v1/query'
+#     read_recent: true
+
+---
+# Environment-Specific Override Examples
+# Copy this file and modify for each environment
+
+# Development (localhost)
+# targets: ['localhost:9091']
+
+# Docker Compose
+# targets: ['gorax-api:9091']  # Use service name as hostname
+
+# Docker Desktop (Mac/Windows)
+# targets: ['host.docker.internal:9091']
+
+# Production with service discovery
+# Use Consul, Kubernetes, or AWS service discovery instead of static configs

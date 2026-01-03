@@ -9,18 +9,43 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorax/gorax/internal/metrics"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
 
 // Repository handles credential database operations
 type Repository struct {
-	db *sqlx.DB
+	db      *sqlx.DB
+	metrics *metrics.Metrics
 }
 
 // NewRepository creates a new credential repository
 func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{db: db}
+	return &Repository{
+		db:      db,
+		metrics: nil, // Metrics optional for backwards compatibility
+	}
+}
+
+// NewRepositoryWithMetrics creates a new credential repository with metrics
+func NewRepositoryWithMetrics(db *sqlx.DB, m *metrics.Metrics) *Repository {
+	return &Repository{
+		db:      db,
+		metrics: m,
+	}
+}
+
+// recordQuery records database query metrics
+func (r *Repository) recordQuery(operation, table string, start time.Time, err error) {
+	if r.metrics != nil {
+		duration := time.Since(start).Seconds()
+		status := "success"
+		if err != nil {
+			status = "error"
+		}
+		r.metrics.RecordDBQuery(operation, table, status, duration)
+	}
 }
 
 // Create inserts a new credential

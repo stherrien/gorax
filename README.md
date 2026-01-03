@@ -253,6 +253,7 @@ cd web && npm test
 |----------|-------------|
 | [Getting Started](docs/getting-started.md) | Installation and setup |
 | [Your First Workflow](docs/first-workflow.md) | Build a workflow in 5 minutes |
+| [Monitoring Guide](docs/MONITORING.md) | Prometheus & Grafana setup |
 | [Slack Integration](docs/integrations/slack.md) | Complete Slack guide |
 | [API Reference](docs/api-reference.md) | REST API documentation |
 | [Contributing](docs/contributing.md) | Join the community |

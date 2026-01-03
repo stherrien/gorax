@@ -551,17 +551,20 @@ Use this checklist to track completion:
 - [ ] Application deployed and working with new schema
 
 ### Performance
-- [ ] Connection pool settings updated
-- [ ] Application restarted with new settings
-- [ ] Connection usage monitored
-- [ ] N+1 query fixed (optional for this sprint)
-- [ ] New indexes added (optional for this sprint)
+- [x] Connection pool settings updated (recommended config documented)
+- [ ] Application restarted with new settings (pending deployment)
+- [ ] Connection usage monitored (pending deployment)
+- [x] N+1 query fixed - GetTopFailures optimized with LATERAL join (10.13% improvement)
+- [x] New indexes added - all performance indexes deployed and verified
+- [x] Formula caching implemented (93.4% improvement at 100% hit rate)
+- [x] Comprehensive benchmark suite created and executed
+- [x] Performance benchmark results documented
 
 ### Verification
 - [ ] CI/CD pipeline tested end-to-end
 - [ ] SSRF protection verified in staging
 - [ ] Webhook retry tested in staging
-- [ ] Performance metrics baseline established
+- [x] Performance metrics baseline established (see [PERFORMANCE_BENCHMARK_RESULTS.md](PERFORMANCE_BENCHMARK_RESULTS.md))
 - [ ] Monitoring dashboards updated
 
 ### Documentation

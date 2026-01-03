@@ -34,6 +34,7 @@ import (
 	"github.com/gorax/gorax/internal/llm/providers/bedrock"
 	"github.com/gorax/gorax/internal/llm/providers/openai"
 	"github.com/gorax/gorax/internal/marketplace"
+	"github.com/gorax/gorax/internal/metrics"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/suggestions"
@@ -84,6 +85,12 @@ type App struct {
 
 	// Error tracking
 	errorTracker *errortracking.Tracker
+
+	// Metrics
+	metrics          *metrics.Metrics
+	dbStatsCollector *metrics.DBStatsCollector
+	metricsStopCtx   context.Context
+	metricsStopFunc  context.CancelFunc
 
 	// Services
 	tenantService       *tenant.Service
@@ -153,6 +160,16 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.Database.ConnMaxIdleTime)
 	app.db = db
+
+	// Initialize metrics
+	app.metrics = metrics.NewMetrics()
+	logger.Info("Metrics initialized")
+
+	// Initialize and start DB stats collector
+	app.metricsStopCtx, app.metricsStopFunc = context.WithCancel(context.Background())
+	app.dbStatsCollector = metrics.NewDBStatsCollector(app.metrics, db.DB, "main", logger)
+	go app.dbStatsCollector.Start(app.metricsStopCtx, 15*time.Second)
+	logger.Info("DB stats collector started", "interval", "15s")
 
 	// Initialize Redis client
 	app.redis = redis.NewClient(&redis.Options{
@@ -409,6 +426,14 @@ func (a *App) Router() http.Handler {
 
 // Close cleans up application resources
 func (a *App) Close() error {
+	// Stop metrics collection
+	if a.metricsStopFunc != nil {
+		a.metricsStopFunc()
+	}
+	if a.dbStatsCollector != nil {
+		a.dbStatsCollector.Stop()
+	}
+
 	if a.errorTracker != nil {
 		a.errorTracker.Close()
 	}

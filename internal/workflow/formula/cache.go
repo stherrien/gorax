@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/expr-lang/expr/vm"
+	"github.com/gorax/gorax/internal/metrics"
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
@@ -114,22 +116,51 @@ func putEnv(env map[string]interface{}) {
 
 // CachedEvaluator is an Evaluator with expression caching and object pooling
 type CachedEvaluator struct {
-	cache *ExpressionCache
-	env   map[string]interface{}
+	cache   *ExpressionCache
+	env     map[string]interface{}
+	metrics *metrics.Metrics
 }
 
 // NewCachedEvaluator creates a new cached evaluator
 func NewCachedEvaluator(cacheSize int) *CachedEvaluator {
 	return &CachedEvaluator{
-		cache: NewExpressionCache(cacheSize),
-		env:   buildEnvironment(),
+		cache:   NewExpressionCache(cacheSize),
+		env:     buildEnvironment(),
+		metrics: nil, // Metrics optional for backwards compatibility
+	}
+}
+
+// NewCachedEvaluatorWithMetrics creates a new cached evaluator with metrics
+func NewCachedEvaluatorWithMetrics(cacheSize int, m *metrics.Metrics) *CachedEvaluator {
+	return &CachedEvaluator{
+		cache:   NewExpressionCache(cacheSize),
+		env:     buildEnvironment(),
+		metrics: m,
 	}
 }
 
 // Evaluate compiles and evaluates an expression with caching
 func (e *CachedEvaluator) Evaluate(expression string, context map[string]interface{}) (interface{}, error) {
+	start := time.Now()
+	var status string
+	var err error
+
+	// Defer metrics recording to ensure it's always called
+	defer func() {
+		if e.metrics != nil {
+			duration := time.Since(start).Seconds()
+			if err != nil {
+				status = "error"
+			} else {
+				status = "success"
+			}
+			e.metrics.RecordFormulaEvaluation(status, duration)
+		}
+	}()
+
 	if expression == "" {
-		return nil, fmt.Errorf("expression cannot be empty")
+		err = fmt.Errorf("expression cannot be empty")
+		return nil, err
 	}
 
 	// Get environment map from pool
@@ -151,10 +182,20 @@ func (e *CachedEvaluator) Evaluate(expression string, context map[string]interfa
 
 	if found {
 		program = cached.Program
+		// Record cache hit
+		if e.metrics != nil {
+			e.metrics.RecordFormulaCacheHit()
+		}
 	} else {
+		// Record cache miss
+		if e.metrics != nil {
+			e.metrics.RecordFormulaCacheMiss()
+		}
+
 		// Compile expression
-		compiled, err := compileExpression(expression, env)
-		if err != nil {
+		compiled, compileErr := compileExpression(expression, env)
+		if compileErr != nil {
+			err = compileErr
 			return nil, err
 		}
 
@@ -168,9 +209,10 @@ func (e *CachedEvaluator) Evaluate(expression string, context map[string]interfa
 	}
 
 	// Run the program
-	result, err := runProgram(program, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate expression: %w", err)
+	result, runErr := runProgram(program, env)
+	if runErr != nil {
+		err = fmt.Errorf("failed to evaluate expression: %w", runErr)
+		return nil, err
 	}
 
 	return result, nil
