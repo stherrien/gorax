@@ -2,9 +2,11 @@
 // Tests WebSocket connection handling and real-time updates under load
 
 import ws from 'k6/ws';
+import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import { config, getScenario } from './config.js';
+import { setupAuth, getAuthHeaders } from './lib/auth.js';
 
 // Custom metrics
 const wsConnectionDuration = new Trend('ws_connection_duration', true);
@@ -28,26 +30,23 @@ export const options = {
   tags: config.options.tags,
 };
 
-// Setup: Authenticate and get token
+// Setup: Authenticate
 export function setup() {
-  const loginRes = http.post(`${config.baseUrl}/api/v1/auth/login`, JSON.stringify({
-    email: config.testUser.email,
-    password: config.testUser.password,
-  }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Setup failed: Unable to authenticate. Status: ${loginRes.status}`);
-  }
-
-  const authToken = loginRes.json('token');
-  return { authToken };
+  return setupAuth(config);
 }
 
 // Main test function
 export default function (data) {
-  const wsUrl = `${config.wsUrl}/ws?token=${data.authToken}`;
+  // Build WebSocket URL with auth parameters
+  let wsUrl = `${config.wsUrl}/ws`;
+
+  // Add auth parameters based on mode
+  if (data.mode === 'dev') {
+    wsUrl += `?tenant_id=${data.tenantID}&user_id=${data.userID}`;
+  } else if (data.mode === 'kratos') {
+    wsUrl += `?token=${data.sessionToken}`;
+  }
+
   let messagesReceived = 0;
   let messageLatencies = [];
 

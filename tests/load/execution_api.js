@@ -5,6 +5,7 @@ import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import { config, getScenario, generateTestWorkflow } from './config.js';
+import { setupAuth, getAuthHeaders } from './lib/auth.js';
 
 // Custom metrics
 const executionStartDuration = new Trend('execution_start_duration', true);
@@ -30,21 +31,10 @@ export const options = {
 
 // Setup: Create test workflows and authenticate
 export function setup() {
-  const loginRes = http.post(`${config.baseUrl}/api/v1/auth/login`, JSON.stringify({
-    email: config.testUser.email,
-    password: config.testUser.password,
-  }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Setup failed: Unable to authenticate. Status: ${loginRes.status}`);
-  }
-
-  const authToken = loginRes.json('token');
+  const authData = setupAuth(config);
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+    ...getAuthHeaders(authData),
   };
 
   // Create test workflows for execution
@@ -66,14 +56,14 @@ export function setup() {
     throw new Error('Setup failed: Unable to create test workflows');
   }
 
-  return { authToken, workflows };
+  return { ...authData, workflows };
 }
 
 // Main test function
 export default function (data) {
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${data.authToken}`,
+    ...getAuthHeaders(data),
   };
 
   // Select a random workflow for this iteration
@@ -242,7 +232,8 @@ export default function (data) {
 // Teardown: Clean up test workflows
 export function teardown(data) {
   const headers = {
-    'Authorization': `Bearer ${data.authToken}`,
+    'Content-Type': 'application/json',
+    ...getAuthHeaders(data),
   };
 
   // Delete test workflows

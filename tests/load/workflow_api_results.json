@@ -1,18 +1,198 @@
 {
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "Create Workflow",
+        "path": "::Create Workflow",
+        "id": "dfc5a77e7a6375363c439918ad712ec2",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 0,
+              "fails": 1,
+              "name": "workflow created successfully",
+              "path": "::Create Workflow::workflow created successfully",
+              "id": "ac3964c3908bec68358c73e51543df35"
+            },
+            {
+              "name": "workflow has valid ID",
+              "path": "::Create Workflow::workflow has valid ID",
+              "id": "357f25bb80b84f83e31ed2dc48329e4c",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "name": "workflow name matches",
+              "path": "::Create Workflow::workflow name matches",
+              "id": "20ed1c67a683822e4bdc6eacfe88cfbf",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "path": "::Create Workflow::response time < 1s",
+              "id": "31ee1d14d1743dcba030f0cfeb43b1aa",
+              "passes": 1,
+              "fails": 0,
+              "name": "response time < 1s"
+            }
+          ]
+      },
+      {
+        "name": "Get Workflow by ID",
+        "path": "::Get Workflow by ID",
+        "id": "e6644f9602f0fa04e6444c020aaae622",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 0,
+              "fails": 1,
+              "name": "workflow retrieved successfully",
+              "path": "::Get Workflow by ID::workflow retrieved successfully",
+              "id": "11597b5eeaa9e0f30ce75a819a4bf5ff"
+            },
+            {
+              "name": "workflow ID matches",
+              "path": "::Get Workflow by ID::workflow ID matches",
+              "id": "d8c9daea121da6cd63fbfaf9a9f8959f",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "response time < 500ms",
+              "path": "::Get Workflow by ID::response time < 500ms",
+              "id": "c013d5c4c153a1ccfe44938df5df6ac6",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "List Workflows",
+        "path": "::List Workflows",
+        "id": "2f053457af0d4a12973b7dbfc4ba4c79",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "workflows listed successfully",
+              "path": "::List Workflows::workflows listed successfully",
+              "id": "1e47ad93093577fd8b5cc83fe06fa698",
+              "passes": 1
+            },
+            {
+              "name": "response is array",
+              "path": "::List Workflows::response is array",
+              "id": "ba330d2b5bd82bd444bde018db729837",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "id": "1c60e4f924bf0d92b141a7250e42ed5c",
+              "passes": 1,
+              "fails": 0,
+              "name": "response time < 800ms",
+              "path": "::List Workflows::response time < 800ms"
+            }
+          ]
+      },
+      {
+        "name": "Update Workflow",
+        "path": "::Update Workflow",
+        "id": "10a559a8a01c2b55dffeaf272059132e",
+        "groups": [],
+        "checks": [
+            {
+              "path": "::Update Workflow::workflow updated successfully",
+              "id": "7a108404cf1e9238f3fe622b7669cb4e",
+              "passes": 0,
+              "fails": 1,
+              "name": "workflow updated successfully"
+            },
+            {
+              "passes": 0,
+              "fails": 1,
+              "name": "name was updated",
+              "path": "::Update Workflow::name was updated",
+              "id": "c14c3eb067810aac2b4495906f329557"
+            },
+            {
+              "path": "::Update Workflow::response time < 1s",
+              "id": "6a9897a75c78538a0380267f017b1064",
+              "passes": 1,
+              "fails": 0,
+              "name": "response time < 1s"
+            }
+          ]
+      },
+      {
+        "groups": [],
+        "checks": [
+            {
+              "path": "::Delete Workflow::workflow deleted successfully",
+              "id": "000028dfe269a598383704964be75b08",
+              "passes": 0,
+              "fails": 1,
+              "name": "workflow deleted successfully"
+            },
+            {
+              "name": "response time < 500ms",
+              "path": "::Delete Workflow::response time < 500ms",
+              "id": "3b5a7066ab05953b72fd279b88b33d07",
+              "passes": 1,
+              "fails": 0
+            }
+          ],
+        "name": "Delete Workflow",
+        "path": "::Delete Workflow",
+        "id": "1a6d88cc7c9101ea4c0999a1616fdb8b"
+      },
+      {
+        "groups": [],
+        "checks": [
+            {
+              "passes": 0,
+              "fails": 1,
+              "name": "workflow not found after deletion",
+              "path": "::Verify Deletion::workflow not found after deletion",
+              "id": "2d166a301ed0e91315d71d05668db56f"
+            }
+          ],
+        "name": "Verify Deletion",
+        "path": "::Verify Deletion",
+        "id": "c504303ea499357b766477e48fdc1c75"
+      }
+    ],
+    "checks": []
+  },
+  "options": {
+    "noColor": false,
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": ""
+  },
   "state": {
     "isStdOutTTY": false,
     "isStdErrTTY": false,
-    "testRunDurationMs": 2.624
+    "testRunDurationMs": 4026.629
   },
   "metrics": {
     "http_req_duration{endpoint:workflow_execute}": {
       "values": {
+        "max": 0,
         "p(90)": 0,
         "p(95)": 0,
         "avg": 0,
         "min": 0,
-        "med": 0,
-        "max": 0
+        "med": 0
       },
       "thresholds": {
         "p(95)<2000": {
@@ -22,19 +202,74 @@
       "type": "trend",
       "contains": "time"
     },
-    "http_req_receiving": {
+    "ws_connecting{endpoint:websocket}": {
+      "values": {
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "checks": {
+      "contains": "default",
+      "values": {
+        "rate": 0.4375,
+        "passes": 7,
+        "fails": 9
+      },
+      "type": "rate"
+    },
+    "data_sent": {
+      "values": {
+        "rate": 523.7631775860156,
+        "count": 2109
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "http_req_connecting": {
+      "contains": "time",
+      "values": {
+        "avg": 0.02766666666666667,
+        "min": 0,
+        "med": 0,
+        "max": 0.166,
+        "p(90)": 0.08300000000000002,
+        "p(95)": 0.12449999999999997
+      },
+      "type": "trend"
+    },
+    "workflow_success_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 5
+      }
+    },
+    "http_req_sending": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "avg": 0.033,
-        "min": 0.033,
-        "med": 0.033,
-        "max": 0.033,
-        "p(90)": 0.033,
-        "p(95)": 0.033
+        "min": 0.017,
+        "med": 0.025500000000000002,
+        "max": 1.186,
+        "p(90)": 0.6140000000000001,
+        "p(95)": 0.8999999999999997,
+        "avg": 0.21899999999999997
       }
     },
-    "http_req_duration{endpoint:webhook_trigger}": {
+    "ws_session_duration": {
       "type": "trend",
       "contains": "time",
       "values": {
@@ -44,14 +279,137 @@
         "max": 0,
         "p(90)": 0,
         "p(95)": 0
+      }
+    },
+    "workflow_read_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 3,
+        "med": 3,
+        "max": 3,
+        "p(90)": 3,
+        "p(95)": 3,
+        "avg": 3
+      }
+    },
+    "data_received": {
+      "values": {
+        "rate": 693.8806629565327,
+        "count": 2794
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "iterations": {
+      "thresholds": {
+        "rate>0.5": {
+          "ok": false
+        }
+      },
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1,
+        "rate": 0.24834669397155787
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "workflow_delete_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 3,
+        "max": 3,
+        "p(90)": 3,
+        "p(95)": 3,
+        "avg": 3,
+        "min": 3
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0.046,
+        "max": 0.108,
+        "p(90)": 0.0835,
+        "p(95)": 0.09574999999999999,
+        "avg": 0.05533333333333334,
+        "min": 0.035
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 2.708382166666667,
+        "min": 1.778625,
+        "med": 2.6092709999999997,
+        "max": 3.430334,
+        "p(90)": 3.3892295000000003,
+        "p(95)": 3.40978175
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.8333333333333334,
+        "passes": 5,
+        "fails": 1
       },
       "thresholds": {
-        "p(95)<200": {
-          "ok": true
+        "rate<0.01": {
+          "ok": false
         }
       }
     },
-    "ws_session_duration": {
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.16483333333333336,
+        "min": 0.004,
+        "med": 0.010499999999999999,
+        "max": 0.903,
+        "p(90)": 0.4795000000000001,
+        "p(95)": 0.6912499999999998
+      }
+    },
+    "workflow_update_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 2,
+        "min": 2,
+        "med": 2,
+        "max": 2,
+        "p(90)": 2,
+        "p(95)": 2
+      }
+    },
+    "ws_connecting": {
       "values": {
         "avg": 0,
         "min": 0,
@@ -63,48 +421,16 @@
       "type": "trend",
       "contains": "time"
     },
-    "http_req_connecting": {
-      "type": "trend",
-      "contains": "time",
-      "values": {
-        "avg": 0.206,
-        "min": 0.206,
-        "med": 0.206,
-        "max": 0.206,
-        "p(90)": 0.206,
-        "p(95)": 0.206
-      }
-    },
-    "http_req_duration": {
-      "type": "trend",
-      "contains": "time",
-      "values": {
-        "avg": 0.434,
-        "min": 0.434,
-        "med": 0.434,
-        "max": 0.434,
-        "p(90)": 0.434,
-        "p(95)": 0.434
-      },
-      "thresholds": {
-        "p(95)<500": {
-          "ok": true
-        },
-        "p(99)<1000": {
-          "ok": true
-        }
-      }
-    },
     "iteration_duration": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "min": 0,
-        "med": 0,
-        "max": 0,
-        "p(90)": 0,
-        "p(95)": 0,
-        "avg": 0
+        "max": 4025.046958,
+        "p(90)": 4025.046958,
+        "p(95)": 4025.046958,
+        "avg": 4025.046958,
+        "min": 4025.046958,
+        "med": 4025.046958
       },
       "thresholds": {
         "p(95)<5000": {
@@ -116,45 +442,69 @@
       "type": "counter",
       "contains": "default",
       "values": {
-        "count": 1,
-        "rate": 381.0975609756097
+        "count": 6,
+        "rate": 1.490080163829347
       }
     },
-    "data_sent": {
-      "contains": "data",
-      "values": {
-        "count": 197,
-        "rate": 75076.21951219512
-      },
-      "type": "counter"
-    },
-    "ws_connecting{endpoint:websocket}": {
+    "http_req_duration": {
       "thresholds": {
         "p(95)<500": {
+          "ok": true
+        },
+        "p(99)<1000": {
           "ok": true
         }
       },
       "type": "trend",
       "contains": "time",
       "values": {
+        "avg": 2.3241666666666667,
+        "min": 1.525,
+        "med": 2.2865,
+        "max": 3.157,
+        "p(90)": 3.1265,
+        "p(95)": 3.14175
+      }
+    },
+    "http_req_duration{endpoint:webhook_trigger}": {
+      "thresholds": {
+        "p(95)<200": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
         "avg": 0,
         "min": 0,
         "med": 0,
-        "max": 0,
-        "p(90)": 0,
-        "p(95)": 0
+        "max": 0
       }
+    },
+    "http_req_duration{expected_response:true}": {
+      "contains": "time",
+      "values": {
+        "avg": 2.294,
+        "min": 2.294,
+        "med": 2.294,
+        "max": 2.294,
+        "p(90)": 2.294,
+        "p(95)": 2.294
+      },
+      "type": "trend"
     },
     "http_req_duration{endpoint:auth_login}": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "avg": 0,
-        "min": 0,
-        "med": 0,
         "max": 0,
         "p(90)": 0,
-        "p(95)": 0
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0
       },
       "thresholds": {
         "p(95)<300": {
@@ -162,28 +512,16 @@
         }
       }
     },
-    "http_req_tls_handshaking": {
-      "contains": "time",
-      "values": {
-        "med": 0,
-        "max": 0,
-        "p(90)": 0,
-        "p(95)": 0,
-        "avg": 0,
-        "min": 0
-      },
-      "type": "trend"
-    },
     "http_req_duration{endpoint:workflow_create}": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "p(95)": 0,
-        "avg": 0,
-        "min": 0,
-        "med": 0,
-        "max": 0,
-        "p(90)": 0
+        "max": 1.525,
+        "p(90)": 1.525,
+        "p(95)": 1.525,
+        "avg": 1.525,
+        "min": 1.525,
+        "med": 1.525
       },
       "thresholds": {
         "p(95)<1000": {
@@ -191,124 +529,80 @@
         }
       }
     },
-    "http_req_failed": {
+    "workflow_errors": {
+      "type": "counter",
+      "contains": "default",
       "values": {
-        "passes": 1,
-        "fails": 0,
-        "rate": 1
-      },
-      "thresholds": {
-        "rate<0.01": {
-          "ok": false
-        }
-      },
-      "type": "rate",
-      "contains": "default"
+        "count": 5,
+        "rate": 1.2417334698577893
+      }
     },
-    "http_req_sending": {
+    "ws_session_duration{endpoint:websocket}": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "max": 0.201,
-        "p(90)": 0.201,
-        "p(95)": 0.201,
-        "avg": 0.201,
-        "min": 0.201,
-        "med": 0.201
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0
+      },
+      "thresholds": {
+        "p(95)<60000": {
+          "ok": true
+        }
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
       }
     },
     "http_req_waiting": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "avg": 0.2,
-        "min": 0.2,
-        "med": 0.2,
-        "max": 0.2,
-        "p(90)": 0.2,
-        "p(95)": 0.2
+        "med": 2.0685000000000002,
+        "max": 2.958,
+        "p(90)": 2.588,
+        "p(95)": 2.773,
+        "avg": 2.0498333333333334,
+        "min": 1.448
       }
     },
-    "data_received": {
-      "type": "counter",
-      "contains": "data",
-      "values": {
-        "count": 454,
-        "rate": 173018.29268292684
-      }
-    },
-    "http_req_blocked": {
-      "contains": "time",
-      "values": {
-        "min": 1.583,
-        "med": 1.583,
-        "max": 1.583,
-        "p(90)": 1.583,
-        "p(95)": 1.583,
-        "avg": 1.583
-      },
-      "type": "trend"
-    },
-    "ws_connecting": {
+    "workflow_list_duration": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "avg": 0,
-        "min": 0,
-        "med": 0,
-        "max": 0,
-        "p(90)": 0,
-        "p(95)": 0
+        "p(95)": 2,
+        "avg": 2,
+        "min": 2,
+        "med": 2,
+        "max": 2,
+        "p(90)": 2
       }
     },
-    "iterations": {
-      "type": "counter",
-      "contains": "default",
-      "values": {
-        "count": 0,
-        "rate": 0
-      },
-      "thresholds": {
-        "rate>0.5": {
-          "ok": false
-        }
-      }
-    },
-    "ws_session_duration{endpoint:websocket}": {
-      "thresholds": {
-        "p(95)<60000": {
-          "ok": true
-        }
-      },
+    "workflow_create_duration": {
       "type": "trend",
       "contains": "time",
       "values": {
-        "p(95)": 0,
-        "avg": 0,
-        "min": 0,
-        "med": 0,
-        "max": 0,
-        "p(90)": 0
+        "avg": 2,
+        "min": 2,
+        "med": 2,
+        "max": 2,
+        "p(90)": 2,
+        "p(95)": 2
       }
     }
   },
-  "root_group": {
-    "name": "",
-    "path": "",
-    "id": "d41d8cd98f00b204e9800998ecf8427e",
-    "groups": [],
-    "checks": []
-  },
-  "options": {
-    "summaryTimeUnit": "",
-    "noColor": false,
-    "summaryTrendStats": [
-      "avg",
-      "min",
-      "med",
-      "max",
-      "p(90)",
-      "p(95)"
-    ]
+  "setup_data": {
+    "mode": "dev",
+    "tenantID": "00000000-0000-0000-0000-000000000001",
+    "userID": "default-test-user"
   }
 }
