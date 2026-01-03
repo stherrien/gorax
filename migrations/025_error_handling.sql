@@ -1,9 +1,9 @@
 -- Error handling enhancements for Gorax workflows
 -- Adds support for try/catch/finally, retry, and circuit breaker nodes
 
--- Add error handling configuration to execution_steps
+-- Add error handling configuration to step_executions
 -- This tracks retry attempts and error context for each step
-ALTER TABLE execution_steps
+ALTER TABLE step_executions
 ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS error_classification VARCHAR(50),
 ADD COLUMN IF NOT EXISTS error_context JSONB;
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS error_handling_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     execution_id UUID NOT NULL REFERENCES executions(id) ON DELETE CASCADE,
-    step_execution_id UUID REFERENCES execution_steps(id) ON DELETE CASCADE,
+    step_execution_id UUID REFERENCES step_executions(id) ON DELETE CASCADE,
     node_id VARCHAR(255) NOT NULL,
     node_type VARCHAR(100) NOT NULL,
     error_type VARCHAR(100) NOT NULL,

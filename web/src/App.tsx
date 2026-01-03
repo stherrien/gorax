@@ -15,6 +15,9 @@ import AIWorkflowBuilder from './pages/AIWorkflowBuilder'
 import Marketplace from './pages/Marketplace'
 import Analytics from './pages/Analytics'
 import Documentation from './pages/Documentation'
+import { OAuthConnections } from './pages/OAuthConnections'
+import { OAuthCallback } from './components/oauth/OAuthCallback'
+import { SSOSettings } from './pages/admin/SSOSettings'
 
 function App() {
   return (
@@ -32,11 +35,15 @@ function App() {
         <Route path="schedules/new" element={<CreateSchedule />} />
         <Route path="schedules/:id/edit" element={<EditSchedule />} />
         <Route path="credentials" element={<CredentialManager />} />
+        <Route path="oauth/connections" element={<OAuthConnections />} />
         <Route path="ai/builder" element={<AIWorkflowBuilder />} />
         <Route path="marketplace" element={<Marketplace />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="docs" element={<Documentation />} />
+        <Route path="admin/sso" element={<SSOSettings />} />
       </Route>
+      {/* OAuth callback route outside Layout (no navigation) */}
+      <Route path="oauth/callback/:provider" element={<OAuthCallback />} />
     </Routes>
   )
 }

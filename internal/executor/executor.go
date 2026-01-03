@@ -512,6 +512,8 @@ func (e *Executor) executeNode(ctx context.Context, node workflow.Node, execCtx 
 		output, err = e.executeSlackUpdateMessageAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeActionSlackAddReaction):
 		output, err = e.executeSlackAddReactionAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeActionSubworkflow):
+		output, err = e.executeSubWorkflowAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlDelay):
 		output, err = e.executeDelayAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlSubWorkflow):

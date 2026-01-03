@@ -23,6 +23,7 @@ import (
 	"github.com/gorax/gorax/internal/analytics"
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/audit"
 	"github.com/gorax/gorax/internal/collaboration"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
@@ -35,8 +36,11 @@ import (
 	"github.com/gorax/gorax/internal/llm/providers/openai"
 	"github.com/gorax/gorax/internal/marketplace"
 	"github.com/gorax/gorax/internal/metrics"
+	"github.com/gorax/gorax/internal/oauth"
+	oauthProviders "github.com/gorax/gorax/internal/oauth/providers"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/sso"
 	"github.com/gorax/gorax/internal/suggestions"
 	"github.com/gorax/gorax/internal/template"
 	"github.com/gorax/gorax/internal/tenant"
@@ -103,6 +107,9 @@ type App struct {
 	templateService     *template.Service
 	marketplaceService  *marketplace.Service
 	collabService       *collaboration.Service
+	oauthService        *oauth.Service
+	ssoService          *sso.Service
+	auditService        *audit.Service
 
 	// WebSocket
 	wsHub     *websocket.Hub
@@ -129,6 +136,9 @@ type App struct {
 	marketplaceHandler       *handlers.MarketplaceHandler
 	analyticsHandler         *handlers.AnalyticsHandler
 	collaborationHandler     *handlers.CollaborationHandler
+	oauthHandler             *handlers.OAuthHandler
+	ssoHandler               *handlers.SSOHandler
+	auditHandler             *handlers.AuditHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -398,6 +408,38 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	analyticsService := analytics.NewService(analyticsRepo)
 	app.analyticsHandler = handlers.NewAnalyticsHandler(analyticsService, logger)
 
+	// Initialize OAuth service and handler
+	oauthRepo := oauth.NewRepository(db)
+	oauthProviderRegistry := map[string]oauth.Provider{
+		"github":    oauthProviders.NewGitHubProvider(),
+		"google":    oauthProviders.NewGoogleProvider(),
+		"slack":     oauthProviders.NewSlackProvider(),
+		"microsoft": oauthProviders.NewMicrosoftProvider(),
+	}
+	// Create an OAuth encryption adapter from the credential encryption service
+	oauthEncryptionAdapter := &oauthEncryptionAdapter{encryptionSvc: encryptionService}
+	app.oauthService = oauth.NewService(oauthRepo, oauthEncryptionAdapter, oauthProviderRegistry, cfg.OAuth.BaseURL)
+	app.oauthHandler = handlers.NewOAuthHandler(app.oauthService)
+	logger.Info("OAuth service initialized", "providers", len(oauthProviderRegistry))
+
+	// Initialize SSO service and handler
+	// TODO: SSO service requires refactoring to avoid import cycles
+	// For now, initialize with nil to allow compilation
+	// ssoRepo := sso.NewRepository(db)
+	// ssoFactory := sso.NewProviderFactory()
+	// app.ssoService = sso.NewService(ssoRepo, nil, ssoFactory)
+	// app.ssoHandler = handlers.NewSSOHandler(app.ssoService)
+	logger.Info("SSO service initialization skipped - requires refactoring")
+
+	// Initialize Audit service and handler
+	auditRepo := audit.NewRepository(db)
+	app.auditService = audit.NewService(auditRepo, cfg.Audit.BufferSize, cfg.Audit.FlushInterval)
+	app.auditHandler = handlers.NewAuditHandler(app.auditService, logger)
+	logger.Info("Audit service initialized",
+		"buffer_size", cfg.Audit.BufferSize,
+		"flush_interval", cfg.Audit.FlushInterval,
+	)
+
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
 
@@ -432,6 +474,11 @@ func (a *App) Close() error {
 	}
 	if a.dbStatsCollector != nil {
 		a.dbStatsCollector.Stop()
+	}
+
+	// Close audit service (flush buffered events)
+	if a.auditService != nil {
+		a.auditService.Close()
 	}
 
 	if a.errorTracker != nil {
@@ -471,6 +518,11 @@ func (a *App) setupRouter() {
 	// Add Sentry middleware if error tracking is enabled
 	if a.errorTracker != nil {
 		r.Use(apiMiddleware.SentryMiddleware(a.errorTracker))
+	}
+
+	// Add audit middleware if enabled
+	if a.config.Audit.Enabled && a.auditService != nil {
+		r.Use(apiMiddleware.AuditMiddleware(a.auditService, a.logger))
 	}
 
 	r.Use(middleware.Recoverer)
@@ -517,6 +569,24 @@ func (a *App) setupRouter() {
 				r.Delete("/{tenantID}", a.tenantAdminHandler.DeleteTenant)
 				r.Put("/{tenantID}/quotas", a.tenantAdminHandler.UpdateTenantQuotas)
 				r.Get("/{tenantID}/usage", a.tenantAdminHandler.GetTenantUsage)
+			})
+
+			// SSO provider management routes (admin only)
+			// TODO: Re-enable when SSO service is properly initialized
+			/* r.Route("/sso", func(r chi.Router) {
+				r.Post("/providers", a.ssoHandler.CreateProvider)
+				r.Get("/providers", a.ssoHandler.ListProviders)
+				r.Get("/providers/{id}", a.ssoHandler.GetProvider)
+				r.Put("/providers/{id}", a.ssoHandler.UpdateProvider)
+				r.Delete("/providers/{id}", a.ssoHandler.DeleteProvider)
+			}) */
+
+			// Audit log routes (admin only)
+			r.Route("/audit", func(r chi.Router) {
+				r.Get("/events", a.auditHandler.QueryEvents)
+				r.Get("/events/{id}", a.auditHandler.GetEvent)
+				r.Get("/stats", a.auditHandler.GetStats)
+				r.Post("/export", a.auditHandler.ExportEvents)
 			})
 		})
 
@@ -694,6 +764,17 @@ func (a *App) setupRouter() {
 				r.Get("/errors", a.analyticsHandler.GetErrorBreakdown)
 				r.Get("/workflows/{workflowID}/nodes", a.analyticsHandler.GetNodePerformance)
 			})
+
+			// OAuth routes
+			r.Route("/oauth", func(r chi.Router) {
+				r.Get("/providers", a.oauthHandler.ListProviders)
+				r.Get("/authorize/{provider}", a.oauthHandler.Authorize)
+				r.Get("/callback/{provider}", a.oauthHandler.Callback)
+				r.Get("/connections", a.oauthHandler.ListConnections)
+				r.Get("/connections/{id}", a.oauthHandler.GetConnection)
+				r.Delete("/connections/{id}", a.oauthHandler.RevokeConnection)
+				r.Post("/connections/{id}/test", a.oauthHandler.TestConnection)
+			})
 		})
 
 		// GraphQL API endpoint (with authentication and tenant context)
@@ -726,6 +807,17 @@ func (a *App) setupRouter() {
 	r.Route("/webhooks", func(r chi.Router) {
 		r.Post("/{workflowID}/{webhookID}", a.webhookHandler.Handle)
 	})
+
+	// SSO authentication endpoints (public)
+	// TODO: Re-enable when SSO service is properly initialized
+	/* r.Route("/sso", func(r chi.Router) {
+		r.Get("/login/{id}", a.ssoHandler.InitiateLogin)
+		r.Get("/callback/{id}", a.ssoHandler.HandleCallback)
+		r.Post("/callback/{id}", a.ssoHandler.HandleCallback)
+		r.Post("/acs", a.ssoHandler.HandleSAMLAssertion) // SAML Assertion Consumer Service
+		r.Get("/metadata/{id}", a.ssoHandler.GetMetadata)
+		r.Get("/discover", a.ssoHandler.DiscoverProvider)
+	}) */
 
 	a.router = r
 }
@@ -827,6 +919,19 @@ func (w *workflowCreatorAdapter) CreateWorkflow(ctx context.Context, tenantID, u
 		return "", err
 	}
 	return created.ID, nil
+}
+
+// oauthEncryptionAdapter adapts credential.EncryptionServiceInterface to oauth.EncryptionService
+type oauthEncryptionAdapter struct {
+	encryptionSvc credential.EncryptionServiceInterface
+}
+
+func (a *oauthEncryptionAdapter) Encrypt(ctx context.Context, tenantID string, data *credential.CredentialData) (*credential.EncryptedSecret, error) {
+	return a.encryptionSvc.Encrypt(ctx, tenantID, data)
+}
+
+func (a *oauthEncryptionAdapter) Decrypt(ctx context.Context, encrypted *credential.EncryptedSecret) (*credential.CredentialData, error) {
+	return a.encryptionSvc.Decrypt(ctx, encrypted)
 }
 
 // workflowServiceMarketplaceAdapter adapts workflow.Service to marketplace.WorkflowService interface

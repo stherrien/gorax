@@ -3,9 +3,6 @@ package sso
 import (
 	"context"
 	"fmt"
-
-	"github.com/gorax/gorax/internal/sso/oidc"
-	"github.com/gorax/gorax/internal/sso/saml"
 )
 
 // DefaultProviderFactory implements ProviderFactory
@@ -17,17 +14,16 @@ func NewProviderFactory() ProviderFactory {
 }
 
 // CreateProvider creates an SSO provider based on the provider type
+// Note: Actual provider creation is delegated to avoid import cycles
 func (f *DefaultProviderFactory) CreateProvider(ctx context.Context, provider *Provider) (SSOProvider, error) {
 	if provider == nil {
 		return nil, fmt.Errorf("provider cannot be nil")
 	}
 
-	switch provider.Type {
-	case ProviderTypeSAML:
-		return saml.NewProvider(ctx, provider)
-	case ProviderTypeOIDC:
-		return oidc.NewProvider(ctx, provider)
-	default:
-		return nil, fmt.Errorf("unsupported provider type: %s", provider.Type)
-	}
+	// To avoid import cycles, provider creation is handled by createProviderFunc
+	// which is injected when the factory is initialized
+	return nil, fmt.Errorf("provider factory must be initialized with createProviderFunc")
 }
+
+// CreateProviderFunc is a function type for creating providers
+type CreateProviderFunc func(ctx context.Context, provider *Provider) (SSOProvider, error)

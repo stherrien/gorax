@@ -21,31 +21,28 @@ export const ssoApi = {
    * Create a new SSO provider
    */
   createProvider: async (request: CreateProviderRequest): Promise<SSOProvider> => {
-    const response = await apiClient.post<SSOProvider>(
+    return await apiClient.post(
       `${SSO_BASE_PATH}/providers`,
       request
     );
-    return response.data;
   },
 
   /**
    * List all SSO providers for the current tenant
    */
   listProviders: async (): Promise<SSOProvider[]> => {
-    const response = await apiClient.get<SSOProvider[]>(
+    return await apiClient.get(
       `${SSO_BASE_PATH}/providers`
     );
-    return response.data;
   },
 
   /**
    * Get a specific SSO provider
    */
   getProvider: async (providerId: string): Promise<SSOProvider> => {
-    const response = await apiClient.get<SSOProvider>(
+    return await apiClient.get(
       `${SSO_BASE_PATH}/providers/${providerId}`
     );
-    return response.data;
   },
 
   /**
@@ -55,11 +52,10 @@ export const ssoApi = {
     providerId: string,
     request: UpdateProviderRequest
   ): Promise<SSOProvider> => {
-    const response = await apiClient.put<SSOProvider>(
+    return await apiClient.put(
       `${SSO_BASE_PATH}/providers/${providerId}`,
       request
     );
-    return response.data;
   },
 
   /**
@@ -73,22 +69,19 @@ export const ssoApi = {
    * Discover SSO provider by email domain
    */
   discoverProvider: async (email: string): Promise<ProviderDiscoveryResponse> => {
-    const response = await apiClient.get<ProviderDiscoveryResponse>(
+    return await apiClient.get(
       `${SSO_BASE_PATH}/discover`,
       { params: { email } }
     );
-    return response.data;
   },
 
   /**
    * Get SAML metadata for a provider
    */
   getMetadata: async (providerId: string): Promise<string> => {
-    const response = await apiClient.get<string>(
-      `${SSO_BASE_PATH}/metadata/${providerId}`,
-      { responseType: 'text' }
+    return await apiClient.get(
+      `${SSO_BASE_PATH}/metadata/${providerId}`
     );
-    return response.data;
   },
 
   /**
@@ -113,11 +106,10 @@ export const ssoApi = {
     providerId: string,
     limit = 100
   ): Promise<SSOLoginEvent[]> => {
-    const response = await apiClient.get<SSOLoginEvent[]>(
+    return await apiClient.get(
       `${SSO_BASE_PATH}/providers/${providerId}/events`,
       { params: { limit } }
     );
-    return response.data;
   },
 };
 

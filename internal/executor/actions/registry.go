@@ -23,6 +23,10 @@ func NewRegistry() *Registry {
 	r.Register("action:formula", func() Action { return &FormulaAction{} })
 	r.Register("action:code", func() Action { return &ScriptAction{} })
 
+	// Register error handling actions
+	// Note: Try and Retry actions require special initialization with executor callbacks
+	// They will be registered separately during executor initialization
+
 	return r
 }
 

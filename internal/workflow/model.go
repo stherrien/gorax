@@ -74,6 +74,7 @@ const (
 	NodeTypeActionSlackSendDM        NodeType = "slack:send_dm"
 	NodeTypeActionSlackUpdateMessage NodeType = "slack:update_message"
 	NodeTypeActionSlackAddReaction   NodeType = "slack:add_reaction"
+	NodeTypeActionSubworkflow        NodeType = "action:subworkflow"
 	NodeTypeControlIf                NodeType = "control:if"
 	NodeTypeControlLoop              NodeType = "control:loop"
 	NodeTypeControlParallel          NodeType = "control:parallel"
@@ -152,8 +153,24 @@ type LoopActionConfig struct {
 
 // ParallelConfig represents parallel execution configuration
 type ParallelConfig struct {
-	ErrorStrategy  string `json:"error_strategy"`            // "fail_fast" or "wait_all" (default "fail_fast")
-	MaxConcurrency int    `json:"max_concurrency,omitempty"` // 0 = unlimited, >0 = max concurrent branches
+	// Branches to execute in parallel (named branches for better organization)
+	Branches []ParallelBranch `json:"branches,omitempty"`
+	// Wait for all branches or first completion
+	WaitMode string `json:"wait_mode,omitempty"` // "all" or "first" (default "all")
+	// Maximum concurrent executions (0 = unlimited, >0 = max concurrent branches)
+	MaxConcurrency int `json:"max_concurrency,omitempty"`
+	// Timeout for parallel execution (e.g., "30s", "1m", "2h")
+	Timeout string `json:"timeout,omitempty"`
+	// What to do if one branch fails
+	FailureMode string `json:"failure_mode,omitempty"` // "stop_all" or "continue" (default "stop_all")
+	// Legacy: ErrorStrategy for backward compatibility (maps to FailureMode)
+	ErrorStrategy string `json:"error_strategy,omitempty"` // "fail_fast" or "wait_all" (deprecated, use FailureMode)
+}
+
+// ParallelBranch represents a named branch in parallel execution
+type ParallelBranch struct {
+	Name  string   `json:"name"`  // Branch name for identification
+	Nodes []string `json:"nodes"` // Node IDs in this branch (sequential execution within branch)
 }
 
 // DelayConfig represents delay action configuration
@@ -176,11 +193,15 @@ type JoinConfig struct {
 
 // SubWorkflowConfig represents sub-workflow action configuration
 type SubWorkflowConfig struct {
-	WorkflowID    string            `json:"workflow_id"`              // ID of the workflow to execute
-	InputMapping  map[string]string `json:"input_mapping,omitempty"`  // Map parent context to sub-workflow input
-	OutputMapping map[string]string `json:"output_mapping,omitempty"` // Map sub-workflow output to parent context
-	WaitForResult bool              `json:"wait_for_result"`          // Sync (true) vs async (false) execution
-	TimeoutMs     int               `json:"timeout_ms,omitempty"`     // Timeout in milliseconds (0 = no timeout)
+	WorkflowID     string            `json:"workflow_id"`              // ID of the workflow to execute
+	WorkflowName   string            `json:"workflow_name,omitempty"`  // Optional, for display purposes
+	InputMapping   map[string]string `json:"input_mapping,omitempty"`  // Map parent context to sub-workflow input
+	OutputMapping  map[string]string `json:"output_mapping,omitempty"` // Map sub-workflow output to parent context
+	Mode           string            `json:"mode"`                     // "sync" or "async" execution mode
+	Timeout        string            `json:"timeout,omitempty"`        // Timeout duration (e.g., "5m", "30s")
+	TimeoutMs      int               `json:"timeout_ms,omitempty"`     // Timeout in milliseconds (deprecated, use Timeout)
+	WaitForResult  bool              `json:"wait_for_result"`          // Sync (true) vs async (false) execution (deprecated, use Mode)
+	InheritContext bool              `json:"inherit_context"`          // Whether to inherit parent context
 }
 
 // TryConfig represents try/catch/finally error handling configuration

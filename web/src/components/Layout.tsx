@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Executions', href: '/executions' },
   { name: 'Analytics', href: '/analytics' },
   { name: 'Credentials', href: '/credentials' },
+  { name: 'OAuth', href: '/oauth/connections' },
   { name: 'Docs', href: '/docs' },
 ]
 
