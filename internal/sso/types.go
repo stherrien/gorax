@@ -131,3 +131,31 @@ type UpdateProviderRequest struct {
 type ProviderFactory interface {
 	CreateProvider(ctx context.Context, provider *Provider) (SSOProvider, error)
 }
+
+// SAMLConfig represents SAML provider configuration
+type SAMLConfig struct {
+	EntityID          string            `json:"entity_id"`
+	ACSURL            string            `json:"acs_url"`
+	IdPMetadataURL    string            `json:"idp_metadata_url,omitempty"`
+	IdPMetadataXML    string            `json:"idp_metadata_xml,omitempty"`
+	IdPEntityID       string            `json:"idp_entity_id"`
+	IdPSSOURL         string            `json:"idp_sso_url"`
+	Certificate       string            `json:"certificate,omitempty"`
+	PrivateKey        string            `json:"private_key,omitempty"`
+	AttributeMapping  map[string]string `json:"attribute_mapping"`
+	SignAuthnRequests bool              `json:"sign_authn_requests"`
+}
+
+// OIDCConfig represents OIDC provider configuration
+type OIDCConfig struct {
+	ClientID         string            `json:"client_id"`
+	ClientSecret     string            `json:"client_secret"`
+	DiscoveryURL     string            `json:"discovery_url"`
+	AuthorizationURL string            `json:"authorization_url,omitempty"`
+	TokenURL         string            `json:"token_url,omitempty"`
+	UserinfoURL      string            `json:"userinfo_url,omitempty"`
+	JWKSURL          string            `json:"jwks_url,omitempty"`
+	RedirectURL      string            `json:"redirect_url"`
+	Scopes           []string          `json:"scopes"`
+	AttributeMapping map[string]string `json:"attribute_mapping"`
+}

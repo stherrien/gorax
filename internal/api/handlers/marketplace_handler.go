@@ -31,9 +31,16 @@ type MarketplaceService interface {
 	GetPopular(ctx context.Context, limit int) ([]*marketplace.MarketplaceTemplate, error)
 	InstallTemplate(ctx context.Context, tenantID, userID, templateID string, input marketplace.InstallTemplateInput) (*marketplace.InstallTemplateResult, error)
 	RateTemplate(ctx context.Context, tenantID, userID, userName, templateID string, input marketplace.RateTemplateInput) (*marketplace.TemplateReview, error)
-	GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*marketplace.TemplateReview, error)
+	GetReviews(ctx context.Context, templateID string, sortBy marketplace.ReviewSortOption, limit, offset int) ([]*marketplace.TemplateReview, error)
 	DeleteReview(ctx context.Context, tenantID, templateID, reviewID string) error
 	GetCategories() []string
+	VoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error
+	UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error
+	ReportReview(ctx context.Context, tenantID, userID, reviewID string, input marketplace.ReportReviewInput) error
+	GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*marketplace.ReviewReport, error)
+	ResolveReviewReport(ctx context.Context, reportID, status, resolvedBy string, notes *string) error
+	HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error
+	GetRatingDistribution(ctx context.Context, templateID string) (*marketplace.RatingDistribution, error)
 }
 
 // NewMarketplaceHandler creates a new marketplace handler
@@ -282,6 +289,7 @@ func (h *MarketplaceHandler) RateTemplate(w http.ResponseWriter, r *http.Request
 // @Accept json
 // @Produce json
 // @Param id path string true "Template ID"
+// @Param sort query string false "Sort by: recent, helpful, rating_high, rating_low" default(recent)
 // @Param limit query int false "Maximum results" default(10)
 // @Param offset query int false "Pagination offset" default(0)
 // @Security TenantID
@@ -291,6 +299,11 @@ func (h *MarketplaceHandler) RateTemplate(w http.ResponseWriter, r *http.Request
 // @Router /api/v1/marketplace/templates/{id}/reviews [get]
 func (h *MarketplaceHandler) GetReviews(w http.ResponseWriter, r *http.Request) {
 	templateID := chi.URLParam(r, "id")
+
+	sortBy := marketplace.ReviewSortRecent
+	if sortStr := r.URL.Query().Get("sort"); sortStr != "" {
+		sortBy = marketplace.ReviewSortOption(sortStr)
+	}
 
 	limit := 10
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -306,7 +319,7 @@ func (h *MarketplaceHandler) GetReviews(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	reviews, err := h.service.GetReviews(r.Context(), templateID, limit, offset)
+	reviews, err := h.service.GetReviews(r.Context(), templateID, sortBy, limit, offset)
 	if err != nil {
 		h.respondError(w, http.StatusInternalServerError, "failed to get reviews")
 		return
@@ -415,6 +428,263 @@ func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) 
 func (h *MarketplaceHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories := h.service.GetCategories()
 	h.respondJSON(w, http.StatusOK, categories)
+}
+
+// VoteReviewHelpful marks a review as helpful
+// @Summary Vote review as helpful
+// @Description Marks a review as helpful by the current user
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param reviewId path string true "Review ID"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Vote recorded successfully"
+// @Failure 409 {object} map[string]string "Already voted"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/reviews/{reviewId}/helpful [post]
+func (h *MarketplaceHandler) VoteReviewHelpful(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	userID := middleware.GetUserID(r)
+	reviewID := chi.URLParam(r, "reviewId")
+
+	if err := h.service.VoteReviewHelpful(r.Context(), tenantID, userID, reviewID); err != nil {
+		if strings.Contains(err.Error(), "already voted") {
+			h.respondError(w, http.StatusConflict, "already voted helpful")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to vote review helpful")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnvoteReviewHelpful removes a helpful vote from a review
+// @Summary Remove helpful vote
+// @Description Removes the current user's helpful vote from a review
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param reviewId path string true "Review ID"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Vote removed successfully"
+// @Failure 404 {object} map[string]string "Vote not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/reviews/{reviewId}/helpful [delete]
+func (h *MarketplaceHandler) UnvoteReviewHelpful(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	userID := middleware.GetUserID(r)
+	reviewID := chi.URLParam(r, "reviewId")
+
+	if err := h.service.UnvoteReviewHelpful(r.Context(), tenantID, userID, reviewID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			h.respondError(w, http.StatusNotFound, "vote not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to unvote review helpful")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReportReview reports a review for moderation
+// @Summary Report review
+// @Description Reports a review for inappropriate content or behavior
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param reviewId path string true "Review ID"
+// @Param report body marketplace.ReportReviewInput true "Report details"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Review reported successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/reviews/{reviewId}/report [post]
+func (h *MarketplaceHandler) ReportReview(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	userID := middleware.GetUserID(r)
+	reviewID := chi.URLParam(r, "reviewId")
+
+	var input marketplace.ReportReviewInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(input); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := h.service.ReportReview(r.Context(), tenantID, userID, reviewID, input); err != nil {
+		if strings.Contains(err.Error(), "invalid") {
+			h.respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to report review")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetRatingDistribution retrieves the rating distribution for a template
+// @Summary Get rating distribution
+// @Description Returns the distribution of ratings (1-5 stars) for a template
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Template ID"
+// @Success 200 {object} marketplace.RatingDistribution "Rating distribution"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/templates/{id}/rating-distribution [get]
+func (h *MarketplaceHandler) GetRatingDistribution(w http.ResponseWriter, r *http.Request) {
+	templateID := chi.URLParam(r, "id")
+
+	distribution, err := h.service.GetRatingDistribution(r.Context(), templateID)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, "failed to get rating distribution")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, distribution)
+}
+
+// GetReviewReports retrieves review reports for admin moderation
+// @Summary Get review reports (admin only)
+// @Description Returns a list of review reports for moderation
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param status query string false "Filter by status: pending, reviewed, actioned, dismissed"
+// @Param limit query int false "Maximum results" default(20)
+// @Param offset query int false "Pagination offset" default(0)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {array} marketplace.ReviewReport "List of reports"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/admin/review-reports [get]
+func (h *MarketplaceHandler) GetReviewReports(w http.ResponseWriter, r *http.Request) {
+	status := r.URL.Query().Get("status")
+
+	limit := 20
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil {
+			limit = l
+		}
+	}
+
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil {
+			offset = o
+		}
+	}
+
+	reports, err := h.service.GetReviewReports(r.Context(), status, limit, offset)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, "failed to get review reports")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, reports)
+}
+
+// ResolveReviewReportInput represents input for resolving a review report
+type ResolveReviewReportInput struct {
+	Status string  `json:"status" validate:"required,oneof=reviewed actioned dismissed"`
+	Notes  *string `json:"notes,omitempty"`
+}
+
+// ResolveReviewReport resolves a review report
+// @Summary Resolve review report (admin only)
+// @Description Resolves a review report with a status and optional notes
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param reportId path string true "Report ID"
+// @Param resolution body ResolveReviewReportInput true "Resolution details"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Report resolved successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/admin/review-reports/{reportId} [put]
+func (h *MarketplaceHandler) ResolveReviewReport(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	reportID := chi.URLParam(r, "reportId")
+
+	var input ResolveReviewReportInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(input); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := h.service.ResolveReviewReport(r.Context(), reportID, input.Status, userID, input.Notes); err != nil {
+		if strings.Contains(err.Error(), "invalid") {
+			h.respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to resolve review report")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HideReviewInput represents input for hiding a review
+type HideReviewInput struct {
+	Reason string `json:"reason" validate:"required,min=1,max=500"`
+}
+
+// HideReview hides a review (admin/moderator only)
+// @Summary Hide review (admin only)
+// @Description Hides a review from public view
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param reviewId path string true "Review ID"
+// @Param input body HideReviewInput true "Hide reason"
+// @Security TenantID
+// @Security UserID
+// @Success 204 "Review hidden successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/admin/reviews/{reviewId}/hide [put]
+func (h *MarketplaceHandler) HideReview(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	reviewID := chi.URLParam(r, "reviewId")
+
+	var input HideReviewInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(input); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := h.service.HideReview(r.Context(), reviewID, input.Reason, userID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			h.respondError(w, http.StatusNotFound, "review not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to hide review")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *MarketplaceHandler) getUserName(r *http.Request) string {

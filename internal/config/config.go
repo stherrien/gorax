@@ -70,16 +70,16 @@ type ServerConfig struct {
 
 // DatabaseConfig holds PostgreSQL configuration
 type DatabaseConfig struct {
-	Host              string
-	Port              int
-	User              string
-	Password          string
-	DBName            string
-	SSLMode           string
-	MaxOpenConns      int
-	MaxIdleConns      int
-	ConnMaxLifetime   time.Duration
-	ConnMaxIdleTime   time.Duration
+	Host            string
+	Port            int
+	User            string
+	Password        string
+	DBName          string
+	SSLMode         string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 // ConnectionString returns the PostgreSQL connection string
@@ -280,6 +280,20 @@ type OAuthConfig struct {
 	// Microsoft OAuth application credentials
 	MicrosoftClientID     string
 	MicrosoftClientSecret string
+	// Twitter OAuth application credentials
+	TwitterClientID     string
+	TwitterClientSecret string
+	// LinkedIn OAuth application credentials
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	// Salesforce OAuth application credentials
+	SalesforceClientID     string
+	SalesforceClientSecret string
+	SalesforceEnvironment  string // "production" or "sandbox"
+	// Auth0 OAuth application credentials
+	Auth0Domain       string
+	Auth0ClientID     string
+	Auth0ClientSecret string
 }
 
 // Load reads configuration from environment variables
@@ -290,16 +304,16 @@ func Load() (*Config, error) {
 			Env:     getEnv("APP_ENV", "development"),
 		},
 		Database: DatabaseConfig{
-			Host:             getEnv("DB_HOST", "localhost"),
-			Port:             getEnvAsInt("DB_PORT", 5433),
-			User:             getEnv("DB_USER", "postgres"),
-			Password:         getEnv("DB_PASSWORD", "postgres"),
-			DBName:           getEnv("DB_NAME", "gorax"),
-			SSLMode:          getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns:     getEnvAsInt("DB_MAX_OPEN_CONNS", 150),
-			MaxIdleConns:     getEnvAsInt("DB_MAX_IDLE_CONNS", 25),
-			ConnMaxLifetime:  getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
-			ConnMaxIdleTime:  getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
+			Host:            getEnv("DB_HOST", "localhost"),
+			Port:            getEnvAsInt("DB_PORT", 5433),
+			User:            getEnv("DB_USER", "postgres"),
+			Password:        getEnv("DB_PASSWORD", "postgres"),
+			DBName:          getEnv("DB_NAME", "gorax"),
+			SSLMode:         getEnv("DB_SSLMODE", "disable"),
+			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 150),
+			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 25),
+			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+			ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
 		},
 		Redis: RedisConfig{
 			Address:  getEnv("REDIS_ADDRESS", "localhost:6379"),
@@ -581,15 +595,25 @@ func loadFormulaCacheConfig() FormulaCacheConfig {
 
 func loadOAuthConfig() OAuthConfig {
 	return OAuthConfig{
-		BaseURL:               getEnv("OAUTH_BASE_URL", "http://localhost:8080"),
-		GitHubClientID:        getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
-		GitHubClientSecret:    getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
-		GoogleClientID:        getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:    getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
-		SlackClientID:         getEnv("OAUTH_SLACK_CLIENT_ID", ""),
-		SlackClientSecret:     getEnv("OAUTH_SLACK_CLIENT_SECRET", ""),
-		MicrosoftClientID:     getEnv("OAUTH_MICROSOFT_CLIENT_ID", ""),
-		MicrosoftClientSecret: getEnv("OAUTH_MICROSOFT_CLIENT_SECRET", ""),
+		BaseURL:                getEnv("OAUTH_BASE_URL", "http://localhost:8080"),
+		GitHubClientID:         getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:     getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
+		GoogleClientID:         getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:     getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+		SlackClientID:          getEnv("OAUTH_SLACK_CLIENT_ID", ""),
+		SlackClientSecret:      getEnv("OAUTH_SLACK_CLIENT_SECRET", ""),
+		MicrosoftClientID:      getEnv("OAUTH_MICROSOFT_CLIENT_ID", ""),
+		MicrosoftClientSecret:  getEnv("OAUTH_MICROSOFT_CLIENT_SECRET", ""),
+		TwitterClientID:        getEnv("OAUTH_TWITTER_CLIENT_ID", ""),
+		TwitterClientSecret:    getEnv("OAUTH_TWITTER_CLIENT_SECRET", ""),
+		LinkedInClientID:       getEnv("OAUTH_LINKEDIN_CLIENT_ID", ""),
+		LinkedInClientSecret:   getEnv("OAUTH_LINKEDIN_CLIENT_SECRET", ""),
+		SalesforceClientID:     getEnv("OAUTH_SALESFORCE_CLIENT_ID", ""),
+		SalesforceClientSecret: getEnv("OAUTH_SALESFORCE_CLIENT_SECRET", ""),
+		SalesforceEnvironment:  getEnv("OAUTH_SALESFORCE_ENVIRONMENT", "production"),
+		Auth0Domain:            getEnv("OAUTH_AUTH0_DOMAIN", "your-tenant.auth0.com"),
+		Auth0ClientID:          getEnv("OAUTH_AUTH0_CLIENT_ID", ""),
+		Auth0ClientSecret:      getEnv("OAUTH_AUTH0_CLIENT_SECRET", ""),
 	}
 }
 

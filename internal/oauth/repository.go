@@ -16,6 +16,11 @@ type PostgresRepository struct {
 	db *sqlx.DB
 }
 
+// NewRepository creates a new OAuth repository (alias for NewPostgresRepository)
+func NewRepository(db *sqlx.DB) *PostgresRepository {
+	return NewPostgresRepository(db)
+}
+
 // NewPostgresRepository creates a new PostgreSQL OAuth repository
 func NewPostgresRepository(db *sqlx.DB) *PostgresRepository {
 	return &PostgresRepository{

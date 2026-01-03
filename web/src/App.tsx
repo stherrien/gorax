@@ -18,6 +18,7 @@ import Documentation from './pages/Documentation'
 import { OAuthConnections } from './pages/OAuthConnections'
 import { OAuthCallback } from './components/oauth/OAuthCallback'
 import { SSOSettings } from './pages/admin/SSOSettings'
+import { AuditLogs } from './pages/admin/AuditLogs'
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="docs" element={<Documentation />} />
         <Route path="admin/sso" element={<SSOSettings />} />
+        <Route path="admin/audit-logs" element={<AuditLogs />} />
       </Route>
       {/* OAuth callback route outside Layout (no navigation) */}
       <Route path="oauth/callback/:provider" element={<OAuthCallback />} />

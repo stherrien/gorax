@@ -74,8 +74,8 @@ func (m *MockMarketplaceService) RateTemplate(ctx context.Context, tenantID, use
 	return args.Get(0).(*marketplace.TemplateReview), args.Error(1)
 }
 
-func (m *MockMarketplaceService) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*marketplace.TemplateReview, error) {
-	args := m.Called(ctx, templateID, limit, offset)
+func (m *MockMarketplaceService) GetReviews(ctx context.Context, templateID string, sortBy marketplace.ReviewSortOption, limit, offset int) ([]*marketplace.TemplateReview, error) {
+	args := m.Called(ctx, templateID, sortBy, limit, offset)
 	return args.Get(0).([]*marketplace.TemplateReview), args.Error(1)
 }
 
@@ -87,6 +87,47 @@ func (m *MockMarketplaceService) DeleteReview(ctx context.Context, tenantID, tem
 func (m *MockMarketplaceService) GetCategories() []string {
 	args := m.Called()
 	return args.Get(0).([]string)
+}
+
+func (m *MockMarketplaceService) VoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) ReportReview(ctx context.Context, tenantID, userID, reviewID string, input marketplace.ReportReviewInput) error {
+	args := m.Called(ctx, tenantID, userID, reviewID, input)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*marketplace.ReviewReport, error) {
+	args := m.Called(ctx, status, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*marketplace.ReviewReport), args.Error(1)
+}
+
+func (m *MockMarketplaceService) ResolveReviewReport(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	args := m.Called(ctx, reportID, status, resolvedBy, notes)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	args := m.Called(ctx, reviewID, reason, hiddenBy)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) GetRatingDistribution(ctx context.Context, templateID string) (*marketplace.RatingDistribution, error) {
+	args := m.Called(ctx, templateID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*marketplace.RatingDistribution), args.Error(1)
 }
 
 func TestMarketplaceHandler_ListTemplates(t *testing.T) {
@@ -815,4 +856,375 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 		assert.Len(t, response, 2)
 		service.AssertExpectations(t)
 	})
+}
+
+// New handler tests for review features
+
+func TestVoteReviewHelpful_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	service.On("VoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").Return(nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.VoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestVoteReviewHelpful_AlreadyVoted(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	service.On("VoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").
+		Return(errors.New("already voted helpful"))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.VoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestUnvoteReviewHelpful_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	service.On("UnvoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").Return(nil)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.UnvoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestReportReview_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	input := marketplace.ReportReviewInput{
+		Reason:  "spam",
+		Details: "This review is spam and should be removed",
+	}
+
+	service.On("ReportReview", mock.Anything, "tenant-1", "user-1", "review-123", input).Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/report", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ReportReview(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestReportReview_InvalidReason(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	input := marketplace.ReportReviewInput{
+		Reason:  "invalid_reason",
+		Details: "Details",
+	}
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/report", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ReportReview(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetRatingDistribution_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	distribution := &marketplace.RatingDistribution{
+		Rating1Count:   5,
+		Rating2Count:   10,
+		Rating3Count:   20,
+		Rating4Count:   30,
+		Rating5Count:   50,
+		TotalRatings:   115,
+		AverageRating:  4.2,
+		Rating1Percent: 4.3,
+		Rating2Percent: 8.7,
+		Rating3Percent: 17.4,
+		Rating4Percent: 26.1,
+		Rating5Percent: 43.5,
+	}
+
+	service.On("GetRatingDistribution", mock.Anything, "template-123").Return(distribution, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/templates/template-123/rating-distribution", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "template-123")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	handler.GetRatingDistribution(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response marketplace.RatingDistribution
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Equal(t, 115, response.TotalRatings)
+	assert.Equal(t, 4.2, response.AverageRating)
+	assert.Equal(t, 50, response.Rating5Count)
+	service.AssertExpectations(t)
+}
+
+func TestGetReviewReports_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	reports := []*marketplace.ReviewReport{
+		{
+			ID:               "report-1",
+			ReviewID:         "review-1",
+			ReporterTenantID: "tenant-1",
+			ReporterUserID:   "user-1",
+			Reason:           "spam",
+			Details:          "This is spam",
+			Status:           "pending",
+		},
+		{
+			ID:               "report-2",
+			ReviewID:         "review-2",
+			ReporterTenantID: "tenant-2",
+			ReporterUserID:   "user-2",
+			Reason:           "inappropriate",
+			Details:          "Inappropriate content",
+			Status:           "pending",
+		},
+	}
+
+	service.On("GetReviewReports", mock.Anything, "pending", 20, 0).Return(reports, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/admin/review-reports?status=pending", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetReviewReports(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response []*marketplace.ReviewReport
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Equal(t, "spam", response[0].Reason)
+	service.AssertExpectations(t)
+}
+
+func TestResolveReviewReport_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	notes := "Reviewed and actioned"
+	input := ResolveReviewReportInput{
+		Status: "actioned",
+		Notes:  &notes,
+	}
+
+	service.On("ResolveReviewReport", mock.Anything, "report-123", "actioned", "admin-user", &notes).Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/review-reports/report-123", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reportId", "report-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ResolveReviewReport(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestResolveReviewReport_InvalidStatus(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	input := ResolveReviewReportInput{
+		Status: "invalid_status",
+	}
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/review-reports/report-123", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reportId", "report-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ResolveReviewReport(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHideReview_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	input := HideReviewInput{
+		Reason: "Violates community guidelines",
+	}
+
+	service.On("HideReview", mock.Anything, "review-123", input.Reason, "admin-user").Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/reviews/review-123/hide", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.HideReview(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestHideReview_NotFound(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	input := HideReviewInput{
+		Reason: "Test reason",
+	}
+
+	service.On("HideReview", mock.Anything, "review-nonexistent", input.Reason, "admin-user").
+		Return(errors.New("review not found"))
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/reviews/review-nonexistent/hide", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-nonexistent")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.HideReview(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestGetReviews_WithSorting(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewMarketplaceHandler(service, logger)
+
+	reviews := []*marketplace.TemplateReview{
+		{ID: "rev-1", Rating: 5, HelpfulCount: 100},
+		{ID: "rev-2", Rating: 5, HelpfulCount: 80},
+		{ID: "rev-3", Rating: 4, HelpfulCount: 60},
+	}
+
+	service.On("GetReviews", mock.Anything, "template-123", marketplace.ReviewSortHelpful, 10, 0).
+		Return(reviews, nil)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/marketplace/templates/template-123/reviews?sort=helpful",
+		nil,
+	)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "template-123")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	handler.GetReviews(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response []*marketplace.TemplateReview
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Len(t, response, 3)
+	assert.Equal(t, 100, response[0].HelpfulCount)
+	service.AssertExpectations(t)
 }

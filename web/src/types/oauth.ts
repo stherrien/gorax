@@ -130,4 +130,28 @@ export const PROVIDER_BRANDING: Record<string, ProviderBranding> = {
     icon: '🏢',
     iconBg: '#e6f4ff',
   },
+  twitter: {
+    name: 'Twitter',
+    color: '#1DA1F2',
+    icon: '𝕏',
+    iconBg: '#e8f5fe',
+  },
+  linkedin: {
+    name: 'LinkedIn',
+    color: '#0077B5',
+    icon: '💼',
+    iconBg: '#e1f0fa',
+  },
+  salesforce: {
+    name: 'Salesforce',
+    color: '#00A1E0',
+    icon: '☁️',
+    iconBg: '#e0f3ff',
+  },
+  auth0: {
+    name: 'Auth0',
+    color: '#EB5424',
+    icon: '🔐',
+    iconBg: '#fef3f0',
+  },
 }

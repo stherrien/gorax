@@ -1,4 +1,4 @@
-package oidc
+package sso
 
 import (
 	"context"
@@ -10,32 +10,31 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/gorax/gorax/internal/sso"
 	"golang.org/x/oauth2"
 )
 
-// Provider implements the OIDC SSO provider
-type Provider struct {
-	provider     *sso.Provider
-	config       *sso.OIDCConfig
+// OIDCProvider implements the OIDC SSO provider
+type OIDCProvider struct {
+	provider     *Provider
+	config       *OIDCConfig
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
 	verifier     *oidc.IDTokenVerifier
 	stateStore   map[string]string // In production, use Redis/database
 }
 
-// NewProvider creates a new OIDC provider
-func NewProvider(ctx context.Context, provider *sso.Provider) (*Provider, error) {
-	if provider.Type != sso.ProviderTypeOIDC {
+// NewOIDCProvider creates a new OIDC provider
+func NewOIDCProvider(ctx context.Context, provider *Provider) (*OIDCProvider, error) {
+	if provider.Type != ProviderTypeOIDC {
 		return nil, fmt.Errorf("invalid provider type: expected oidc, got %s", provider.Type)
 	}
 
-	var config sso.OIDCConfig
+	var config OIDCConfig
 	if err := json.Unmarshal(provider.Config, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal OIDC config: %w", err)
 	}
 
-	p := &Provider{
+	p := &OIDCProvider{
 		provider:   provider,
 		config:     &config,
 		stateStore: make(map[string]string),
@@ -49,7 +48,7 @@ func NewProvider(ctx context.Context, provider *sso.Provider) (*Provider, error)
 }
 
 // initProvider initializes the OIDC provider and OAuth2 config
-func (p *Provider) initProvider(ctx context.Context) error {
+func (p *OIDCProvider) initProvider(ctx context.Context) error {
 	// Initialize OIDC provider
 	oidcProvider, err := oidc.NewProvider(ctx, p.config.DiscoveryURL)
 	if err != nil {
@@ -80,12 +79,12 @@ func (p *Provider) initProvider(ctx context.Context) error {
 }
 
 // GetType returns the provider type
-func (p *Provider) GetType() sso.ProviderType {
-	return sso.ProviderTypeOIDC
+func (p *OIDCProvider) GetType() ProviderType {
+	return ProviderTypeOIDC
 }
 
 // InitiateLogin generates the OIDC authorization URL
-func (p *Provider) InitiateLogin(ctx context.Context, relayState string) (string, error) {
+func (p *OIDCProvider) InitiateLogin(ctx context.Context, relayState string) (string, error) {
 	// Generate state token for CSRF protection
 	state, err := generateState()
 	if err != nil {
@@ -102,7 +101,7 @@ func (p *Provider) InitiateLogin(ctx context.Context, relayState string) (string
 }
 
 // HandleCallback processes the OIDC callback and extracts user attributes
-func (p *Provider) HandleCallback(ctx context.Context, r *http.Request) (*sso.UserAttributes, error) {
+func (p *OIDCProvider) HandleCallback(ctx context.Context, r *http.Request) (*UserAttributes, error) {
 	// Verify state parameter
 	state := r.URL.Query().Get("state")
 	if state == "" {
@@ -177,7 +176,7 @@ func (p *Provider) HandleCallback(ctx context.Context, r *http.Request) (*sso.Us
 }
 
 // getUserInfo fetches additional user information from userinfo endpoint
-func (p *Provider) getUserInfo(ctx context.Context, token *oauth2.Token) (map[string]interface{}, error) {
+func (p *OIDCProvider) getUserInfo(ctx context.Context, token *oauth2.Token) (map[string]interface{}, error) {
 	userInfo, err := p.oidcProvider.UserInfo(ctx, oauth2.StaticTokenSource(token))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
@@ -192,8 +191,8 @@ func (p *Provider) getUserInfo(ctx context.Context, token *oauth2.Token) (map[st
 }
 
 // extractUserAttributes extracts user attributes from OIDC claims
-func (p *Provider) extractUserAttributes(claims map[string]interface{}) (*sso.UserAttributes, error) {
-	attrs := &sso.UserAttributes{
+func (p *OIDCProvider) extractUserAttributes(claims map[string]interface{}) (*UserAttributes, error) {
+	attrs := &UserAttributes{
 		Attributes: make(map[string]string),
 	}
 
@@ -270,13 +269,13 @@ func (p *Provider) extractUserAttributes(claims map[string]interface{}) (*sso.Us
 }
 
 // GetMetadata returns empty string (OIDC doesn't have SP metadata like SAML)
-func (p *Provider) GetMetadata(ctx context.Context) (string, error) {
+func (p *OIDCProvider) GetMetadata(ctx context.Context) (string, error) {
 	// OIDC discovery is handled by the IdP's .well-known endpoint
 	return "", nil
 }
 
 // Validate validates the OIDC provider configuration
-func (p *Provider) Validate(ctx context.Context) error {
+func (p *OIDCProvider) Validate(ctx context.Context) error {
 	if p.config.ClientID == "" {
 		return fmt.Errorf("client ID is required")
 	}

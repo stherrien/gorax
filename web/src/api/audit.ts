@@ -35,7 +35,7 @@ export const auditAPI = {
     if (filter.sortBy) params.sort_by = filter.sortBy
     if (filter.sortDirection) params.sort_direction = filter.sortDirection
 
-    const response = await apiClient.get('/api/v1/audit/events', { params })
+    const response = await apiClient.get('/api/v1/admin/audit/events', { params })
 
     return {
       events: response.events || [],
@@ -49,14 +49,14 @@ export const auditAPI = {
    * Get a single audit event by ID
    */
   async getAuditEvent(eventId: string): Promise<AuditEvent> {
-    return apiClient.get(`/api/v1/audit/events/${eventId}`)
+    return apiClient.get(`/api/v1/admin/audit/events/${eventId}`)
   },
 
   /**
    * Get audit statistics for a time range
    */
   async getAuditStats(timeRange: TimeRange): Promise<AuditStats> {
-    return apiClient.get('/api/v1/audit/stats', {
+    return apiClient.get('/api/v1/admin/audit/stats', {
       params: {
         start_date: timeRange.startDate,
         end_date: timeRange.endDate,
@@ -89,7 +89,7 @@ export const auditAPI = {
     if (filter.endDate) params.end_date = filter.endDate
 
     // Build URL with query parameters
-    const url = new URL('/api/v1/audit/export', window.location.origin)
+    const url = new URL('/api/v1/admin/audit/export', window.location.origin)
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, String(value))
     })

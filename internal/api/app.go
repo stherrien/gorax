@@ -410,11 +410,19 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 
 	// Initialize OAuth service and handler
 	oauthRepo := oauth.NewRepository(db)
+
+	// Determine Salesforce environment (sandbox or production)
+	salesforceIsSandbox := cfg.OAuth.SalesforceEnvironment == "sandbox"
+
 	oauthProviderRegistry := map[string]oauth.Provider{
-		"github":    oauthProviders.NewGitHubProvider(),
-		"google":    oauthProviders.NewGoogleProvider(),
-		"slack":     oauthProviders.NewSlackProvider(),
-		"microsoft": oauthProviders.NewMicrosoftProvider(),
+		"github":     oauthProviders.NewGitHubProvider(),
+		"google":     oauthProviders.NewGoogleProvider(),
+		"slack":      oauthProviders.NewSlackProvider(),
+		"microsoft":  oauthProviders.NewMicrosoftProvider(),
+		"twitter":    oauthProviders.NewTwitterProvider(),
+		"linkedin":   oauthProviders.NewLinkedInProvider(),
+		"salesforce": oauthProviders.NewSalesforceProvider(salesforceIsSandbox),
+		"auth0":      oauthProviders.NewAuth0Provider(cfg.OAuth.Auth0Domain),
 	}
 	// Create an OAuth encryption adapter from the credential encryption service
 	oauthEncryptionAdapter := &oauthEncryptionAdapter{encryptionSvc: encryptionService}
@@ -743,16 +751,35 @@ func (a *App) setupRouter() {
 
 			// Marketplace routes
 			r.Route("/marketplace", func(r chi.Router) {
+				// Public template routes
 				r.Get("/templates", a.marketplaceHandler.ListTemplates)
 				r.Get("/templates/{id}", a.marketplaceHandler.GetTemplate)
 				r.Post("/templates", a.marketplaceHandler.PublishTemplate)
 				r.Post("/templates/{id}/install", a.marketplaceHandler.InstallTemplate)
-				r.Post("/templates/{id}/rate", a.marketplaceHandler.RateTemplate)
-				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
-				r.Delete("/templates/{id}/reviews/{reviewId}", a.marketplaceHandler.DeleteReview)
 				r.Get("/trending", a.marketplaceHandler.GetTrending)
 				r.Get("/popular", a.marketplaceHandler.GetPopular)
 				r.Get("/categories", a.marketplaceHandler.GetCategories)
+
+				// Review routes
+				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
+				r.Get("/templates/{id}/rating-distribution", a.marketplaceHandler.GetRatingDistribution)
+				r.Post("/templates/{id}/rate", a.marketplaceHandler.RateTemplate)
+				r.Delete("/templates/{id}/reviews/{reviewId}", a.marketplaceHandler.DeleteReview)
+
+				// Review helpful votes
+				r.Post("/reviews/{reviewId}/helpful", a.marketplaceHandler.VoteReviewHelpful)
+				r.Delete("/reviews/{reviewId}/helpful", a.marketplaceHandler.UnvoteReviewHelpful)
+
+				// Review reporting
+				r.Post("/reviews/{reviewId}/report", a.marketplaceHandler.ReportReview)
+
+				// Admin routes (marketplace moderation)
+				r.Route("/admin", func(r chi.Router) {
+					r.Use(apiMiddleware.RequireAdmin())
+					r.Get("/review-reports", a.marketplaceHandler.GetReviewReports)
+					r.Put("/review-reports/{reportId}", a.marketplaceHandler.ResolveReviewReport)
+					r.Put("/reviews/{reviewId}/hide", a.marketplaceHandler.HideReview)
+				})
 			})
 
 			// Analytics routes
@@ -931,7 +958,18 @@ func (a *oauthEncryptionAdapter) Encrypt(ctx context.Context, tenantID string, d
 }
 
 func (a *oauthEncryptionAdapter) Decrypt(ctx context.Context, encrypted *credential.EncryptedSecret) (*credential.CredentialData, error) {
-	return a.encryptionSvc.Decrypt(ctx, encrypted)
+	// Convert EncryptedSecret to byte array format expected by EncryptionServiceInterface
+	// encryptedData format: nonce (12 bytes) + ciphertext + authTag (16 bytes)
+	const nonceSize = 12
+	encryptedData := make([]byte, 0, nonceSize+len(encrypted.Ciphertext)+len(encrypted.AuthTag))
+	encryptedData = append(encryptedData, encrypted.Nonce...)
+	encryptedData = append(encryptedData, encrypted.Ciphertext...)
+	encryptedData = append(encryptedData, encrypted.AuthTag...)
+
+	// encryptedKey is the encrypted DEK
+	encryptedKey := encrypted.EncryptedDEK
+
+	return a.encryptionSvc.Decrypt(ctx, encryptedData, encryptedKey)
 }
 
 // workflowServiceMarketplaceAdapter adapts workflow.Service to marketplace.WorkflowService interface

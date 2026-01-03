@@ -1,7 +1,6 @@
 import { apiClient } from './client'
 import type {
   MarketplaceTemplate,
-  MarketplaceTemplateWithCategories,
   Category,
   PublishTemplateInput,
   InstallTemplateInput,
@@ -87,7 +86,7 @@ class MarketplaceAPI {
    * Vote a review as helpful
    */
   async voteReviewHelpful(reviewId: string): Promise<void> {
-    await apiClient.post(`/api/v1/marketplace/reviews/${reviewId}/helpful`)
+    await apiClient.post(`/api/v1/marketplace/reviews/${reviewId}/helpful`, {})
   }
 
   /**

@@ -149,7 +149,25 @@ export class APIClient {
 
     // Categorize errors by status code
     if (response.status === 401 || response.status === 403) {
-      throw new AuthError(errorMessage, response.status, errorData)
+      // Handle authentication/authorization errors
+      const authError = new AuthError(errorMessage, response.status, errorData)
+
+      // If 401, redirect to login (unless already on login page)
+      if (response.status === 401 && !window.location.pathname.includes('/login')) {
+        // Store the current path for redirect after login
+        localStorage.setItem('redirect_after_login', window.location.pathname)
+
+        // In development, just show error
+        // In production, redirect to Kratos login
+        if (import.meta.env.MODE === 'production') {
+          // TODO: Redirect to Kratos login URL
+          console.error('Unauthorized - redirect to login')
+        } else {
+          console.error('Unauthorized (dev mode) - ', errorMessage)
+        }
+      }
+
+      throw authError
     }
 
     if (response.status === 404) {

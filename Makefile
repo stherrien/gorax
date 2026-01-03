@@ -55,6 +55,27 @@ test-coverage:
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
+# Smoke tests
+smoke-tests:
+	@echo "Running smoke tests..."
+	cd tests/smoke && ./run-all.sh
+
+smoke-tests-quick:
+	@echo "Running smoke tests (skip Go tests)..."
+	cd tests/smoke && SKIP_GO=true ./run-all.sh
+
+smoke-tests-api:
+	cd tests/smoke && ./api-smoke.sh
+
+smoke-tests-db:
+	cd tests/smoke && ./db-smoke.sh
+
+smoke-tests-services:
+	cd tests/smoke && ./service-smoke.sh
+
+smoke-tests-perf:
+	cd tests/smoke && ./perf-smoke.sh
+
 # Lint code
 lint:
 	golangci-lint run ./...
@@ -264,10 +285,14 @@ help:
 	@echo "  make run-worker    - Run worker"
 	@echo ""
 	@echo "🧪 Testing & Quality:"
-	@echo "  make test          - Run all tests"
-	@echo "  make test-coverage - Run tests with coverage report"
-	@echo "  make lint          - Run linter"
-	@echo "  make fmt           - Format code"
+	@echo "  make test             - Run all tests"
+	@echo "  make test-coverage    - Run tests with coverage report"
+	@echo "  make smoke-tests      - Run all smoke tests"
+	@echo "  make smoke-tests-quick - Run smoke tests (skip Go tests)"
+	@echo "  make smoke-tests-api  - Run API smoke tests only"
+	@echo "  make smoke-tests-db   - Run database smoke tests only"
+	@echo "  make lint             - Run linter"
+	@echo "  make fmt              - Format code"
 	@echo ""
 	@echo "🐳 Docker:"
 	@echo "  make docker-up     - Start all services"
