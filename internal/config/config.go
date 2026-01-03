@@ -28,6 +28,8 @@ type Config struct {
 	WebSocket      WebSocketConfig
 	SSRF           SSRFConfig
 	FormulaCache   FormulaCacheConfig
+	OAuth          OAuthConfig
+	Audit          AuditConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -262,6 +264,24 @@ type FormulaCacheConfig struct {
 	LogInterval time.Duration
 }
 
+// OAuthConfig holds OAuth 2.0 configuration
+type OAuthConfig struct {
+	// BaseURL is the base URL for OAuth callbacks (e.g., "https://gorax.example.com")
+	BaseURL string
+	// GitHub OAuth application credentials
+	GitHubClientID     string
+	GitHubClientSecret string
+	// Google OAuth application credentials
+	GoogleClientID     string
+	GoogleClientSecret string
+	// Slack OAuth application credentials
+	SlackClientID     string
+	SlackClientSecret string
+	// Microsoft OAuth application credentials
+	MicrosoftClientID     string
+	MicrosoftClientSecret string
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -382,6 +402,8 @@ func Load() (*Config, error) {
 		WebSocket:    loadWebSocketConfig(),
 		SSRF:         loadSSRFConfig(),
 		FormulaCache: loadFormulaCacheConfig(),
+		OAuth:        loadOAuthConfig(),
+		Audit:        loadAuditConfig(),
 	}
 
 	return cfg, nil
@@ -554,5 +576,55 @@ func loadFormulaCacheConfig() FormulaCacheConfig {
 		// Log interval defaults to 0 (disabled)
 		// Set to "5m", "1h", etc. to enable periodic logging
 		LogInterval: getEnvAsDuration("FORMULA_CACHE_LOG_INTERVAL", 0),
+	}
+}
+
+func loadOAuthConfig() OAuthConfig {
+	return OAuthConfig{
+		BaseURL:               getEnv("OAUTH_BASE_URL", "http://localhost:8080"),
+		GitHubClientID:        getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:    getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
+		GoogleClientID:        getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:    getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+		SlackClientID:         getEnv("OAUTH_SLACK_CLIENT_ID", ""),
+		SlackClientSecret:     getEnv("OAUTH_SLACK_CLIENT_SECRET", ""),
+		MicrosoftClientID:     getEnv("OAUTH_MICROSOFT_CLIENT_ID", ""),
+		MicrosoftClientSecret: getEnv("OAUTH_MICROSOFT_CLIENT_SECRET", ""),
+	}
+}
+
+// AuditConfig holds audit logging configuration
+type AuditConfig struct {
+	// Enabled controls whether audit logging is active (default: true)
+	Enabled bool
+	// BufferSize is the number of events to buffer before flushing (default: 100)
+	BufferSize int
+	// FlushInterval is how often to flush buffered events (default: 5s)
+	FlushInterval time.Duration
+	// HotRetentionDays is days to keep in main database (default: 90)
+	HotRetentionDays int
+	// WarmRetentionDays is days to keep in compressed form (default: 365)
+	WarmRetentionDays int
+	// ColdRetentionDays is days to keep in archive storage (default: 2555 = 7 years)
+	ColdRetentionDays int
+	// ArchiveEnabled controls whether to archive old logs (default: true)
+	ArchiveEnabled bool
+	// ArchiveBucket is the S3/GCS bucket for archived logs
+	ArchiveBucket string
+	// PurgeEnabled controls whether to purge expired logs (default: true)
+	PurgeEnabled bool
+}
+
+func loadAuditConfig() AuditConfig {
+	return AuditConfig{
+		Enabled:           getEnvAsBool("AUDIT_ENABLED", true),
+		BufferSize:        getEnvAsInt("AUDIT_BUFFER_SIZE", 100),
+		FlushInterval:     getEnvAsDuration("AUDIT_FLUSH_INTERVAL", 5*time.Second),
+		HotRetentionDays:  getEnvAsInt("AUDIT_HOT_RETENTION_DAYS", 90),
+		WarmRetentionDays: getEnvAsInt("AUDIT_WARM_RETENTION_DAYS", 365),
+		ColdRetentionDays: getEnvAsInt("AUDIT_COLD_RETENTION_DAYS", 2555),
+		ArchiveEnabled:    getEnvAsBool("AUDIT_ARCHIVE_ENABLED", true),
+		ArchiveBucket:     getEnv("AUDIT_ARCHIVE_BUCKET", "audit-logs"),
+		PurgeEnabled:      getEnvAsBool("AUDIT_PURGE_ENABLED", true),
 	}
 }

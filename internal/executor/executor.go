@@ -516,6 +516,12 @@ func (e *Executor) executeNode(ctx context.Context, node workflow.Node, execCtx 
 		output, err = e.executeDelayAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlSubWorkflow):
 		output, err = e.executeSubWorkflowAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeControlTry):
+		output, err = e.executeTryAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeControlRetry):
+		output, err = e.executeRetryAction(ctx, nodeToExecute, execCtx)
+	case string(workflow.NodeTypeControlCircuitBreaker):
+		output, err = e.executeCircuitBreakerAction(ctx, nodeToExecute, execCtx)
 	case string(workflow.NodeTypeControlLoop):
 		// Loop nodes need access to workflow definition
 		// For now, return error - will be handled separately in execution flow

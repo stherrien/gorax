@@ -566,7 +566,7 @@ Iterates over an array, executing body nodes for each item.
 }
 ```
 
-**Example:**
+**Example: Basic Loop**
 
 ```json
 {
@@ -575,10 +575,13 @@ Iterates over an array, executing body nodes for each item.
       "id": "loop-1",
       "type": "control:loop",
       "data": {
+        "name": "Process Each User",
         "config": {
-          "source": "steps['get-users'].body.users",
+          "source": "${steps.get-users.output.users}",
           "item_variable": "user",
-          "index_variable": "i"
+          "index_variable": "i",
+          "max_iterations": 1000,
+          "on_error": "continue"
         }
       }
     },
@@ -586,12 +589,14 @@ Iterates over an array, executing body nodes for each item.
       "id": "send-email",
       "type": "action:http",
       "data": {
+        "name": "Send Welcome Email",
         "config": {
           "method": "POST",
           "url": "https://api.sendgrid.com/v3/mail/send",
           "body": {
             "to": "{{steps.user.email}}",
-            "subject": "Hello {{steps.user.name}}"
+            "subject": "Hello {{steps.user.name}}",
+            "text": "You are user #{{steps.i}}"
           }
         }
       }
@@ -602,6 +607,127 @@ Iterates over an array, executing body nodes for each item.
   ]
 }
 ```
+
+**Example: Loop with Multiple Body Nodes**
+
+```json
+{
+  "nodes": [
+    {
+      "id": "loop-1",
+      "type": "control:loop",
+      "data": {
+        "config": {
+          "source": "${steps.fetch-orders.output.orders}",
+          "item_variable": "order",
+          "index_variable": "order_index"
+        }
+      }
+    },
+    {
+      "id": "validate-order",
+      "type": "action:transform",
+      "data": {
+        "config": {
+          "expression": "steps.order.total > 0 && steps.order.items.length > 0"
+        }
+      }
+    },
+    {
+      "id": "process-payment",
+      "type": "action:http",
+      "data": {
+        "config": {
+          "method": "POST",
+          "url": "https://api.stripe.com/v1/charges",
+          "body": {
+            "amount": "{{steps.order.total}}",
+            "currency": "usd",
+            "customer": "{{steps.order.customer_id}}"
+          }
+        }
+      }
+    },
+    {
+      "id": "update-inventory",
+      "type": "action:http",
+      "data": {
+        "config": {
+          "method": "PUT",
+          "url": "https://api.example.com/inventory",
+          "body": {
+            "items": "{{steps.order.items}}"
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "loop-1", "target": "validate-order" },
+    { "id": "e2", "source": "validate-order", "target": "process-payment" },
+    { "id": "e3", "source": "process-payment", "target": "update-inventory" }
+  ]
+}
+```
+
+**Example: Nested Loops**
+
+```json
+{
+  "nodes": [
+    {
+      "id": "outer-loop",
+      "type": "control:loop",
+      "data": {
+        "config": {
+          "source": "${steps.fetch-departments.output.departments}",
+          "item_variable": "department",
+          "index_variable": "dept_idx"
+        }
+      }
+    },
+    {
+      "id": "inner-loop",
+      "type": "control:loop",
+      "data": {
+        "config": {
+          "source": "${steps.department.employees}",
+          "item_variable": "employee",
+          "index_variable": "emp_idx"
+        }
+      }
+    },
+    {
+      "id": "send-notification",
+      "type": "action:http",
+      "data": {
+        "config": {
+          "method": "POST",
+          "url": "https://api.slack.com/api/chat.postMessage",
+          "body": {
+            "channel": "{{steps.employee.slack_id}}",
+            "text": "Department {{steps.department.name}} announcement"
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "outer-loop", "target": "inner-loop" },
+    { "id": "e2", "source": "inner-loop", "target": "send-notification" }
+  ]
+}
+```
+
+**Best Practices:**
+
+1. **Set Reasonable Limits**: Always set `max_iterations` to prevent runaway loops
+2. **Error Handling**: Use `on_error: "continue"` for batch operations where partial success is acceptable
+3. **Empty Loop Bodies**: Loops with no body nodes (no outgoing edges) are valid and will iterate without side effects
+4. **Performance**: For large arrays (>100 items), consider pagination or parallel processing
+5. **Variable Naming**: Use descriptive variable names (`user`, `order`, `item`) rather than generic names
+6. **Accessing Loop Variables**: Inside loop body, access variables via `steps.{variable_name}`
+7. **Loop Output**: The loop node outputs an array of iteration results, accessible via `steps.{loop_id}.iterations`
 
 #### Parallel (`control:parallel`)
 
