@@ -204,6 +204,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	eventTypeRepo := eventtypes.NewRepository(db)
 	templateRepo := template.NewRepository(db)
 	marketplaceRepo := marketplace.NewRepository(db)
+	categoryRepo := marketplace.NewCategoryRepository(db)
 
 	// Initialize services
 	app.tenantService = tenant.NewService(tenantRepo, logger)
@@ -217,6 +218,9 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	// Initialize marketplace service with workflow service adapter
 	workflowServiceForMarketplace := &workflowServiceMarketplaceAdapter{workflowService: app.workflowService}
 	app.marketplaceService = marketplace.NewService(marketplaceRepo, workflowServiceForMarketplace, logger)
+
+	// Initialize category service
+	categoryService := marketplace.NewCategoryService(categoryRepo)
 
 	// Initialize WebSocket hub
 	app.wsHub = websocket.NewHub(logger)
@@ -398,7 +402,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
 
 	// Initialize marketplace handler
-	app.marketplaceHandler = handlers.NewMarketplaceHandler(app.marketplaceService, logger)
+	app.marketplaceHandler = handlers.NewMarketplaceHandler(app.marketplaceService, categoryService, logger)
 
 	// Initialize collaboration handler
 	app.collaborationHandler = handlers.NewCollaborationHandler(app.collabHub, app.wsHub, cfg.WebSocket, logger)
@@ -763,7 +767,10 @@ func (a *App) setupRouter() {
 				r.Post("/templates/{id}/install", a.marketplaceHandler.InstallTemplate)
 				r.Get("/trending", a.marketplaceHandler.GetTrending)
 				r.Get("/popular", a.marketplaceHandler.GetPopular)
+
+				// Category routes
 				r.Get("/categories", a.marketplaceHandler.GetCategories)
+				r.Get("/categories/{id}", a.marketplaceHandler.GetCategory)
 
 				// Review routes
 				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
@@ -781,6 +788,11 @@ func (a *App) setupRouter() {
 				// Admin routes (marketplace moderation)
 				r.Route("/admin", func(r chi.Router) {
 					r.Use(apiMiddleware.RequireAdmin())
+
+					// Category management (admin only)
+					r.Post("/categories", a.marketplaceHandler.CreateCategory)
+
+					// Review moderation
 					r.Get("/review-reports", a.marketplaceHandler.GetReviewReports)
 					r.Put("/review-reports/{reportId}", a.marketplaceHandler.ResolveReviewReport)
 					r.Put("/reviews/{reviewId}/hide", a.marketplaceHandler.HideReview)

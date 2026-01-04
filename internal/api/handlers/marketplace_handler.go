@@ -17,9 +17,10 @@ import (
 
 // MarketplaceHandler handles marketplace HTTP requests
 type MarketplaceHandler struct {
-	service  MarketplaceService
-	logger   *slog.Logger
-	validate *validator.Validate
+	service         MarketplaceService
+	categoryService CategoryService
+	logger          *slog.Logger
+	validate        *validator.Validate
 }
 
 // MarketplaceService defines the interface for marketplace business logic
@@ -43,12 +44,20 @@ type MarketplaceService interface {
 	GetRatingDistribution(ctx context.Context, templateID string) (*marketplace.RatingDistribution, error)
 }
 
+// CategoryService defines the interface for category operations
+type CategoryService interface {
+	GetCategoriesWithHierarchy(ctx context.Context) ([]marketplace.Category, error)
+	GetCategory(ctx context.Context, id string) (*marketplace.Category, error)
+	CreateCategory(ctx context.Context, input marketplace.CreateCategoryInput) (*marketplace.Category, error)
+}
+
 // NewMarketplaceHandler creates a new marketplace handler
-func NewMarketplaceHandler(service MarketplaceService, logger *slog.Logger) *MarketplaceHandler {
+func NewMarketplaceHandler(service MarketplaceService, categoryService CategoryService, logger *slog.Logger) *MarketplaceHandler {
 	return &MarketplaceHandler{
-		service:  service,
-		logger:   logger,
-		validate: validator.New(),
+		service:         service,
+		categoryService: categoryService,
+		logger:          logger,
+		validate:        validator.New(),
 	}
 }
 
@@ -419,15 +428,90 @@ func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) 
 
 // GetCategories retrieves all available template categories
 // @Summary Get template categories
-// @Description Returns the list of all available template categories
+// @Description Returns the list of all available template categories with hierarchy
 // @Tags Marketplace
 // @Accept json
 // @Produce json
-// @Success 200 {array} string "List of category names"
+// @Success 200 {object} map[string]interface{} "Categories with hierarchy"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/v1/marketplace/categories [get]
 func (h *MarketplaceHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
-	categories := h.service.GetCategories()
-	h.respondJSON(w, http.StatusOK, categories)
+	categories, err := h.categoryService.GetCategoriesWithHierarchy(r.Context())
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, "failed to list categories")
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": categories,
+	})
+}
+
+// GetCategory retrieves a single category
+// @Summary Get category
+// @Description Retrieves a single category by ID
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param id path string true "Category ID"
+// @Success 200 {object} marketplace.Category "Category details"
+// @Failure 404 {object} map[string]string "Category not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/categories/{id} [get]
+func (h *MarketplaceHandler) GetCategory(w http.ResponseWriter, r *http.Request) {
+	categoryID := chi.URLParam(r, "id")
+
+	category, err := h.categoryService.GetCategory(r.Context(), categoryID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			h.respondError(w, http.StatusNotFound, "category not found")
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to get category")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, category)
+}
+
+// CreateCategory creates a new category (admin only)
+// @Summary Create category
+// @Description Creates a new marketplace category
+// @Tags Marketplace
+// @Accept json
+// @Produce json
+// @Param category body marketplace.CreateCategoryInput true "Category data"
+// @Success 201 {object} marketplace.Category "Created category"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 409 {object} map[string]string "Category already exists"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/marketplace/categories [post]
+func (h *MarketplaceHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var input marketplace.CreateCategoryInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.validate.Struct(input); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	category, err := h.categoryService.CreateCategory(r.Context(), input)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			h.respondError(w, http.StatusConflict, "category with this slug already exists")
+			return
+		}
+		if strings.Contains(err.Error(), "invalid") {
+			h.respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.respondError(w, http.StatusInternalServerError, "failed to create category")
+		return
+	}
+
+	h.respondJSON(w, http.StatusCreated, category)
 }
 
 // VoteReviewHelpful marks a review as helpful
