@@ -17,8 +17,10 @@ export default function WorkflowEditor() {
   const navigate = useNavigate()
   const isNewWorkflow = id === 'new'
 
-  // Validate ID for existing workflows (not 'new')
-  const validatedId = !isNewWorkflow && id && isValidResourceId(id) ? id : null
+  // For existing workflows, use ID directly (backend will validate)
+  // Only block reserved keywords
+  const RESERVED_KEYWORDS = ['new', 'create', 'edit', 'list']
+  const validatedId = !isNewWorkflow && id && !RESERVED_KEYWORDS.includes(id.toLowerCase()) ? id : null
 
   // Load existing workflow if editing
   const { workflow, loading, error } = useWorkflow(validatedId)
