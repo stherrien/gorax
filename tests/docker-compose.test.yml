@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for integration tests
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: gorax-postgres-test
+    environment:
+      POSTGRES_USER: gorax
+      POSTGRES_PASSWORD: gorax_test
+      POSTGRES_DB: gorax_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gorax"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Redis for caching and queue tests
+  redis-test:
+    image: redis:7-alpine
+    container_name: gorax-redis-test
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-test-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # MySQL for database connector tests
+  mysql-test:
+    image: mysql:8.0
+    container_name: gorax-mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: test_password
+      MYSQL_DATABASE: test_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-test-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptest_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # MongoDB for database connector tests
+  mongo-test:
+    image: mongo:7.0
+    container_name: gorax-mongo-test
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test_user
+      MONGO_INITDB_ROOT_PASSWORD: test_password
+      MONGO_INITDB_DATABASE: test_db
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-test-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # LocalStack for AWS service mocking (S3, SQS, etc.)
+  localstack-test:
+    image: localstack/localstack:latest
+    container_name: gorax-localstack-test
+    environment:
+      SERVICES: s3,sqs,kms
+      DEBUG: 0
+      DATA_DIR: /tmp/localstack/data
+      LAMBDA_EXECUTOR: local
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"  # LocalStack edge port
+      - "4571:4571"  # S3 port
+    volumes:
+      - localstack-test-data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # MailHog for email notification tests
+  mailhog-test:
+    image: mailhog/mailhog:latest
+    container_name: gorax-mailhog-test
+    ports:
+      - "1026:1025"  # SMTP port
+      - "8026:8025"  # Web UI port
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # MinIO for S3-compatible storage tests
+  minio-test:
+    image: minio/minio:latest
+    container_name: gorax-minio-test
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9001:9000"  # API port
+      - "9002:9001"  # Console port
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-test-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Mock OAuth Provider (uses our custom mock)
+  mock-oauth-provider:
+    build:
+      context: ./mocks
+      dockerfile: Dockerfile.oauth
+    container_name: gorax-mock-oauth
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: 8090
+      CLIENT_ID: test-client-id
+      CLIENT_SECRET: test-client-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Mock SAML IdP for SSO tests
+  mock-saml-idp:
+    image: kristophjunge/test-saml-idp:latest
+    container_name: gorax-mock-saml-idp
+    ports:
+      - "8091:8080"
+    environment:
+      SIMPLESAMLPHP_SP_ENTITY_ID: http://localhost:8080
+      SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: http://localhost:8080/api/v1/sso/saml/acs
+    volumes:
+      - ./mocks/saml/users.php:/var/www/simplesamlphp/config/authsources.php
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/simplesaml/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+volumes:
+  postgres-test-data:
+    driver: local
+  redis-test-data:
+    driver: local
+  mysql-test-data:
+    driver: local
+  mongo-test-data:
+    driver: local
+  localstack-test-data:
+    driver: local
+  minio-test-data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

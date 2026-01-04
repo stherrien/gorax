@@ -1,47 +1,27 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { executionAPI } from '../api/executions'
 import type {
-  Execution,
   ExecutionListParams,
-  DashboardStats,
   DashboardStatsParams,
 } from '../api/executions'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of executions
  */
 export function useExecutions(params?: ExecutionListParams) {
-  const [executions, setExecutions] = useState<Execution[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchExecutions = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await executionAPI.list(params)
-      setExecutions(response.executions)
-      setTotal(response.total)
-    } catch (err) {
-      setError(err as Error)
-      setExecutions([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchExecutions()
-  }, [fetchExecutions])
+  const query = useQuery({
+    queryKey: ['executions', params],
+    queryFn: () => executionAPI.list(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    executions,
-    total,
-    loading,
-    error,
-    refetch: fetchExecutions,
+    executions: query.data?.executions ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -49,38 +29,18 @@ export function useExecutions(params?: ExecutionListParams) {
  * Hook to fetch a single execution by ID
  */
 export function useExecution(id: string | null) {
-  const [execution, setExecution] = useState<Execution | null>(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchExecution = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await executionAPI.get(id)
-      setExecution(data)
-    } catch (err) {
-      setError(err as Error)
-      setExecution(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchExecution()
-  }, [fetchExecution])
+  const query = useQuery({
+    queryKey: ['execution', id],
+    queryFn: () => executionAPI.get(id!),
+    enabled: isValidResourceId(id),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    execution,
-    loading,
-    error,
-    refetch: fetchExecution,
+    execution: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -88,33 +48,17 @@ export function useExecution(id: string | null) {
  * Hook to fetch dashboard statistics
  */
 export function useDashboardStats(params?: DashboardStatsParams) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchStats = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await executionAPI.getDashboardStats(params)
-      setStats(data)
-    } catch (err) {
-      setError(err as Error)
-      setStats(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
+  const query = useQuery({
+    queryKey: ['dashboard-stats', params],
+    queryFn: () => executionAPI.getDashboardStats(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    stats,
-    loading,
-    error,
-    refetch: fetchStats,
+    stats: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -122,32 +66,16 @@ export function useDashboardStats(params?: DashboardStatsParams) {
  * Hook to fetch recent executions (for dashboard)
  */
 export function useRecentExecutions(limit: number = 10) {
-  const [executions, setExecutions] = useState<Execution[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchRecentExecutions = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await executionAPI.getRecentExecutions(limit)
-      setExecutions(response.executions || [])
-    } catch (err) {
-      setError(err as Error)
-      setExecutions([])
-    } finally {
-      setLoading(false)
-    }
-  }, [limit])
-
-  useEffect(() => {
-    fetchRecentExecutions()
-  }, [fetchRecentExecutions])
+  const query = useQuery({
+    queryKey: ['recent-executions', limit],
+    queryFn: () => executionAPI.getRecentExecutions(limit),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    executions,
-    loading,
-    error,
-    refetch: fetchRecentExecutions,
+    executions: query.data?.executions ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }

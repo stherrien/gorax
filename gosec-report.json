@@ -1,0 +1,1692 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10650: \n10651: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10652: \n",
+			"line": "10651",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10591: \n10592: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10593: \n",
+			"line": "10592",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10536: \n10537: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10538: \n",
+			"line": "10537",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10481: \n10482: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10483: \n",
+			"line": "10482",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10423: \n10424: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10425: \n",
+			"line": "10424",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10375: \n10376: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10377: \n",
+			"line": "10376",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10319: \n10320: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10321: \n",
+			"line": "10320",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10270: \n10271: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10272: \n",
+			"line": "10271",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10180: \n10181: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10182: \n",
+			"line": "10181",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "10087: \n10088: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n10089: \n",
+			"line": "10088",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9977: \n9978: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9979: \n",
+			"line": "9978",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9869: \n9870: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9871: \n",
+			"line": "9870",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9793: \n9794: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9795: \n",
+			"line": "9794",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9701: \n9702: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9703: \n",
+			"line": "9702",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9446: \n9447: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9448: \n",
+			"line": "9447",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9299: \n9300: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9301: \n",
+			"line": "9300",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e int32",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/graphql/generated/generated.go",
+			"code": "9248: \n9249: \tatomic.AddInt32(\u0026ec.deferred, int32(len(deferred)))\n9250: \n",
+			"line": "9249",
+			"column": "37",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/worker.go",
+			"code": "357: \tif w.redis != nil {\n358: \t\tw.redis.Close()\n359: \t}\n",
+			"line": "358",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/worker.go",
+			"code": "354: \tif w.db != nil {\n355: \t\tw.db.Close()\n356: \t}\n",
+			"line": "355",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/health.go",
+			"code": "154: \tw.Header().Set(\"Content-Type\", \"application/json\")\n155: \tjson.NewEncoder(w).Encode(response)\n156: }\n",
+			"line": "155",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/health.go",
+			"code": "117: \tw.WriteHeader(http.StatusOK)\n118: \tjson.NewEncoder(w).Encode(map[string]string{\n119: \t\t\"status\": \"ready\",\n120: \t\t\"time\":   time.Now().Format(time.RFC3339),\n121: \t})\n122: }\n",
+			"line": "118-121",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/health.go",
+			"code": "109: \t\tw.WriteHeader(http.StatusServiceUnavailable)\n110: \t\tjson.NewEncoder(w).Encode(map[string]string{\n111: \t\t\t\"status\": \"at_capacity\",\n112: \t\t\t\"time\":   time.Now().Format(time.RFC3339),\n113: \t\t})\n114: \t\treturn\n",
+			"line": "110-113",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/health.go",
+			"code": "97: \t\tw.WriteHeader(http.StatusServiceUnavailable)\n98: \t\tjson.NewEncoder(w).Encode(map[string]string{\n99: \t\t\t\"status\": \"not_ready\",\n100: \t\t\t\"time\":   time.Now().Format(time.RFC3339),\n101: \t\t})\n102: \t\treturn\n",
+			"line": "98-101",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/worker/health.go",
+			"code": "86: \tw.WriteHeader(http.StatusOK)\n87: \tjson.NewEncoder(w).Encode(map[string]string{\n88: \t\t\"status\": \"alive\",\n89: \t\t\"time\":   time.Now().Format(time.RFC3339),\n90: \t})\n91: }\n",
+			"line": "87-90",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/websocket/hub.go",
+			"code": "251: \t\tticker.Stop()\n252: \t\tc.Conn.Close()\n253: \t}()\n",
+			"line": "252",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/websocket/hub.go",
+			"code": "220: \t\tc.Hub.Unregister \u003c- c\n221: \t\tc.Conn.Close()\n222: \t}()\n",
+			"line": "221",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/retention/scheduler.go",
+			"code": "120: \t\tcase \u003c-ticker.C:\n121: \t\t\ts.executeCleanup(ctx)\n122: \t\t}\n",
+			"line": "121",
+			"column": "4",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/retention/scheduler.go",
+			"code": "109: \t// Run initial cleanup immediately\n110: \ts.executeCleanup(ctx)\n111: \n",
+			"line": "110",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/notification/email.go",
+			"code": "239: \tif err != nil {\n240: \t\twriter.Close()\n241: \t\treturn fmt.Errorf(\"failed to write message: %w\", err)\n",
+			"line": "240",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/integrations/database/postgres.go",
+			"code": "314: \tif err := db.Ping(); err != nil {\n315: \t\tdb.Close()\n316: \t\treturn nil, fmt.Errorf(\"failed to ping database: %w\", err)\n",
+			"line": "315",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/integrations/database/mysql.go",
+			"code": "306: \tif err := db.Ping(); err != nil {\n307: \t\tdb.Close()\n308: \t\treturn nil, fmt.Errorf(\"failed to ping database: %w\", err)\n",
+			"line": "307",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/executor/executor.go",
+			"code": "501: \n502: \te.repo.UpdateExecutionStatus(ctx, execution.ID, workflow.ExecutionStatusFailed, nil, \u0026errMsg)\n503: \n",
+			"line": "502",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/middleware/quota.go",
+			"code": "222: \t}\n223: \tjson.NewEncoder(w).Encode(response)\n224: }\n",
+			"line": "223",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/workflow_bulk_handler.go",
+			"code": "222: \tw.WriteHeader(status)\n223: \tjson.NewEncoder(w).Encode(data)\n224: }\n",
+			"line": "223",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/workflow.go",
+			"code": "342: \tw.WriteHeader(status)\n343: \tjson.NewEncoder(w).Encode(data)\n344: }\n",
+			"line": "343",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/workflow.go",
+			"code": "230: \tif r.Body != nil {\n231: \t\tjson.NewDecoder(r.Body).Decode(\u0026triggerData)\n232: \t}\n",
+			"line": "231",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/webhook_replay_handler.go",
+			"code": "114: \tw.WriteHeader(status)\n115: \tjson.NewEncoder(w).Encode(data)\n116: }\n",
+			"line": "115",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/webhook_management_handler.go",
+			"code": "357: \tw.WriteHeader(status)\n358: \tjson.NewEncoder(w).Encode(data)\n359: }\n",
+			"line": "358",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/webhook_filter_handler.go",
+			"code": "240: \tw.WriteHeader(status)\n241: \tjson.NewEncoder(w).Encode(data)\n242: }\n",
+			"line": "241",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/webhook.go",
+			"code": "145: \tw.WriteHeader(status)\n146: \tjson.NewEncoder(w).Encode(data)\n147: }\n",
+			"line": "146",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/usage.go",
+			"code": "175: \tw.Header().Set(\"Content-Type\", \"application/json\")\n176: \tjson.NewEncoder(w).Encode(response)\n177: }\n",
+			"line": "176",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/usage.go",
+			"code": "111: \tw.Header().Set(\"Content-Type\", \"application/json\")\n112: \tjson.NewEncoder(w).Encode(usage)\n113: }\n",
+			"line": "112",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "254: \tw.Header().Set(\"Content-Type\", \"application/json\")\n255: \tjson.NewEncoder(w).Encode(response)\n256: }\n",
+			"line": "255",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "201: \tw.Header().Set(\"Content-Type\", \"application/json\")\n202: \tjson.NewEncoder(w).Encode(map[string]interface{}{\n203: \t\t\"tenant\": t,\n204: \t\t\"quotas\": quotas,\n205: \t})\n206: }\n",
+			"line": "202-205",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "149: \tw.Header().Set(\"Content-Type\", \"application/json\")\n150: \tjson.NewEncoder(w).Encode(t)\n151: }\n",
+			"line": "150",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "112: \tw.Header().Set(\"Content-Type\", \"application/json\")\n113: \tjson.NewEncoder(w).Encode(t)\n114: }\n",
+			"line": "113",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "89: \tw.Header().Set(\"Content-Type\", \"application/json\")\n90: \tjson.NewEncoder(w).Encode(response)\n91: }\n",
+			"line": "90",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/tenant_admin.go",
+			"code": "52: \tw.WriteHeader(http.StatusCreated)\n53: \tjson.NewEncoder(w).Encode(t)\n54: }\n",
+			"line": "53",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/suggestions_handler.go",
+			"code": "233: \tw.WriteHeader(status)\n234: \tjson.NewEncoder(w).Encode(data)\n235: }\n",
+			"line": "234",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/schedule_template_handler.go",
+			"code": "137: \tw.WriteHeader(status)\n138: \tjson.NewEncoder(w).Encode(data)\n139: }\n",
+			"line": "138",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/schedule.go",
+			"code": "254: \tw.WriteHeader(status)\n255: \tjson.NewEncoder(w).Encode(data)\n256: }\n",
+			"line": "255",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/log_export_handler.go",
+			"code": "63: \tw.WriteHeader(http.StatusOK)\n64: \tw.Write(data)\n65: }\n",
+			"line": "64",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/health.go",
+			"code": "96: \tw.WriteHeader(statusCode)\n97: \tjson.NewEncoder(w).Encode(resp)\n98: }\n",
+			"line": "97",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/health.go",
+			"code": "47: \tw.Header().Set(\"Content-Type\", \"application/json\")\n48: \tjson.NewEncoder(w).Encode(resp)\n49: }\n",
+			"line": "48",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/event_types_handler.go",
+			"code": "49: \tw.WriteHeader(status)\n50: \tjson.NewEncoder(w).Encode(data)\n51: }\n",
+			"line": "50",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/credential.go",
+			"code": "350: \tw.WriteHeader(status)\n351: \tjson.NewEncoder(w).Encode(data)\n352: }\n",
+			"line": "351",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "422: \th.wsHub.Unregister \u003c- client\n423: \tclient.Conn.Close()\n424: \n",
+			"line": "423",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "406: \t// Broadcast change to other users\n407: \th.collabHub.BroadcastToOthers(workflowID, userID, collaboration.WebSocketMessage{\n408: \t\tType:      collaboration.MessageTypeChangeApplied,\n409: \t\tPayload:   payload,\n410: \t\tTimestamp: time.Now(),\n411: \t})\n412: \n",
+			"line": "407-411",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "390: \treleasedPayload, _ := json.Marshal(collaboration.LockReleasedPayload{ElementID: lockRel.ElementID})\n391: \th.collabHub.BroadcastToWorkflow(workflowID, collaboration.WebSocketMessage{\n392: \t\tType:      collaboration.MessageTypeLockReleased,\n393: \t\tPayload:   releasedPayload,\n394: \t\tTimestamp: time.Now(),\n395: \t})\n396: \n",
+			"line": "391-395",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "351: \tacquiredPayload, _ := json.Marshal(collaboration.LockAcquiredPayload{Lock: lock})\n352: \th.collabHub.BroadcastToWorkflow(workflowID, collaboration.WebSocketMessage{\n353: \t\tType:      collaboration.MessageTypeLockAcquired,\n354: \t\tPayload:   acquiredPayload,\n355: \t\tTimestamp: time.Now(),\n356: \t})\n357: \n",
+			"line": "352-356",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "341: \t\t})\n342: \t\th.collabHub.BroadcastToUser(workflowID, userID, collaboration.WebSocketMessage{\n343: \t\t\tType:      collaboration.MessageTypeLockFailed,\n344: \t\t\tPayload:   failedPayload,\n345: \t\t\tTimestamp: time.Now(),\n346: \t\t})\n347: \t\treturn\n",
+			"line": "342-346",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "293: \t// Broadcast presence update to others\n294: \th.collabHub.BroadcastToOthers(workflowID, userID, collaboration.WebSocketMessage{\n295: \t\tType:      collaboration.MessageTypePresenceUpdate,\n296: \t\tPayload:   payload,\n297: \t\tTimestamp: time.Now(),\n298: \t})\n299: }\n",
+			"line": "294-298",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "266: \tleftPayload, _ := json.Marshal(collaboration.UserLeftPayload{UserID: userID})\n267: \th.collabHub.BroadcastToOthers(workflowID, userID, collaboration.WebSocketMessage{\n268: \t\tType:      collaboration.MessageTypeUserLeft,\n269: \t\tPayload:   leftPayload,\n270: \t\tTimestamp: time.Now(),\n271: \t})\n272: \n",
+			"line": "267-271",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "244: \tjoinedPayload, _ := json.Marshal(collaboration.UserJoinedPayload{User: presence})\n245: \th.collabHub.BroadcastToOthers(workflowID, userID, collaboration.WebSocketMessage{\n246: \t\tType:      collaboration.MessageTypeUserJoined,\n247: \t\tPayload:   joinedPayload,\n248: \t\tTimestamp: time.Now(),\n249: \t})\n250: \n",
+			"line": "245-249",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "236: \tstatePayload, _ := json.Marshal(collaboration.SessionState{Session: session})\n237: \th.collabHub.BroadcastToUser(workflowID, userID, collaboration.WebSocketMessage{\n238: \t\tType:      collaboration.MessageTypeUserJoined,\n239: \t\tPayload:   statePayload,\n240: \t\tTimestamp: time.Now(),\n241: \t})\n242: \n",
+			"line": "237-241",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "180: \t\tcase \u003c-ticker.C:\n181: \t\t\tclient.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))\n182: \t\t\tif err := client.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {\n",
+			"line": "181",
+			"column": "4",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "172: \t\t\t\tw.Write([]byte{'\\n'})\n173: \t\t\t\tw.Write(\u003c-client.Send)\n174: \t\t\t}\n",
+			"line": "173",
+			"column": "5",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "171: \t\t\tfor i := 0; i \u003c n; i++ {\n172: \t\t\t\tw.Write([]byte{'\\n'})\n173: \t\t\t\tw.Write(\u003c-client.Send)\n",
+			"line": "172",
+			"column": "5",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "166: \t\t\t}\n167: \t\t\tw.Write(message)\n168: \n",
+			"line": "167",
+			"column": "4",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "158: \t\t\tif !ok {\n159: \t\t\t\tclient.Conn.WriteMessage(websocket.CloseMessage, []byte{})\n160: \t\t\t\treturn\n",
+			"line": "159",
+			"column": "5",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "156: \t\tcase message, ok := \u003c-client.Send:\n157: \t\t\tclient.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))\n158: \t\t\tif !ok {\n",
+			"line": "157",
+			"column": "4",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "150: \t\tticker.Stop()\n151: \t\tclient.Conn.Close()\n152: \t}()\n",
+			"line": "151",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "125: \tclient.Conn.SetPongHandler(func(string) error {\n126: \t\tclient.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))\n127: \t\treturn nil\n",
+			"line": "126",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/collaboration_handler.go",
+			"code": "123: \n124: \tclient.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))\n125: \tclient.Conn.SetPongHandler(func(string) error {\n",
+			"line": "124",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/bulk_handler.go",
+			"code": "229: \tw.WriteHeader(http.StatusOK)\n230: \tjson.NewEncoder(w).Encode(schedules)\n231: }\n",
+			"line": "230",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "532: \tw.WriteHeader(http.StatusOK)\n533: \tjson.NewEncoder(w).Encode(map[string]string{\n534: \t\t\"status\": \"success\",\n535: \t})\n536: }\n",
+			"line": "533-535",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "489: \tw.WriteHeader(resp.StatusCode)\n490: \tjson.NewEncoder(w).Encode(kratosResp)\n491: \n",
+			"line": "490",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "436: \tw.Header().Set(\"Content-Type\", \"application/json\")\n437: \tjson.NewEncoder(w).Encode(flowResp)\n438: }\n",
+			"line": "437",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "403: \tw.WriteHeader(resp.StatusCode)\n404: \tjson.NewEncoder(w).Encode(kratosResp)\n405: \n",
+			"line": "404",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "350: \tw.Header().Set(\"Content-Type\", \"application/json\")\n351: \tjson.NewEncoder(w).Encode(flowResp)\n352: }\n",
+			"line": "351",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "313: \tw.Header().Set(\"Content-Type\", \"application/json\")\n314: \tjson.NewEncoder(w).Encode(user)\n315: }\n",
+			"line": "314",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "308: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n309: \t\tjson.NewEncoder(w).Encode(authUser)\n310: \t\treturn\n",
+			"line": "309",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "247: \tw.WriteHeader(resp.StatusCode)\n248: \tjson.NewEncoder(w).Encode(kratosResp)\n249: \n",
+			"line": "248",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "183: \tw.Header().Set(\"Content-Type\", \"application/json\")\n184: \tjson.NewEncoder(w).Encode(flowResp)\n185: }\n",
+			"line": "184",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "150: \tw.WriteHeader(resp.StatusCode)\n151: \tjson.NewEncoder(w).Encode(kratosResp)\n152: \n",
+			"line": "151",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/auth.go",
+			"code": "88: \tw.WriteHeader(resp.StatusCode)\n89: \tjson.NewEncoder(w).Encode(map[string]interface{}{\n90: \t\t\"flow_id\": resp.Header.Get(\"X-Flow-Id\"),\n91: \t\t\"ui\":      resp.Header.Get(\"Location\"),\n92: \t})\n93: }\n",
+			"line": "89-92",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/handlers/aibuilder_handler.go",
+			"code": "48: \tw.WriteHeader(status)\n49: \tjson.NewEncoder(w).Encode(data)\n50: }\n",
+			"line": "49",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/app_with_auth.go",
+			"code": "128: \tif a.redis != nil {\n129: \t\ta.redis.Close()\n130: \t}\n",
+			"line": "129",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/app_with_auth.go",
+			"code": "125: \tif a.db != nil {\n126: \t\ta.db.Close()\n127: \t}\n",
+			"line": "126",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/app.go",
+			"code": "413: \tif a.redis != nil {\n414: \t\ta.redis.Close()\n415: \t}\n",
+			"line": "414",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/api/app.go",
+			"code": "410: \tif a.db != nil {\n411: \t\ta.db.Close()\n412: \t}\n",
+			"line": "411",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "488: \n489: \tregistry.Register(NodeTemplate{\n490: \t\tNodeType:    \"slack:send_dm\",\n491: \t\tName:        \"Slack: Send Direct Message\",\n492: \t\tDescription: \"Sends a direct message to a Slack user\",\n493: \t\tCategory:    NodeCategoryIntegration,\n494: \t\tConfigSchema: map[string]interface{}{\n495: \t\t\t\"type\": \"object\",\n496: \t\t\t\"properties\": map[string]interface{}{\n497: \t\t\t\t\"user_id\": map[string]interface{}{\"type\": \"string\"},\n498: \t\t\t\t\"text\":    map[string]interface{}{\"type\": \"string\"},\n499: \t\t\t},\n500: \t\t},\n501: \t\tExampleConfig: map[string]interface{}{\n502: \t\t\t\"user_id\": \"${steps.lookup.output.slack_user_id}\",\n503: \t\t\t\"text\":    \"You have a new task assigned\",\n504: \t\t},\n505: \t\tLLMDescription: \"Use this to send direct messages to Slack users. Specify user ID (not username) and message text.\",\n506: \t\tIsActive:       true,\n507: \t})\n508: \n",
+			"line": "489-507",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "466: \t// Integrations\n467: \tregistry.Register(NodeTemplate{\n468: \t\tNodeType:    \"slack:send_message\",\n469: \t\tName:        \"Slack: Send Message\",\n470: \t\tDescription: \"Sends a message to a Slack channel\",\n471: \t\tCategory:    NodeCategoryIntegration,\n472: \t\tConfigSchema: map[string]interface{}{\n473: \t\t\t\"type\": \"object\",\n474: \t\t\t\"properties\": map[string]interface{}{\n475: \t\t\t\t\"channel\": map[string]interface{}{\"type\": \"string\"},\n476: \t\t\t\t\"text\":    map[string]interface{}{\"type\": \"string\"},\n477: \t\t\t\t\"blocks\":  map[string]interface{}{\"type\": \"array\"},\n478: \t\t\t},\n479: \t\t},\n480: \t\tExampleConfig: map[string]interface{}{\n481: \t\t\t\"channel\": \"#general\",\n482: \t\t\t\"text\":    \"New alert: ${steps.data.output.message}\",\n483: \t\t},\n484: \t\tLLMDescription: \"Use this to send messages to Slack channels. Specify channel name (e.g., #general) or ID \" +\n485: \t\t\t\"and message text. Supports Block Kit for rich formatting.\",\n486: \t\tIsActive: true,\n487: \t})\n488: \n",
+			"line": "467-487",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "444: \n445: \tregistry.Register(NodeTemplate{\n446: \t\tNodeType:    \"control:parallel\",\n447: \t\tName:        \"Parallel\",\n448: \t\tDescription: \"Executes multiple branches in parallel\",\n449: \t\tCategory:    NodeCategoryControl,\n450: \t\tConfigSchema: map[string]interface{}{\n451: \t\t\t\"type\": \"object\",\n452: \t\t\t\"properties\": map[string]interface{}{\n453: \t\t\t\t\"error_strategy\":  map[string]interface{}{\"type\": \"string\", \"enum\": []string{\"fail_fast\", \"wait_all\"}},\n454: \t\t\t\t\"max_concurrency\": map[string]interface{}{\"type\": \"integer\"},\n455: \t\t\t},\n456: \t\t},\n457: \t\tExampleConfig: map[string]interface{}{\n458: \t\t\t\"error_strategy\":  \"fail_fast\",\n459: \t\t\t\"max_concurrency\": 5,\n460: \t\t},\n461: \t\tLLMDescription: \"Use this to run multiple branches simultaneously. Choose 'fail_fast' to stop on first error \" +\n462: \t\t\t\"or 'wait_all' to complete all branches regardless of errors.\",\n463: \t\tIsActive: true,\n464: \t})\n465: \n",
+			"line": "445-464",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "425: \n426: \tregistry.Register(NodeTemplate{\n427: \t\tNodeType:    \"control:delay\",\n428: \t\tName:        \"Delay\",\n429: \t\tDescription: \"Pauses workflow execution for a specified duration\",\n430: \t\tCategory:    NodeCategoryControl,\n431: \t\tConfigSchema: map[string]interface{}{\n432: \t\t\t\"type\": \"object\",\n433: \t\t\t\"properties\": map[string]interface{}{\n434: \t\t\t\t\"duration\": map[string]interface{}{\"type\": \"string\"},\n435: \t\t\t},\n436: \t\t},\n437: \t\tExampleConfig: map[string]interface{}{\n438: \t\t\t\"duration\": \"5s\",\n439: \t\t},\n440: \t\tLLMDescription: \"Use this to pause the workflow. Specify duration as '5s' (seconds), '2m' (minutes), or '1h' (hours). \" +\n441: \t\t\t\"Can also use variables: '${steps.config.output.delay}'.\",\n442: \t\tIsActive: true,\n443: \t})\n444: \n",
+			"line": "426-443",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "400: \n401: \tregistry.Register(NodeTemplate{\n402: \t\tNodeType:    \"control:loop\",\n403: \t\tName:        \"Loop (For Each)\",\n404: \t\tDescription: \"Iterates over an array executing child nodes for each item\",\n405: \t\tCategory:    NodeCategoryControl,\n406: \t\tConfigSchema: map[string]interface{}{\n407: \t\t\t\"type\": \"object\",\n408: \t\t\t\"properties\": map[string]interface{}{\n409: \t\t\t\t\"source\":         map[string]interface{}{\"type\": \"string\"},\n410: \t\t\t\t\"item_variable\":  map[string]interface{}{\"type\": \"string\"},\n411: \t\t\t\t\"index_variable\": map[string]interface{}{\"type\": \"string\"},\n412: \t\t\t\t\"max_iterations\": map[string]interface{}{\"type\": \"integer\"},\n413: \t\t\t},\n414: \t\t},\n415: \t\tExampleConfig: map[string]interface{}{\n416: \t\t\t\"source\":         \"${steps.data.output.items}\",\n417: \t\t\t\"item_variable\":  \"item\",\n418: \t\t\t\"index_variable\": \"index\",\n419: \t\t\t\"max_iterations\": 100,\n420: \t\t},\n421: \t\tLLMDescription: \"Use this to process each item in an array. Specify the source array and variable names. \" +\n422: \t\t\t\"Nodes inside the loop can access ${loop.item} for the current item and ${loop.index} for the index.\",\n423: \t\tIsActive: true,\n424: \t})\n425: \n",
+			"line": "401-424",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "379: \t// Control flow\n380: \tregistry.Register(NodeTemplate{\n381: \t\tNodeType:    \"control:if\",\n382: \t\tName:        \"Conditional (If/Else)\",\n383: \t\tDescription: \"Branches workflow based on a condition\",\n384: \t\tCategory:    NodeCategoryControl,\n385: \t\tConfigSchema: map[string]interface{}{\n386: \t\t\t\"type\": \"object\",\n387: \t\t\t\"properties\": map[string]interface{}{\n388: \t\t\t\t\"condition\":   map[string]interface{}{\"type\": \"string\"},\n389: \t\t\t\t\"description\": map[string]interface{}{\"type\": \"string\"},\n390: \t\t\t},\n391: \t\t},\n392: \t\tExampleConfig: map[string]interface{}{\n393: \t\t\t\"condition\":   \"${steps.data.output.status} == \\\"approved\\\"\",\n394: \t\t\t\"description\": \"Check if status is approved\",\n395: \t\t},\n396: \t\tLLMDescription: \"Use this to branch workflow logic based on conditions. Write a condition that evaluates to true/false. \" +\n397: \t\t\t\"Connect 'true' and 'false' edges to different downstream nodes for conditional branching.\",\n398: \t\tIsActive: true,\n399: \t})\n400: \n",
+			"line": "380-399",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "353: \n354: \tregistry.Register(NodeTemplate{\n355: \t\tNodeType:    \"action:email\",\n356: \t\tName:        \"Send Email\",\n357: \t\tDescription: \"Sends email notifications\",\n358: \t\tCategory:    NodeCategoryAction,\n359: \t\tConfigSchema: map[string]interface{}{\n360: \t\t\t\"type\": \"object\",\n361: \t\t\t\"properties\": map[string]interface{}{\n362: \t\t\t\t\"to\":      map[string]interface{}{\"type\": \"string\"},\n363: \t\t\t\t\"subject\": map[string]interface{}{\"type\": \"string\"},\n364: \t\t\t\t\"body\":    map[string]interface{}{\"type\": \"string\"},\n365: \t\t\t\t\"cc\":      map[string]interface{}{\"type\": \"string\"},\n366: \t\t\t\t\"bcc\":     map[string]interface{}{\"type\": \"string\"},\n367: \t\t\t},\n368: \t\t},\n369: \t\tExampleConfig: map[string]interface{}{\n370: \t\t\t\"to\":      \"user@example.com\",\n371: \t\t\t\"subject\": \"Workflow Alert\",\n372: \t\t\t\"body\":    \"Data processed: ${steps.process.output.count} items\",\n373: \t\t},\n374: \t\tLLMDescription: \"Use this to send email notifications. Configure recipients, subject, and body. \" +\n375: \t\t\t\"Use template variables like ${steps.nodeName.output.field} for dynamic content.\",\n376: \t\tIsActive: true,\n377: \t})\n378: \n",
+			"line": "354-377",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "332: \n333: \tregistry.Register(NodeTemplate{\n334: \t\tNodeType:    \"action:formula\",\n335: \t\tName:        \"Formula\",\n336: \t\tDescription: \"Evaluates mathematical or logical expressions\",\n337: \t\tCategory:    NodeCategoryAction,\n338: \t\tConfigSchema: map[string]interface{}{\n339: \t\t\t\"type\": \"object\",\n340: \t\t\t\"properties\": map[string]interface{}{\n341: \t\t\t\t\"expression\":      map[string]interface{}{\"type\": \"string\"},\n342: \t\t\t\t\"output_variable\": map[string]interface{}{\"type\": \"string\"},\n343: \t\t\t},\n344: \t\t},\n345: \t\tExampleConfig: map[string]interface{}{\n346: \t\t\t\"expression\":      \"${steps.data.output.price} * ${steps.data.output.quantity} * 1.1\",\n347: \t\t\t\"output_variable\": \"total_with_tax\",\n348: \t\t},\n349: \t\tLLMDescription: \"Use this for calculations. Write expressions using ${variable} syntax. \" +\n350: \t\t\t\"Supports math operators (+, -, *, /), comparisons (==, !=, \u003c, \u003e), and logical operators (\u0026\u0026, ||, !).\",\n351: \t\tIsActive: true,\n352: \t})\n353: \n",
+			"line": "333-352",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "311: \n312: \tregistry.Register(NodeTemplate{\n313: \t\tNodeType:    \"action:code\",\n314: \t\tName:        \"JavaScript Code\",\n315: \t\tDescription: \"Executes custom JavaScript code\",\n316: \t\tCategory:    NodeCategoryAction,\n317: \t\tConfigSchema: map[string]interface{}{\n318: \t\t\t\"type\": \"object\",\n319: \t\t\t\"properties\": map[string]interface{}{\n320: \t\t\t\t\"script\":  map[string]interface{}{\"type\": \"string\"},\n321: \t\t\t\t\"timeout\": map[string]interface{}{\"type\": \"integer\"},\n322: \t\t\t},\n323: \t\t},\n324: \t\tExampleConfig: map[string]interface{}{\n325: \t\t\t\"script\":  \"const input = context.steps.transform.output;\\nreturn { processed: input.data.map(x =\u003e x * 2) };\",\n326: \t\t\t\"timeout\": 30,\n327: \t\t},\n328: \t\tLLMDescription: \"Use this for complex logic that cannot be expressed with other nodes. \" +\n329: \t\t\t\"Write JavaScript code that returns an object. Access previous steps via context.steps.nodeName.output.\",\n330: \t\tIsActive: true,\n331: \t})\n332: \n",
+			"line": "312-331",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "288: \n289: \tregistry.Register(NodeTemplate{\n290: \t\tNodeType:    \"action:transform\",\n291: \t\tName:        \"Transform Data\",\n292: \t\tDescription: \"Transforms and maps data between steps\",\n293: \t\tCategory:    NodeCategoryAction,\n294: \t\tConfigSchema: map[string]interface{}{\n295: \t\t\t\"type\": \"object\",\n296: \t\t\t\"properties\": map[string]interface{}{\n297: \t\t\t\t\"expression\": map[string]interface{}{\"type\": \"string\"},\n298: \t\t\t\t\"mapping\":    map[string]interface{}{\"type\": \"object\"},\n299: \t\t\t},\n300: \t\t},\n301: \t\tExampleConfig: map[string]interface{}{\n302: \t\t\t\"mapping\": map[string]interface{}{\n303: \t\t\t\t\"user_name\":  \"${steps.trigger.body.user.name}\",\n304: \t\t\t\t\"user_email\": \"${steps.trigger.body.user.email}\",\n305: \t\t\t},\n306: \t\t},\n307: \t\tLLMDescription: \"Use this to reshape, filter, or combine data. Create mappings to extract and rename fields \" +\n308: \t\t\t\"from previous steps. Use ${steps.nodeName.output.field} syntax for variable references.\",\n309: \t\tIsActive: true,\n310: \t})\n311: \n",
+			"line": "289-310",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "261: \t// Actions\n262: \tregistry.Register(NodeTemplate{\n263: \t\tNodeType:    \"action:http\",\n264: \t\tName:        \"HTTP Request\",\n265: \t\tDescription: \"Makes HTTP API calls to external services\",\n266: \t\tCategory:    NodeCategoryAction,\n267: \t\tConfigSchema: map[string]interface{}{\n268: \t\t\t\"type\": \"object\",\n269: \t\t\t\"properties\": map[string]interface{}{\n270: \t\t\t\t\"method\":  map[string]interface{}{\"type\": \"string\", \"enum\": []string{\"GET\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\"}},\n271: \t\t\t\t\"url\":     map[string]interface{}{\"type\": \"string\"},\n272: \t\t\t\t\"headers\": map[string]interface{}{\"type\": \"object\"},\n273: \t\t\t\t\"body\":    map[string]interface{}{\"type\": \"object\"},\n274: \t\t\t\t\"timeout\": map[string]interface{}{\"type\": \"integer\"},\n275: \t\t\t},\n276: \t\t},\n277: \t\tExampleConfig: map[string]interface{}{\n278: \t\t\t\"method\":  \"POST\",\n279: \t\t\t\"url\":     \"https://api.example.com/data\",\n280: \t\t\t\"headers\": map[string]interface{}{\"Content-Type\": \"application/json\"},\n281: \t\t\t\"body\":    map[string]interface{}{\"key\": \"${steps.trigger.body.value}\"},\n282: \t\t\t\"timeout\": 30,\n283: \t\t},\n284: \t\tLLMDescription: \"Use this to call REST APIs. Configure the HTTP method, URL, headers, and request body. \" +\n285: \t\t\t\"Supports template variables like ${steps.trigger.body.data} for dynamic values from previous steps.\",\n286: \t\tIsActive: true,\n287: \t})\n288: \n",
+			"line": "262-287",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "239: \n240: \tregistry.Register(NodeTemplate{\n241: \t\tNodeType:    \"trigger:schedule\",\n242: \t\tName:        \"Schedule Trigger\",\n243: \t\tDescription: \"Starts workflow on a cron schedule\",\n244: \t\tCategory:    NodeCategoryTrigger,\n245: \t\tConfigSchema: map[string]interface{}{\n246: \t\t\t\"type\": \"object\",\n247: \t\t\t\"properties\": map[string]interface{}{\n248: \t\t\t\t\"cron\":     map[string]interface{}{\"type\": \"string\"},\n249: \t\t\t\t\"timezone\": map[string]interface{}{\"type\": \"string\"},\n250: \t\t\t},\n251: \t\t},\n252: \t\tExampleConfig: map[string]interface{}{\n253: \t\t\t\"cron\":     \"0 9 * * 1-5\",\n254: \t\t\t\"timezone\": \"America/New_York\",\n255: \t\t},\n256: \t\tLLMDescription: \"Use this to run a workflow automatically at scheduled times. \" +\n257: \t\t\t\"Specify a cron expression (e.g., '0 9 * * 1-5' for 9am weekdays) and optional timezone.\",\n258: \t\tIsActive: true,\n259: \t})\n260: \n",
+			"line": "240-259",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/internal/aibuilder/node_registry.go",
+			"code": "215: \t// Triggers\n216: \tregistry.Register(NodeTemplate{\n217: \t\tNodeType:    \"trigger:webhook\",\n218: \t\tName:        \"Webhook Trigger\",\n219: \t\tDescription: \"Starts workflow when an HTTP webhook is received\",\n220: \t\tCategory:    NodeCategoryTrigger,\n221: \t\tConfigSchema: map[string]interface{}{\n222: \t\t\t\"type\": \"object\",\n223: \t\t\t\"properties\": map[string]interface{}{\n224: \t\t\t\t\"path\":      map[string]interface{}{\"type\": \"string\"},\n225: \t\t\t\t\"auth_type\": map[string]interface{}{\"type\": \"string\", \"enum\": []string{\"none\", \"basic\", \"signature\", \"api_key\"}},\n226: \t\t\t\t\"secret\":    map[string]interface{}{\"type\": \"string\"},\n227: \t\t\t},\n228: \t\t},\n229: \t\tExampleConfig: map[string]interface{}{\n230: \t\t\t\"path\":      \"/my-webhook\",\n231: \t\t\t\"auth_type\": \"signature\",\n232: \t\t\t\"secret\":    \"my-secret\",\n233: \t\t},\n234: \t\tLLMDescription: \"Use this to start a workflow when an external system sends an HTTP POST request. \" +\n235: \t\t\t\"Configure authentication (none, basic auth, signature verification, or API key) for security. \" +\n236: \t\t\t\"The webhook payload will be available in subsequent steps via ${steps.trigger.body}.\",\n237: \t\tIsActive: true,\n238: \t})\n239: \n",
+			"line": "216-238",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/shawntherrien/Projects/gorax/cmd/worker/main.go",
+			"code": "117: \t\tdefer shutdownCancel()\n118: \t\thealthServer.Shutdown(shutdownCtx)\n119: \t}()\n",
+			"line": "118",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 249,
+		"lines": 76300,
+		"nosec": 8,
+		"found": 105
+	},
+	"GosecVersion": "dev"
+}

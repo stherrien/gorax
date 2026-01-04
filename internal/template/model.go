@@ -18,6 +18,7 @@ type Template struct {
 	Definition  json.RawMessage `db:"definition" json:"definition"`
 	Tags        pq.StringArray  `db:"tags" json:"tags"`
 	IsPublic    bool            `db:"is_public" json:"is_public"`
+	UsageCount  int             `db:"usage_count" json:"usage_count"`
 	CreatedBy   string          `db:"created_by" json:"created_by"`
 	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`

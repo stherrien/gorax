@@ -3,10 +3,18 @@
 
 export const config = {
   // Environment configuration
-  baseUrl: __ENV.BASE_URL || 'http://localhost:8080',
-  wsUrl: __ENV.WS_URL || 'ws://localhost:8080',
+  baseUrl: __ENV.BASE_URL || 'http://localhost:8181',  // Updated default port
+  wsUrl: __ENV.WS_URL || 'ws://localhost:8181',        // Updated default port
 
-  // Test user credentials
+  // Authentication configuration
+  auth: {
+    mode: __ENV.AUTH_MODE || 'dev', // 'dev' or 'kratos'
+    devTenantID: __ENV.TEST_TENANT_ID || '00000000-0000-0000-0000-000000000001',
+    devUserID: __ENV.TEST_USER_ID || 'default-test-user',
+    kratosPublicURL: __ENV.KRATOS_PUBLIC_URL || 'http://localhost:4433',
+  },
+
+  // Test user credentials (for Kratos mode)
   testUser: {
     email: __ENV.TEST_USER_EMAIL || 'loadtest@example.com',
     password: __ENV.TEST_USER_PASSWORD || 'loadtest123',
@@ -115,35 +123,63 @@ export function getScenario(name) {
 }
 
 // Helper function to generate test workflow
+// Updated to match current Gorax API schema (nodes/edges structure)
 export function generateTestWorkflow(id) {
   return {
     name: `${config.testData.workflowNamePrefix}${id}`,
     description: `Load test workflow ${id}`,
-    trigger: {
-      type: 'webhook',
-      config: {
-        path: `/webhook/test-${id}`,
-        method: 'POST',
-      },
+    definition: {
+      nodes: [
+        {
+          id: `trigger-${id}`,
+          type: 'trigger:webhook',  // Must use full type for validation
+          position: { x: 0, y: 0 },
+          data: {
+            name: 'Webhook Trigger',
+            config: {
+              path: `/webhook/test-${id}`,
+              auth_type: 'none',  // No auth for test webhooks
+            },
+          },
+        },
+        {
+          id: `transform-${id}`,
+          type: 'action:transform',  // Use full type
+          position: { x: 200, y: 0 },
+          data: {
+            name: 'Transform Data',
+            config: {
+              expression: '{{ trigger.body.value * 2 }}',
+            },
+          },
+        },
+        {
+          id: `http-${id}`,
+          type: 'action:http',  // Use full type
+          position: { x: 400, y: 0 },
+          data: {
+            name: 'Send HTTP Request',
+            config: {
+              method: 'POST',
+              url: 'https://httpbin.org/post',
+              body: '{{ transform.result }}',
+            },
+          },
+        },
+      ],
+      edges: [
+        {
+          id: `e1-${id}`,
+          source: `trigger-${id}`,
+          target: `transform-${id}`,
+        },
+        {
+          id: `e2-${id}`,
+          source: `transform-${id}`,
+          target: `http-${id}`,
+        },
+      ],
     },
-    steps: [
-      {
-        id: 'step1',
-        type: 'transform',
-        config: {
-          formula: '{{ trigger.body.value * 2 }}',
-        },
-      },
-      {
-        id: 'step2',
-        type: 'http',
-        config: {
-          url: 'https://httpbin.org/post',
-          method: 'POST',
-          body: '{{ step1.result }}',
-        },
-      },
-    ],
   };
 }
 

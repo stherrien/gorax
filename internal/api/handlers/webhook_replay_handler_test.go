@@ -69,7 +69,7 @@ func newTestReplayHandlerWithMock() (*testReplayHandler, *MockReplayService) {
 }
 
 func (h *testReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Request) {
-	tenantID := getTenantIDFromContext(r.Context())
+	tenantID := getTestTenantID(r.Context())
 	eventID := chi.URLParam(r, "eventID")
 
 	var input webhook.ReplayRequest
@@ -101,7 +101,7 @@ func (h *testReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *testReplayHandler) BatchReplayEvents(w http.ResponseWriter, r *http.Request) {
-	tenantID := getTenantIDFromContext(r.Context())
+	tenantID := getTestTenantID(r.Context())
 	webhookID := chi.URLParam(r, "webhookID")
 
 	var input webhook.BatchReplayRequest
@@ -145,7 +145,7 @@ func findSubstring(s, substr string) bool {
 	return false
 }
 
-func getTenantIDFromContext(ctx context.Context) string {
+func getTestTenantID(ctx context.Context) string {
 	if v := ctx.Value("tenant_id"); v != nil {
 		return v.(string)
 	}

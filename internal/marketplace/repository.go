@@ -26,9 +26,18 @@ type Repository interface {
 	CreateReview(ctx context.Context, review *TemplateReview) error
 	UpdateReview(ctx context.Context, tenantID, reviewID string, rating int, comment string) error
 	DeleteReview(ctx context.Context, tenantID, reviewID string) error
-	GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error)
+	GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error)
 	GetUserReview(ctx context.Context, tenantID, templateID string) (*TemplateReview, error)
 	UpdateTemplateRating(ctx context.Context, templateID string) error
+	VoteReviewHelpful(ctx context.Context, vote *ReviewHelpfulVote) error
+	UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error
+	HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error)
+	CreateReviewReport(ctx context.Context, report *ReviewReport) error
+	GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error)
+	UpdateReviewReportStatus(ctx context.Context, reportID, status, resolvedBy string, notes *string) error
+	HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error
+	UnhideReview(ctx context.Context, reviewID string) error
+	GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error)
 }
 
 // PostgresRepository implements Repository using PostgreSQL
@@ -80,7 +89,9 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*Marketpla
 	query := `
 		SELECT id, name, description, category, definition, tags,
 			   author_id, author_name, version, download_count,
-			   average_rating, total_ratings, is_verified,
+			   average_rating, total_ratings,
+			   rating_1_count, rating_2_count, rating_3_count, rating_4_count, rating_5_count,
+			   is_verified,
 			   source_tenant_id, source_template_id, published_at, updated_at
 		FROM marketplace_templates
 		WHERE id = $1
@@ -103,7 +114,9 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) ([
 	query := `
 		SELECT id, name, description, category, definition, tags,
 			   author_id, author_name, version, download_count,
-			   average_rating, total_ratings, is_verified,
+			   average_rating, total_ratings,
+			   rating_1_count, rating_2_count, rating_3_count, rating_4_count, rating_5_count,
+			   is_verified,
 			   source_tenant_id, source_template_id, published_at, updated_at
 		FROM marketplace_templates
 		WHERE 1=1
@@ -449,15 +462,21 @@ func (r *PostgresRepository) DeleteReview(ctx context.Context, tenantID, reviewI
 }
 
 // GetReviews retrieves reviews for a template
-func (r *PostgresRepository) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error) {
-	query := `
+func (r *PostgresRepository) GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error) {
+	orderClause := buildReviewOrderClause(sortBy)
+
+	query := fmt.Sprintf(`
 		SELECT id, template_id, tenant_id, user_id, user_name,
-			   rating, comment, created_at, updated_at
+			   rating, comment, helpful_count, is_hidden,
+			   hidden_reason, hidden_at, hidden_by, deleted_at,
+			   created_at, updated_at
 		FROM marketplace_reviews
 		WHERE template_id = $1
-		ORDER BY created_at DESC
+		  AND deleted_at IS NULL
+		  AND is_hidden = false
+		%s
 		LIMIT $2 OFFSET $3
-	`
+	`, orderClause)
 
 	var reviews []*TemplateReview
 	err := r.db.SelectContext(ctx, &reviews, query, templateID, limit, offset)
@@ -466,6 +485,22 @@ func (r *PostgresRepository) GetReviews(ctx context.Context, templateID string, 
 	}
 
 	return reviews, nil
+}
+
+// buildReviewOrderClause builds the ORDER BY clause for review queries
+func buildReviewOrderClause(sortBy ReviewSortOption) string {
+	switch sortBy {
+	case ReviewSortHelpful:
+		return "ORDER BY helpful_count DESC, created_at DESC"
+	case ReviewSortRatingH:
+		return "ORDER BY rating DESC, created_at DESC"
+	case ReviewSortRatingL:
+		return "ORDER BY rating ASC, created_at DESC"
+	case ReviewSortRecent:
+		fallthrough
+	default:
+		return "ORDER BY created_at DESC"
+	}
 }
 
 // GetUserReview retrieves a user's review for a template
@@ -513,6 +548,224 @@ func (r *PostgresRepository) UpdateTemplateRating(ctx context.Context, templateI
 	}
 
 	return nil
+}
+
+// VoteReviewHelpful records a helpful vote for a review
+func (r *PostgresRepository) VoteReviewHelpful(ctx context.Context, vote *ReviewHelpfulVote) error {
+	query := `
+		INSERT INTO review_helpful_votes (review_id, tenant_id, user_id)
+		VALUES ($1, $2, $3)
+		RETURNING id, voted_at
+	`
+
+	err := r.db.QueryRowContext(ctx, query, vote.ReviewID, vote.TenantID, vote.UserID).
+		Scan(&vote.ID, &vote.VotedAt)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return fmt.Errorf("you have already voted this review as helpful")
+		}
+		return fmt.Errorf("vote review helpful: %w", err)
+	}
+
+	return nil
+}
+
+// UnvoteReviewHelpful removes a helpful vote for a review
+func (r *PostgresRepository) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	query := `DELETE FROM review_helpful_votes WHERE review_id = $1 AND tenant_id = $2 AND user_id = $3`
+
+	result, err := r.db.ExecContext(ctx, query, reviewID, tenantID, userID)
+	if err != nil {
+		return fmt.Errorf("unvote review helpful: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("vote not found")
+	}
+
+	return nil
+}
+
+// HasVotedHelpful checks if a user has voted a review as helpful
+func (r *PostgresRepository) HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM review_helpful_votes
+			WHERE review_id = $1 AND tenant_id = $2 AND user_id = $3
+		)
+	`
+
+	var exists bool
+	err := r.db.QueryRowContext(ctx, query, reviewID, tenantID, userID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check helpful vote: %w", err)
+	}
+
+	return exists, nil
+}
+
+// CreateReviewReport creates a new review report
+func (r *PostgresRepository) CreateReviewReport(ctx context.Context, report *ReviewReport) error {
+	query := `
+		INSERT INTO review_reports (
+			review_id, reporter_tenant_id, reporter_user_id, reason, details
+		) VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, status
+	`
+
+	err := r.db.QueryRowContext(
+		ctx, query,
+		report.ReviewID,
+		report.ReporterTenantID,
+		report.ReporterUserID,
+		report.Reason,
+		report.Details,
+	).Scan(&report.ID, &report.CreatedAt, &report.Status)
+
+	if err != nil {
+		return fmt.Errorf("create review report: %w", err)
+	}
+
+	return nil
+}
+
+// GetReviewReports retrieves review reports filtered by status
+func (r *PostgresRepository) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error) {
+	query := `
+		SELECT id, review_id, reporter_tenant_id, reporter_user_id,
+			   reason, details, status, resolved_at, resolved_by,
+			   resolution_notes, created_at
+		FROM review_reports
+		WHERE ($1 = '' OR status = $1)
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	var reports []*ReviewReport
+	err := r.db.SelectContext(ctx, &reports, query, status, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("get review reports: %w", err)
+	}
+
+	return reports, nil
+}
+
+// UpdateReviewReportStatus updates the status of a review report
+func (r *PostgresRepository) UpdateReviewReportStatus(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	query := `
+		UPDATE review_reports
+		SET status = $1, resolved_at = NOW(), resolved_by = $2, resolution_notes = $3
+		WHERE id = $4
+	`
+
+	result, err := r.db.ExecContext(ctx, query, status, resolvedBy, notes, reportID)
+	if err != nil {
+		return fmt.Errorf("update report status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("report not found")
+	}
+
+	return nil
+}
+
+// HideReview hides a review (moderation)
+func (r *PostgresRepository) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	query := `
+		UPDATE marketplace_reviews
+		SET is_hidden = true, hidden_reason = $1, hidden_at = NOW(), hidden_by = $2
+		WHERE id = $3
+	`
+
+	result, err := r.db.ExecContext(ctx, query, reason, hiddenBy, reviewID)
+	if err != nil {
+		return fmt.Errorf("hide review: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("review not found")
+	}
+
+	return nil
+}
+
+// UnhideReview unhides a review
+func (r *PostgresRepository) UnhideReview(ctx context.Context, reviewID string) error {
+	query := `
+		UPDATE marketplace_reviews
+		SET is_hidden = false, hidden_reason = NULL, hidden_at = NULL, hidden_by = NULL
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, reviewID)
+	if err != nil {
+		return fmt.Errorf("unhide review: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("review not found")
+	}
+
+	return nil
+}
+
+// GetRatingDistribution retrieves the rating distribution for a template
+func (r *PostgresRepository) GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error) {
+	query := `
+		SELECT rating_1_count, rating_2_count, rating_3_count, rating_4_count, rating_5_count,
+			   total_ratings, average_rating
+		FROM marketplace_templates
+		WHERE id = $1
+	`
+
+	var dist RatingDistribution
+	err := r.db.QueryRowContext(ctx, query, templateID).Scan(
+		&dist.Rating1Count,
+		&dist.Rating2Count,
+		&dist.Rating3Count,
+		&dist.Rating4Count,
+		&dist.Rating5Count,
+		&dist.TotalRatings,
+		&dist.AverageRating,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("template not found")
+		}
+		return nil, fmt.Errorf("get rating distribution: %w", err)
+	}
+
+	if dist.TotalRatings > 0 {
+		total := float64(dist.TotalRatings)
+		dist.Rating1Percent = float64(dist.Rating1Count) / total * 100
+		dist.Rating2Percent = float64(dist.Rating2Count) / total * 100
+		dist.Rating3Percent = float64(dist.Rating3Count) / total * 100
+		dist.Rating4Percent = float64(dist.Rating4Count) / total * 100
+		dist.Rating5Percent = float64(dist.Rating5Count) / total * 100
+	}
+
+	return &dist, nil
 }
 
 func (r *PostgresRepository) buildOrderBy(sortBy string) string {

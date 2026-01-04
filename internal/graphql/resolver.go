@@ -6,6 +6,7 @@ import (
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/template"
 	"github.com/gorax/gorax/internal/webhook"
+	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -20,5 +21,6 @@ type Resolver struct {
 	WebhookService  *webhook.Service
 	ScheduleService *schedule.Service
 	TemplateService *template.Service
+	WebSocketHub    *websocket.Hub
 	Logger          *slog.Logger
 }

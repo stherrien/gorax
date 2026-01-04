@@ -48,20 +48,108 @@ cd /Users/shawntherrien/Projects/gorax
 make run
 ```
 
-2. **Create a test user** (if not exists):
+2. **Configure environment variables** (optional):
 ```bash
-# Use the API or admin interface to create a test user
-# Email: loadtest@example.com
-# Password: loadtest123
+# Updated defaults for Gorax (port 8181)
+export BASE_URL="http://localhost:8181"
+export WS_URL="ws://localhost:8181"
+
+# Authentication mode ('dev' for DevAuth, 'kratos' for production)
+export AUTH_MODE="dev"  # Default: 'dev'
+
+# DevAuth credentials (for development)
+export TEST_TENANT_ID="default-tenant"  # Default tenant ID
+export TEST_USER_ID="default-test-user"  # Default user ID
+
+# Kratos credentials (for production)
+export TEST_USER_EMAIL="loadtest@example.com"
+export TEST_USER_PASSWORD="loadtest123"
+export KRATOS_PUBLIC_URL="http://localhost:4433"
 ```
 
-3. **Configure environment variables** (optional):
+## Authentication Modes
+
+Gorax supports two authentication modes depending on the environment:
+
+### Development Mode (DevAuth)
+
+**Default mode** for local development and testing.
+
+Uses header-based authentication:
+- `X-Tenant-ID`: Identifies the tenant (default: `default-tenant`)
+- `X-User-ID`: Identifies the user (default: `default-test-user`)
+
+**No login endpoints required** - authentication is handled by middleware that reads headers.
+
+**Configuration:**
 ```bash
-export BASE_URL="http://localhost:8080"
-export WS_URL="ws://localhost:8080"
+export AUTH_MODE="dev"
+export TEST_TENANT_ID="your-tenant-id"
+export TEST_USER_ID="your-user-id"
+```
+
+**When to use:**
+- Local development
+- Testing in development environments
+- CI/CD tests against development servers
+- Quick smoke tests
+
+### Production Mode (Kratos)
+
+Uses Ory Kratos for production authentication.
+
+Requires login via Kratos endpoints:
+- Login flow initialization
+- Credential submission
+- Session token management
+
+**Configuration:**
+```bash
+export AUTH_MODE="kratos"
+export KRATOS_PUBLIC_URL="https://auth.gorax.io"
 export TEST_USER_EMAIL="loadtest@example.com"
 export TEST_USER_PASSWORD="loadtest123"
 ```
+
+**When to use:**
+- Staging environment testing
+- Production performance testing
+- Pre-release validation
+- Load testing with production-like auth overhead
+
+### Authentication in Tests
+
+The test suite automatically detects and uses the appropriate authentication mode:
+
+**DevAuth Example:**
+```javascript
+// No setup required - auth is handled by middleware
+const headers = {
+  'X-Tenant-ID': 'default-tenant',
+  'X-User-ID': 'default-test-user',
+};
+```
+
+**Kratos Example** (future):
+```javascript
+// Login and get session token
+const token = await authenticate();
+const headers = {
+  'Authorization': `Bearer ${token}`,
+};
+```
+
+### Test Compatibility
+
+| Test Suite | DevAuth | Kratos |
+|------------|---------|--------|
+| workflow_api.js | ✅ | ✅ |
+| execution_api.js | ✅ | ✅ |
+| webhook_trigger.js | ✅ | ✅ |
+| websocket_connections.js | ✅ | ✅ |
+| auth_endpoints.js | ⚠️ Skipped | ✅ |
+
+**Note:** The `auth_endpoints.js` test is skipped in DevAuth mode since DevAuth doesn't use login endpoints.
 
 ## Test Scenarios
 

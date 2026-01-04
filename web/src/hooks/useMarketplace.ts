@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { marketplaceAPI } from '../api/marketplace'
 import type {
   MarketplaceTemplate,
+  Category,
   TemplateReview,
   SearchFilter,
   InstallTemplateInput,
   InstallTemplateResult,
   RateTemplateInput,
+  ReviewSortOption,
+  RatingDistribution,
+  ReportReviewInput,
 } from '../types/marketplace'
 
 /**
@@ -102,9 +106,14 @@ export function useMarketplaceTemplate(templateId: string) {
 }
 
 /**
- * Hook to fetch and manage template reviews
+ * Hook to fetch and manage template reviews with sorting
  */
-export function useMarketplaceReviews(templateId: string, limit = 10) {
+export function useMarketplaceReviews(
+  templateId: string,
+  sortBy: ReviewSortOption = 'recent',
+  limit = 10,
+  offset = 0
+) {
   const [reviews, setReviews] = useState<TemplateReview[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -114,7 +123,7 @@ export function useMarketplaceReviews(templateId: string, limit = 10) {
       try {
         setLoading(true)
         setError(null)
-        const data = await marketplaceAPI.getReviews(templateId, limit)
+        const data = await marketplaceAPI.getReviews(templateId, sortBy, limit, offset)
         setReviews(data)
       } catch (err) {
         setError(err as Error)
@@ -126,7 +135,7 @@ export function useMarketplaceReviews(templateId: string, limit = 10) {
     if (templateId) {
       fetchReviews()
     }
-  }, [templateId, limit])
+  }, [templateId, sortBy, limit, offset])
 
   const deleteReview = async (reviewId: string) => {
     try {
@@ -141,7 +150,7 @@ export function useMarketplaceReviews(templateId: string, limit = 10) {
     try {
       setLoading(true)
       setError(null)
-      const data = await marketplaceAPI.getReviews(templateId, limit)
+      const data = await marketplaceAPI.getReviews(templateId, sortBy, limit, offset)
       setReviews(data)
     } catch (err) {
       setError(err as Error)
@@ -210,7 +219,7 @@ export function usePopularTemplates(limit = 10) {
 }
 
 /**
- * Hook to fetch template categories
+ * Hook to fetch template categories (legacy - returns strings)
  */
 export function useMarketplaceCategories() {
   const [categories, setCategories] = useState<string[]>([])
@@ -235,4 +244,199 @@ export function useMarketplaceCategories() {
   }, [])
 
   return { categories, loading, error }
+}
+
+/**
+ * Hook to fetch detailed categories with hierarchy
+ */
+export function useCategories() {
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await marketplaceAPI.listCategories()
+      setCategories(data)
+    } catch (err) {
+      setError(err as Error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
+
+  return { categories, loading, error, refetch: fetchCategories }
+}
+
+/**
+ * Hook to fetch featured templates
+ */
+export function useFeaturedTemplates(limit = 10) {
+  const [templates, setTemplates] = useState<MarketplaceTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await marketplaceAPI.getFeatured(limit)
+        setTemplates(data)
+      } catch (err) {
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFeatured()
+  }, [limit])
+
+  return { templates, loading, error }
+}
+
+/**
+ * Hook to fetch rating distribution for a template
+ */
+export function useRatingDistribution(templateId: string) {
+  const [distribution, setDistribution] = useState<RatingDistribution | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    const fetchDistribution = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await marketplaceAPI.getRatingDistribution(templateId)
+        setDistribution(data)
+      } catch (err) {
+        setError(err as Error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (templateId) {
+      fetchDistribution()
+    }
+  }, [templateId])
+
+  return { distribution, loading, error }
+}
+
+/**
+ * Hook to manage helpful votes on reviews
+ */
+export function useReviewHelpful(reviewId: string) {
+  const [hasVoted, setHasVoted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    const checkVoteStatus = async () => {
+      try {
+        const voted = await marketplaceAPI.hasVotedHelpful(reviewId)
+        setHasVoted(voted)
+      } catch (err) {
+        setError(err as Error)
+      }
+    }
+
+    if (reviewId) {
+      checkVoteStatus()
+    }
+  }, [reviewId])
+
+  const vote = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      await marketplaceAPI.voteReviewHelpful(reviewId)
+      setHasVoted(true)
+    } catch (err) {
+      setError(err as Error)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const unvote = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      await marketplaceAPI.unvoteReviewHelpful(reviewId)
+      setHasVoted(false)
+    } catch (err) {
+      setError(err as Error)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleVote = async () => {
+    if (hasVoted) {
+      await unvote()
+    } else {
+      await vote()
+    }
+  }
+
+  return { hasVoted, loading, error, vote, unvote, toggleVote }
+}
+
+/**
+ * Hook to report a review
+ */
+export function useReportReview() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  const report = async (reviewId: string, input: ReportReviewInput) => {
+    try {
+      setLoading(true)
+      setError(null)
+      await marketplaceAPI.reportReview(reviewId, input)
+    } catch (err) {
+      setError(err as Error)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { report, loading, error }
+}
+
+/**
+ * Hook to create or update a review
+ */
+export function useCreateReview(templateId: string) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  const createReview = async (input: RateTemplateInput): Promise<TemplateReview> => {
+    try {
+      setLoading(true)
+      setError(null)
+      const review = await marketplaceAPI.rate(templateId, input)
+      return review
+    } catch (err) {
+      setError(err as Error)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { createReview, loading, error }
 }

@@ -1,47 +1,28 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { scheduleAPI } from '../api/schedules'
 import type {
-  Schedule,
   ScheduleListParams,
   ScheduleCreateInput,
   ScheduleUpdateInput,
 } from '../api/schedules'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of schedules
  */
 export function useSchedules(params?: ScheduleListParams) {
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchSchedules = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await scheduleAPI.list(params)
-      setSchedules(response.schedules)
-      setTotal(response.total)
-    } catch (err) {
-      setError(err as Error)
-      setSchedules([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchSchedules()
-  }, [fetchSchedules])
+  const query = useQuery({
+    queryKey: ['schedules', params],
+    queryFn: () => scheduleAPI.list(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    schedules,
-    total,
-    loading,
-    error,
-    refetch: fetchSchedules,
+    schedules: query.data?.schedules ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -49,38 +30,18 @@ export function useSchedules(params?: ScheduleListParams) {
  * Hook to fetch a single schedule by ID
  */
 export function useSchedule(id: string | null) {
-  const [schedule, setSchedule] = useState<Schedule | null>(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchSchedule = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await scheduleAPI.get(id)
-      setSchedule(data)
-    } catch (err) {
-      setError(err as Error)
-      setSchedule(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchSchedule()
-  }, [fetchSchedule])
+  const query = useQuery({
+    queryKey: ['schedule', id],
+    queryFn: () => scheduleAPI.get(id!),
+    enabled: isValidResourceId(id),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    schedule,
-    loading,
-    error,
-    refetch: fetchSchedule,
+    schedule: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -88,62 +49,52 @@ export function useSchedule(id: string | null) {
  * Hook for schedule CRUD mutations
  */
 export function useScheduleMutations() {
-  const [creating, setCreating] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const queryClient = useQueryClient()
 
-  const createSchedule = async (
-    workflowId: string,
-    input: ScheduleCreateInput
-  ): Promise<Schedule> => {
-    try {
-      setCreating(true)
-      const schedule = await scheduleAPI.create(workflowId, input)
-      return schedule
-    } finally {
-      setCreating(false)
-    }
-  }
+  const createMutation = useMutation({
+    mutationFn: ({ workflowId, input }: { workflowId: string; input: ScheduleCreateInput }) =>
+      scheduleAPI.create(workflowId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+    },
+  })
 
-  const updateSchedule = async (
-    id: string,
-    updates: ScheduleUpdateInput
-  ): Promise<Schedule> => {
-    try {
-      setUpdating(true)
-      const schedule = await scheduleAPI.update(id, updates)
-      return schedule
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: ScheduleUpdateInput }) =>
+      scheduleAPI.update(id, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+    },
+  })
 
-  const deleteSchedule = async (id: string): Promise<void> => {
-    try {
-      setDeleting(true)
-      await scheduleAPI.delete(id)
-    } finally {
-      setDeleting(false)
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => scheduleAPI.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule', id] })
+    },
+  })
 
-  const toggleSchedule = async (id: string, enabled: boolean): Promise<Schedule> => {
-    try {
-      setUpdating(true)
-      const schedule = await scheduleAPI.toggle(id, enabled)
-      return schedule
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      scheduleAPI.toggle(id, enabled),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+    },
+  })
 
   return {
-    createSchedule,
-    updateSchedule,
-    deleteSchedule,
-    toggleSchedule,
-    creating,
-    updating,
-    deleting,
+    createSchedule: (workflowId: string, input: ScheduleCreateInput) =>
+      createMutation.mutateAsync({ workflowId, input }),
+    updateSchedule: (id: string, updates: ScheduleUpdateInput) =>
+      updateMutation.mutateAsync({ id, updates }),
+    deleteSchedule: deleteMutation.mutateAsync,
+    toggleSchedule: (id: string, enabled: boolean) =>
+      toggleMutation.mutateAsync({ id, enabled }),
+    creating: createMutation.isPending,
+    updating: updateMutation.isPending || toggleMutation.isPending,
+    deleting: deleteMutation.isPending,
   }
 }

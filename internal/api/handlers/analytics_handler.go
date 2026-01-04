@@ -40,7 +40,19 @@ func NewAnalyticsHandler(service AnalyticsService, logger *slog.Logger) *Analyti
 }
 
 // GetTenantOverview retrieves overall analytics for a tenant
-// GET /api/v1/analytics/overview
+// @Summary Get tenant analytics overview
+// @Description Returns aggregated analytics data for the tenant including total executions, success rates, and trends
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.TenantOverview "Tenant analytics overview"
+// @Failure 400 {object} map[string]string "Invalid time range"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/overview [get]
 func (h *AnalyticsHandler) GetTenantOverview(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -68,7 +80,21 @@ func (h *AnalyticsHandler) GetTenantOverview(w http.ResponseWriter, r *http.Requ
 }
 
 // GetWorkflowStats retrieves analytics for a specific workflow
-// GET /api/v1/analytics/workflows/:workflowID
+// @Summary Get workflow-specific analytics
+// @Description Returns detailed analytics for a specific workflow including execution counts, success rate, and average duration
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param workflowID path string true "Workflow ID"
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.WorkflowStats "Workflow analytics"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 404 {object} map[string]string "Workflow not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/workflows/{workflowID} [get]
 func (h *AnalyticsHandler) GetWorkflowStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -107,7 +133,20 @@ func (h *AnalyticsHandler) GetWorkflowStats(w http.ResponseWriter, r *http.Reque
 }
 
 // GetExecutionTrends retrieves execution trends over time
-// GET /api/v1/analytics/trends
+// @Summary Get execution trends
+// @Description Returns time-series data showing execution trends with configurable granularity (hour, day, week, month)
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Param granularity query string false "Time granularity (hour, day, week, month)" default(day) Enums(hour, day, week, month)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.ExecutionTrends "Execution trends data"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/trends [get]
 func (h *AnalyticsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -145,7 +184,20 @@ func (h *AnalyticsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Req
 }
 
 // GetTopWorkflows retrieves the most frequently executed workflows
-// GET /api/v1/analytics/top-workflows
+// @Summary Get top workflows by execution count
+// @Description Returns the most frequently executed workflows ordered by execution count
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Param limit query int false "Maximum number of workflows to return" default(10)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.TopWorkflows "Top workflows"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/top-workflows [get]
 func (h *AnalyticsHandler) GetTopWorkflows(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -181,7 +233,19 @@ func (h *AnalyticsHandler) GetTopWorkflows(w http.ResponseWriter, r *http.Reques
 }
 
 // GetErrorBreakdown retrieves error analysis
-// GET /api/v1/analytics/errors
+// @Summary Get error breakdown and analysis
+// @Description Returns categorized error data including error types, frequencies, and affected workflows
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.ErrorBreakdown "Error breakdown data"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/errors [get]
 func (h *AnalyticsHandler) GetErrorBreakdown(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
@@ -209,7 +273,19 @@ func (h *AnalyticsHandler) GetErrorBreakdown(w http.ResponseWriter, r *http.Requ
 }
 
 // GetNodePerformance retrieves node-level performance statistics
-// GET /api/v1/analytics/workflows/:workflowID/nodes
+// @Summary Get node performance metrics
+// @Description Returns performance statistics for individual nodes within a workflow including execution time and success rate
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param workflowID path string true "Workflow ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.NodePerformance "Node performance metrics"
+// @Failure 400 {object} map[string]string "Invalid workflow ID"
+// @Failure 404 {object} map[string]string "Workflow not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/workflows/{workflowID}/nodes [get]
 func (h *AnalyticsHandler) GetNodePerformance(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {

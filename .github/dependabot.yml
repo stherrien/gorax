@@ -1,0 +1,131 @@
+version: 2
+updates:
+  # Go dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "stherrien"
+    assignees:
+      - "stherrien"
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+      - "automated"
+    versioning-strategy: increase
+    # Group Go dependencies by type
+    groups:
+      aws-sdk:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2/*"
+      testing:
+        patterns:
+          - "github.com/stretchr/testify"
+          - "github.com/DATA-DOG/go-sqlmock"
+      production:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "stherrien"
+    assignees:
+      - "stherrien"
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "frontend"
+      - "automated"
+    versioning-strategy: increase
+    # Ignore major version updates for React
+    ignore:
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@testing-library/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      production:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "stherrien"
+    assignees:
+      - "stherrien"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+          - "github/*"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "stherrien"
+    assignees:
+      - "stherrien"
+    commit-message:
+      prefix: "build(docker)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"

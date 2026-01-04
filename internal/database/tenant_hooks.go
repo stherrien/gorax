@@ -105,7 +105,7 @@ func (db *TenantDB) BeginTxx(ctx context.Context, opts *driver.TxOptions) (*sqlx
 	if tenantID != "" {
 		_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() //nolint:errcheck // best effort rollback on error
 			return nil, fmt.Errorf("failed to set tenant context in transaction: %w", err)
 		}
 	}
@@ -123,7 +123,7 @@ func GetTenantIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
-	tenantID, _ := ctx.Value(ContextKeyTenantID).(string)
+	tenantID, _ := ctx.Value(ContextKeyTenantID).(string) //nolint:errcheck // type assertion ok value intentionally ignored
 	return tenantID
 }
 

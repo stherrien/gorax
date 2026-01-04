@@ -407,6 +407,16 @@ func (m *mockTemplateRepository) Delete(ctx context.Context, tenantID, id string
 	return fmt.Errorf("template not found")
 }
 
+func (m *mockTemplateRepository) IncrementUsageCount(ctx context.Context, id string) error {
+	for _, tmpl := range m.templates {
+		if tmpl.ID == id {
+			tmpl.UsageCount++
+			return nil
+		}
+	}
+	return fmt.Errorf("template not found")
+}
+
 func filterByCategory(templates []*Template, category string) []*Template {
 	result := make([]*Template, 0)
 	for _, tmpl := range templates {

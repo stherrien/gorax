@@ -9,20 +9,20 @@ import (
 type MessageType string
 
 const (
-	MessageTypeJoin          MessageType = "join"
-	MessageTypeLeave         MessageType = "leave"
-	MessageTypePresence      MessageType = "presence"
-	MessageTypeLockAcquire   MessageType = "lock_acquire"
-	MessageTypeLockRelease   MessageType = "lock_release"
-	MessageTypeChange        MessageType = "change"
-	MessageTypeUserJoined    MessageType = "user_joined"
-	MessageTypeUserLeft      MessageType = "user_left"
+	MessageTypeJoin           MessageType = "join"
+	MessageTypeLeave          MessageType = "leave"
+	MessageTypePresence       MessageType = "presence"
+	MessageTypeLockAcquire    MessageType = "lock_acquire"
+	MessageTypeLockRelease    MessageType = "lock_release"
+	MessageTypeChange         MessageType = "change"
+	MessageTypeUserJoined     MessageType = "user_joined"
+	MessageTypeUserLeft       MessageType = "user_left"
 	MessageTypePresenceUpdate MessageType = "presence_update"
-	MessageTypeLockAcquired  MessageType = "lock_acquired"
-	MessageTypeLockReleased  MessageType = "lock_released"
-	MessageTypeLockFailed    MessageType = "lock_failed"
-	MessageTypeChangeApplied MessageType = "change_applied"
-	MessageTypeError         MessageType = "error"
+	MessageTypeLockAcquired   MessageType = "lock_acquired"
+	MessageTypeLockReleased   MessageType = "lock_released"
+	MessageTypeLockFailed     MessageType = "lock_failed"
+	MessageTypeChangeApplied  MessageType = "change_applied"
+	MessageTypeError          MessageType = "error"
 )
 
 // EditSession represents an active editing session for a workflow
@@ -53,17 +53,17 @@ type CursorPosition struct {
 
 // Selection represents a user's current selection (node/edge)
 type Selection struct {
-	Type     string   `json:"type"` // "node" or "edge"
+	Type       string   `json:"type"` // "node" or "edge"
 	ElementIDs []string `json:"element_ids"`
 }
 
 // EditLock represents a lock on a node or edge being edited
 type EditLock struct {
-	ElementID  string    `json:"element_id"`
-	ElementType string   `json:"element_type"` // "node" or "edge"
-	UserID     string    `json:"user_id"`
-	UserName   string    `json:"user_name"`
-	AcquiredAt time.Time `json:"acquired_at"`
+	ElementID   string    `json:"element_id"`
+	ElementType string    `json:"element_type"` // "node" or "edge"
+	UserID      string    `json:"user_id"`
+	UserName    string    `json:"user_name"`
+	AcquiredAt  time.Time `json:"acquired_at"`
 }
 
 // EditOperation represents a change operation using operational transform
@@ -151,8 +151,8 @@ type LockReleasedPayload struct {
 
 // LockFailedPayload represents the payload when lock acquisition fails
 type LockFailedPayload struct {
-	ElementID string     `json:"element_id"`
-	Reason    string     `json:"reason"`
+	ElementID   string    `json:"element_id"`
+	Reason      string    `json:"reason"`
 	CurrentLock *EditLock `json:"current_lock,omitempty"`
 }
 

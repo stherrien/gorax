@@ -9,10 +9,28 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gorax/gorax/internal/security"
 )
 
 // HTTPAction implements the Action interface for HTTP requests
-type HTTPAction struct{}
+type HTTPAction struct {
+	urlValidator *security.URLValidator
+}
+
+// NewHTTPAction creates a new HTTP action with default URL validator
+func NewHTTPAction() *HTTPAction {
+	return &HTTPAction{
+		urlValidator: security.NewURLValidator(),
+	}
+}
+
+// NewHTTPActionWithValidator creates a new HTTP action with custom URL validator
+func NewHTTPActionWithValidator(validator *security.URLValidator) *HTTPAction {
+	return &HTTPAction{
+		urlValidator: validator,
+	}
+}
 
 // HTTPActionConfig represents the configuration for an HTTP action
 type HTTPActionConfig struct {
@@ -103,6 +121,13 @@ func (a *HTTPAction) executeHTTP(ctx context.Context, config HTTPActionConfig, e
 	url := InterpolateString(config.URL, execContext)
 	if url == "" {
 		return nil, fmt.Errorf("URL is required")
+	}
+
+	// Validate URL to prevent SSRF attacks
+	if a.urlValidator != nil {
+		if err := a.urlValidator.ValidateURL(url); err != nil {
+			return nil, fmt.Errorf("SSRF protection: %w", err)
+		}
 	}
 
 	// Prepare request body
@@ -229,7 +254,7 @@ func isValidHTTPMethod(method string) bool {
 
 // Legacy function for backward compatibility
 func ExecuteHTTP(ctx context.Context, config HTTPActionConfig, context map[string]interface{}) (*HTTPActionResult, error) {
-	action := &HTTPAction{}
+	action := NewHTTPAction()
 	input := NewActionInput(config, context)
 	output, err := action.Execute(ctx, input)
 	if err != nil {

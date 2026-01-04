@@ -191,8 +191,8 @@ func (a *PostgresStatementAction) Execute(ctx context.Context, input *actions.Ac
 		return nil, fmt.Errorf("failed to get rows affected: %w", err)
 	}
 
-	// Get last insert ID (may not be supported by all drivers)
-	lastInsertID, _ := sqlResult.LastInsertId()
+	// Get last insert ID (error ignored - may not be supported by all drivers/statements)
+	lastInsertID, _ := sqlResult.LastInsertId() //nolint:errcheck
 
 	result := &StatementResult{
 		RowsAffected: rowsAffected,
@@ -278,7 +278,7 @@ func (a *PostgresTransactionAction) Execute(ctx context.Context, input *actions.
 			return nil, fmt.Errorf("statement %d failed: %w (transaction rolled back)", i, err)
 		}
 
-		rowsAffected, _ := sqlResult.RowsAffected()
+		rowsAffected, _ := sqlResult.RowsAffected() //nolint:errcheck // error ignored - count is best effort
 		result.TotalAffected += rowsAffected
 		result.StatementsRun++
 	}

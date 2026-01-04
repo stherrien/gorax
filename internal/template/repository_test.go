@@ -501,6 +501,20 @@ func (m *MockRepository) Delete(ctx context.Context, tenantID, id string) error 
 	return nil
 }
 
+func (m *MockRepository) IncrementUsageCount(ctx context.Context, id string) error {
+	if m.templates == nil {
+		return errors.New("template not found")
+	}
+
+	template, ok := m.templates[id]
+	if !ok {
+		return errors.New("template not found")
+	}
+
+	template.UsageCount++
+	return nil
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
 }

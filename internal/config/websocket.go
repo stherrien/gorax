@@ -160,9 +160,9 @@ func loadWebSocketConfig() WebSocketConfig {
 			"http://localhost:5173",
 			"http://localhost:5174",
 		}),
-		MaxMessageSize:                getEnvAsInt64("WEBSOCKET_MAX_MESSAGE_SIZE", 512*1024),                  // 512KB default
-		MaxConnectionsPerWorkflow:     getEnvAsInt("WEBSOCKET_MAX_CONNECTIONS_PER_WORKFLOW", 50),             // 50 users per workflow
-		ConnectionsPerTenantPerMinute: getEnvAsInt("WEBSOCKET_CONNECTIONS_PER_TENANT_PER_MINUTE", 60),        // 60 connections/min
+		MaxMessageSize:                getEnvAsInt64("WEBSOCKET_MAX_MESSAGE_SIZE", 512*1024),          // 512KB default
+		MaxConnectionsPerWorkflow:     getEnvAsInt("WEBSOCKET_MAX_CONNECTIONS_PER_WORKFLOW", 50),      // 50 users per workflow
+		ConnectionsPerTenantPerMinute: getEnvAsInt("WEBSOCKET_CONNECTIONS_PER_TENANT_PER_MINUTE", 60), // 60 connections/min
 	}
 }
 

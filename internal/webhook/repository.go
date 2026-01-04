@@ -199,41 +199,53 @@ func (r *Repository) CreateEvent(ctx context.Context, event *WebhookEvent) error
 
 // webhookEventDB is the database representation with JSONB as RawMessage
 type webhookEventDB struct {
-	ID               string             `db:"id"`
-	TenantID         string             `db:"tenant_id"`
-	WebhookID        string             `db:"webhook_id"`
-	ExecutionID      *string            `db:"execution_id"`
-	RequestMethod    string             `db:"request_method"`
-	RequestHeaders   json.RawMessage    `db:"request_headers"`
-	RequestBody      json.RawMessage    `db:"request_body"`
-	ResponseStatus   *int               `db:"response_status"`
-	ProcessingTimeMs *int               `db:"processing_time_ms"`
-	Status           WebhookEventStatus `db:"status"`
-	ErrorMessage     *string            `db:"error_message"`
-	FilteredReason   *string            `db:"filtered_reason"`
-	ReplayCount      int                `db:"replay_count"`
-	SourceEventID    *string            `db:"source_event_id"`
-	Metadata         json.RawMessage    `db:"metadata"`
-	CreatedAt        time.Time          `db:"created_at"`
+	ID                string             `db:"id"`
+	TenantID          string             `db:"tenant_id"`
+	WebhookID         string             `db:"webhook_id"`
+	ExecutionID       *string            `db:"execution_id"`
+	RequestMethod     string             `db:"request_method"`
+	RequestHeaders    json.RawMessage    `db:"request_headers"`
+	RequestBody       json.RawMessage    `db:"request_body"`
+	ResponseStatus    *int               `db:"response_status"`
+	ProcessingTimeMs  *int               `db:"processing_time_ms"`
+	Status            WebhookEventStatus `db:"status"`
+	ErrorMessage      *string            `db:"error_message"`
+	FilteredReason    *string            `db:"filtered_reason"`
+	ReplayCount       int                `db:"replay_count"`
+	SourceEventID     *string            `db:"source_event_id"`
+	Metadata          json.RawMessage    `db:"metadata"`
+	RetryCount        int                `db:"retry_count"`
+	MaxRetries        int                `db:"max_retries"`
+	NextRetryAt       *time.Time         `db:"next_retry_at"`
+	LastRetryAt       *time.Time         `db:"last_retry_at"`
+	RetryError        *string            `db:"retry_error"`
+	PermanentlyFailed bool               `db:"permanently_failed"`
+	CreatedAt         time.Time          `db:"created_at"`
 }
 
 // toWebhookEvent converts webhookEventDB to WebhookEvent
 func (db *webhookEventDB) toWebhookEvent() (*WebhookEvent, error) {
 	event := &WebhookEvent{
-		ID:               db.ID,
-		TenantID:         db.TenantID,
-		WebhookID:        db.WebhookID,
-		ExecutionID:      db.ExecutionID,
-		RequestMethod:    db.RequestMethod,
-		RequestBody:      db.RequestBody,
-		ResponseStatus:   db.ResponseStatus,
-		ProcessingTimeMs: db.ProcessingTimeMs,
-		Status:           db.Status,
-		ErrorMessage:     db.ErrorMessage,
-		FilteredReason:   db.FilteredReason,
-		ReplayCount:      db.ReplayCount,
-		SourceEventID:    db.SourceEventID,
-		CreatedAt:        db.CreatedAt,
+		ID:                db.ID,
+		TenantID:          db.TenantID,
+		WebhookID:         db.WebhookID,
+		ExecutionID:       db.ExecutionID,
+		RequestMethod:     db.RequestMethod,
+		RequestBody:       db.RequestBody,
+		ResponseStatus:    db.ResponseStatus,
+		ProcessingTimeMs:  db.ProcessingTimeMs,
+		Status:            db.Status,
+		ErrorMessage:      db.ErrorMessage,
+		FilteredReason:    db.FilteredReason,
+		ReplayCount:       db.ReplayCount,
+		SourceEventID:     db.SourceEventID,
+		RetryCount:        db.RetryCount,
+		MaxRetries:        db.MaxRetries,
+		NextRetryAt:       db.NextRetryAt,
+		LastRetryAt:       db.LastRetryAt,
+		RetryError:        db.RetryError,
+		PermanentlyFailed: db.PermanentlyFailed,
+		CreatedAt:         db.CreatedAt,
 	}
 
 	// Unmarshal request headers
@@ -627,4 +639,115 @@ func (r *Repository) DeleteOldEvents(ctx context.Context, retentionPeriod time.D
 	}
 
 	return int(rows), nil
+}
+
+// MarkEventForRetry marks a webhook event for retry with exponential backoff
+func (r *Repository) MarkEventForRetry(ctx context.Context, eventID string, errorMsg string) error {
+	query := `SELECT mark_webhook_event_for_retry($1, $2)`
+
+	_, err := r.db.ExecContext(ctx, query, eventID, errorMsg)
+	if err != nil {
+		return fmt.Errorf("mark event for retry: %w", err)
+	}
+
+	return nil
+}
+
+// MarkEventAsNonRetryable marks a webhook event as permanently failed without retry
+func (r *Repository) MarkEventAsNonRetryable(ctx context.Context, eventID string, errorMsg string) error {
+	query := `
+		UPDATE webhook_events
+		SET
+			permanently_failed = true,
+			retry_error = $2,
+			status = 'failed',
+			next_retry_at = NULL
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, eventID, errorMsg)
+	if err != nil {
+		return fmt.Errorf("mark event as non-retryable: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+// GetEventsForRetry retrieves webhook events that are ready for retry
+func (r *Repository) GetEventsForRetry(ctx context.Context, batchSize int) ([]*WebhookEvent, error) {
+	query := `SELECT * FROM get_webhook_events_for_retry($1)`
+
+	var eventsDB []webhookEventDB
+	err := r.db.SelectContext(ctx, &eventsDB, query, batchSize)
+	if err != nil {
+		return nil, fmt.Errorf("get events for retry: %w", err)
+	}
+
+	events := make([]*WebhookEvent, 0, len(eventsDB))
+	for _, eventDB := range eventsDB {
+		event, err := eventDB.toWebhookEvent()
+		if err != nil {
+			return nil, fmt.Errorf("convert event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+// MarkEventRetrySucceeded marks a retry attempt as successful
+func (r *Repository) MarkEventRetrySucceeded(ctx context.Context, eventID string, executionID string, processingTimeMs int) error {
+	query := `
+		UPDATE webhook_events
+		SET
+			status = 'processed',
+			execution_id = $2,
+			processing_time_ms = $3,
+			next_retry_at = NULL
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, eventID, executionID, processingTimeMs)
+	if err != nil {
+		return fmt.Errorf("mark retry succeeded: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+// GetRetryStatistics retrieves retry statistics for a webhook
+func (r *Repository) GetRetryStatistics(ctx context.Context, webhookID string) (*RetryStatistics, error) {
+	query := `SELECT * FROM webhook_retry_stats WHERE webhook_id = $1`
+
+	var stats RetryStatistics
+	err := r.db.GetContext(ctx, &stats, query, webhookID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Return empty stats if no retry data exists
+			return &RetryStatistics{
+				WebhookID: webhookID,
+			}, nil
+		}
+		return nil, fmt.Errorf("get retry statistics: %w", err)
+	}
+
+	return &stats, nil
 }

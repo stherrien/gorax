@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorax/gorax/internal/config"
 )
@@ -82,8 +83,10 @@ func validateKratosSession(kratosURL, sessionToken string) (*User, error) {
 	}
 	req.Header.Set("X-Session-Token", sessionToken)
 
-	// Make request
-	client := &http.Client{}
+	// Make request with timeout to prevent slowloris/timeout attacks
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
