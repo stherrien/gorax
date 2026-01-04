@@ -115,20 +115,26 @@ export default function WorkflowEditor() {
     }
 
     try {
+      console.log('Save workflow - Debug:', { isNewWorkflow, id, validatedId, hasName: !!name })
+
       if (isNewWorkflow) {
+        console.log('Creating new workflow...')
         const newWorkflow = await createWorkflow(workflowData)
+        console.log('Workflow created:', newWorkflow)
         navigate(`/workflows/${newWorkflow.id}`)
       } else if (validatedId) {
+        console.log('Updating existing workflow:', validatedId)
         await updateWorkflow(validatedId, workflowData)
         setSaveSuccess('Workflow saved successfully')
         setTimeout(() => setSaveSuccess(null), 3000)
       } else {
+        console.error('Save failed - invalid state:', { isNewWorkflow, id, validatedId })
         setSaveError('Invalid workflow ID')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow'
-      setSaveError(errorMessage)
       console.error('Failed to save workflow:', err)
+      setSaveError(errorMessage)
     }
   }
 
