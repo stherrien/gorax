@@ -1,46 +1,28 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { templateAPI } from '../api/templates'
 import type {
-  Template,
   TemplateListParams,
   CreateTemplateInput,
   UpdateTemplateInput,
   CreateFromWorkflowInput,
   InstantiateTemplateInput,
-  InstantiateTemplateResult,
 } from '../api/templates'
 
 /**
  * Hook to fetch and manage list of templates
  */
 export function useTemplates(params?: TemplateListParams) {
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchTemplates = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await templateAPI.list(params)
-      setTemplates(data)
-    } catch (err) {
-      setError(err as Error)
-      setTemplates([])
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchTemplates()
-  }, [fetchTemplates])
+  const query = useQuery({
+    queryKey: ['templates', params],
+    queryFn: () => templateAPI.list(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    templates,
-    loading,
-    error,
-    refetch: fetchTemplates,
+    templates: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -48,38 +30,18 @@ export function useTemplates(params?: TemplateListParams) {
  * Hook to fetch a single template by ID
  */
 export function useTemplate(id: string | null) {
-  const [template, setTemplate] = useState<Template | null>(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchTemplate = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await templateAPI.get(id)
-      setTemplate(data)
-    } catch (err) {
-      setError(err as Error)
-      setTemplate(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchTemplate()
-  }, [fetchTemplate])
+  const query = useQuery({
+    queryKey: ['template', id],
+    queryFn: () => templateAPI.get(id!),
+    enabled: !!id,
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    template,
-    loading,
-    error,
-    refetch: fetchTemplate,
+    template: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -87,77 +49,60 @@ export function useTemplate(id: string | null) {
  * Hook for template CRUD mutations
  */
 export function useTemplateMutations() {
-  const [creating, setCreating] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [instantiating, setInstantiating] = useState(false)
+  const queryClient = useQueryClient()
 
-  const createTemplate = async (input: CreateTemplateInput): Promise<Template> => {
-    try {
-      setCreating(true)
-      const template = await templateAPI.create(input)
-      return template
-    } finally {
-      setCreating(false)
-    }
-  }
+  const createMutation = useMutation({
+    mutationFn: (input: CreateTemplateInput) => templateAPI.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] })
+    },
+  })
 
-  const updateTemplate = async (
-    id: string,
-    updates: UpdateTemplateInput
-  ): Promise<void> => {
-    try {
-      setUpdating(true)
-      await templateAPI.update(id, updates)
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateTemplateInput }) =>
+      templateAPI.update(id, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] })
+      queryClient.invalidateQueries({ queryKey: ['template', variables.id] })
+    },
+  })
 
-  const deleteTemplate = async (id: string): Promise<void> => {
-    try {
-      setDeleting(true)
-      await templateAPI.delete(id)
-    } finally {
-      setDeleting(false)
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => templateAPI.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] })
+      queryClient.invalidateQueries({ queryKey: ['template', id] })
+    },
+  })
 
-  const createFromWorkflow = async (
-    workflowId: string,
-    input: CreateFromWorkflowInput
-  ): Promise<Template> => {
-    try {
-      setCreating(true)
-      const template = await templateAPI.createFromWorkflow(workflowId, input)
-      return template
-    } finally {
-      setCreating(false)
-    }
-  }
+  const createFromWorkflowMutation = useMutation({
+    mutationFn: ({ workflowId, input }: { workflowId: string; input: CreateFromWorkflowInput }) =>
+      templateAPI.createFromWorkflow(workflowId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] })
+    },
+  })
 
-  const instantiateTemplate = async (
-    templateId: string,
-    input: InstantiateTemplateInput
-  ): Promise<InstantiateTemplateResult> => {
-    try {
-      setInstantiating(true)
-      const result = await templateAPI.instantiate(templateId, input)
-      return result
-    } finally {
-      setInstantiating(false)
-    }
-  }
+  const instantiateMutation = useMutation({
+    mutationFn: ({ templateId, input }: { templateId: string; input: InstantiateTemplateInput }) =>
+      templateAPI.instantiate(templateId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
 
   return {
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
-    createFromWorkflow,
-    instantiateTemplate,
-    creating,
-    updating,
-    deleting,
-    instantiating,
+    createTemplate: createMutation.mutateAsync,
+    updateTemplate: (id: string, updates: UpdateTemplateInput) =>
+      updateMutation.mutateAsync({ id, updates }),
+    deleteTemplate: deleteMutation.mutateAsync,
+    createFromWorkflow: (workflowId: string, input: CreateFromWorkflowInput) =>
+      createFromWorkflowMutation.mutateAsync({ workflowId, input }),
+    instantiateTemplate: (templateId: string, input: InstantiateTemplateInput) =>
+      instantiateMutation.mutateAsync({ templateId, input }),
+    creating: createMutation.isPending || createFromWorkflowMutation.isPending,
+    updating: updateMutation.isPending,
+    deleting: deleteMutation.isPending,
+    instantiating: instantiateMutation.isPending,
   }
 }

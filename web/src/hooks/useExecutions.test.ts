@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import {
   useExecutions,
   useExecution,
@@ -19,6 +21,20 @@ vi.mock('../api/executions', () => ({
 }))
 
 import { executionAPI } from '../api/executions'
+
+// Helper to create a wrapper with QueryClient
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
 
 describe('useExecutions', () => {
   const mockExecution: Execution = {
@@ -49,7 +65,9 @@ describe('useExecutions', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useExecutions())
+      const { result } = renderHook(() => useExecutions(), {
+        wrapper: createWrapper(),
+      })
 
       expect(result.current.loading).toBe(true)
       expect(result.current.executions).toEqual([])

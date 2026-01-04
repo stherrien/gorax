@@ -1,50 +1,28 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { webhookAPI } from '../api/webhooks'
 import type {
-  Webhook,
-  WebhookEvent,
   WebhookListParams,
   WebhookCreateInput,
   WebhookUpdateInput,
   TestWebhookInput,
-  TestWebhookResponse,
 } from '../api/webhooks'
 
 /**
  * Hook to fetch and manage list of webhooks
  */
 export function useWebhooks(params?: WebhookListParams) {
-  const [webhooks, setWebhooks] = useState<Webhook[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchWebhooks = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await webhookAPI.list(params)
-      setWebhooks(response.webhooks)
-      setTotal(response.total)
-    } catch (err) {
-      setError(err as Error)
-      setWebhooks([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchWebhooks()
-  }, [fetchWebhooks])
+  const query = useQuery({
+    queryKey: ['webhooks', params],
+    queryFn: () => webhookAPI.list(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    webhooks,
-    total,
-    loading,
-    error,
-    refetch: fetchWebhooks,
+    webhooks: query.data?.webhooks ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -52,38 +30,18 @@ export function useWebhooks(params?: WebhookListParams) {
  * Hook to fetch a single webhook by ID
  */
 export function useWebhook(id: string | null) {
-  const [webhook, setWebhook] = useState<Webhook | null>(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchWebhook = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await webhookAPI.get(id)
-      setWebhook(data)
-    } catch (err) {
-      setError(err as Error)
-      setWebhook(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchWebhook()
-  }, [fetchWebhook])
+  const query = useQuery({
+    queryKey: ['webhook', id],
+    queryFn: () => webhookAPI.get(id!),
+    enabled: !!id,
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    webhook,
-    loading,
-    error,
-    refetch: fetchWebhook,
+    webhook: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -94,42 +52,19 @@ export function useWebhookEvents(
   webhookId: string | null,
   params?: { page?: number; limit?: number }
 ) {
-  const [events, setEvents] = useState<WebhookEvent[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(!!webhookId)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchEvents = useCallback(async () => {
-    if (!webhookId) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await webhookAPI.getEvents(webhookId, params)
-      setEvents(response.events)
-      setTotal(response.total)
-    } catch (err) {
-      setError(err as Error)
-      setEvents([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [webhookId, params])
-
-  useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+  const query = useQuery({
+    queryKey: ['webhook-events', webhookId, params],
+    queryFn: () => webhookAPI.getEvents(webhookId!, params),
+    enabled: !!webhookId,
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    events,
-    total,
-    loading,
-    error,
-    refetch: fetchEvents,
+    events: query.data?.events ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -137,77 +72,56 @@ export function useWebhookEvents(
  * Hook for webhook CRUD mutations
  */
 export function useWebhookMutations() {
-  const [creating, setCreating] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [regenerating, setRegenerating] = useState(false)
-  const [testing, setTesting] = useState(false)
+  const queryClient = useQueryClient()
 
-  const createWebhook = async (input: WebhookCreateInput): Promise<Webhook> => {
-    try {
-      setCreating(true)
-      const webhook = await webhookAPI.create(input)
-      return webhook
-    } finally {
-      setCreating(false)
-    }
-  }
+  const createMutation = useMutation({
+    mutationFn: (input: WebhookCreateInput) => webhookAPI.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] })
+    },
+  })
 
-  const updateWebhook = async (
-    id: string,
-    updates: WebhookUpdateInput
-  ): Promise<Webhook> => {
-    try {
-      setUpdating(true)
-      const webhook = await webhookAPI.update(id, updates)
-      return webhook
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: WebhookUpdateInput }) =>
+      webhookAPI.update(id, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] })
+      queryClient.invalidateQueries({ queryKey: ['webhook', variables.id] })
+    },
+  })
 
-  const deleteWebhook = async (id: string): Promise<void> => {
-    try {
-      setDeleting(true)
-      await webhookAPI.delete(id)
-    } finally {
-      setDeleting(false)
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => webhookAPI.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] })
+      queryClient.invalidateQueries({ queryKey: ['webhook', id] })
+    },
+  })
 
-  const regenerateSecret = async (id: string): Promise<{ secret: string }> => {
-    try {
-      setRegenerating(true)
-      const response = await webhookAPI.regenerateSecret(id)
-      return response
-    } finally {
-      setRegenerating(false)
-    }
-  }
+  const regenerateMutation = useMutation({
+    mutationFn: (id: string) => webhookAPI.regenerateSecret(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['webhook', id] })
+    },
+  })
 
-  const testWebhook = async (
-    id: string,
-    input?: TestWebhookInput
-  ): Promise<TestWebhookResponse> => {
-    try {
-      setTesting(true)
-      const response = await webhookAPI.test(id, input || {})
-      return response
-    } finally {
-      setTesting(false)
-    }
-  }
+  const testMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input?: TestWebhookInput }) =>
+      webhookAPI.test(id, input || {}),
+  })
 
   return {
-    createWebhook,
-    updateWebhook,
-    deleteWebhook,
-    regenerateSecret,
-    testWebhook,
-    creating,
-    updating,
-    deleting,
-    regenerating,
-    testing,
+    createWebhook: createMutation.mutateAsync,
+    updateWebhook: (id: string, updates: WebhookUpdateInput) =>
+      updateMutation.mutateAsync({ id, updates }),
+    deleteWebhook: deleteMutation.mutateAsync,
+    regenerateSecret: regenerateMutation.mutateAsync,
+    testWebhook: (id: string, input?: TestWebhookInput) =>
+      testMutation.mutateAsync({ id, input }),
+    creating: createMutation.isPending,
+    updating: updateMutation.isPending,
+    deleting: deleteMutation.isPending,
+    regenerating: regenerateMutation.isPending,
+    testing: testMutation.isPending,
   }
 }
