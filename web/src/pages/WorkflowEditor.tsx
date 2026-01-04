@@ -17,13 +17,11 @@ export default function WorkflowEditor() {
   const navigate = useNavigate()
   const isNewWorkflow = id === 'new'
 
-  // For existing workflows, use ID directly (backend will validate)
-  // Only block reserved keywords
-  const RESERVED_KEYWORDS = ['new', 'create', 'edit', 'list']
-  const validatedId = !isNewWorkflow && id && !RESERVED_KEYWORDS.includes(id.toLowerCase()) ? id : null
+  // For existing workflows, use the ID directly - backend will validate
+  const workflowId = !isNewWorkflow && id ? id : null
 
   // Load existing workflow if editing
-  const { workflow, loading, error } = useWorkflow(validatedId)
+  const { workflow, loading, error } = useWorkflow(workflowId)
   const { createWorkflow, updateWorkflow, creating, updating } = useWorkflowMutations()
 
   // Form state
@@ -115,31 +113,24 @@ export default function WorkflowEditor() {
     }
 
     try {
-      console.log('Save workflow - Debug:', { isNewWorkflow, id, validatedId, hasName: !!name })
-
       if (isNewWorkflow) {
-        console.log('Creating new workflow...')
         const newWorkflow = await createWorkflow(workflowData)
-        console.log('Workflow created:', newWorkflow)
         navigate(`/workflows/${newWorkflow.id}`)
-      } else if (validatedId) {
-        console.log('Updating existing workflow:', validatedId)
-        await updateWorkflow(validatedId, workflowData)
+      } else if (workflowId) {
+        await updateWorkflow(workflowId, workflowData)
         setSaveSuccess('Workflow saved successfully')
         setTimeout(() => setSaveSuccess(null), 3000)
       } else {
-        console.error('Save failed - invalid state:', { isNewWorkflow, id, validatedId })
-        setSaveError('Invalid workflow ID')
+        setSaveError('Cannot save workflow without ID')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow'
-      console.error('Failed to save workflow:', err)
       setSaveError(errorMessage)
     }
   }
 
   const handleTestWorkflow = async () => {
-    if (isNewWorkflow || !validatedId) {
+    if (isNewWorkflow || !workflowId) {
       setDryRunError('Please save the workflow before testing')
       setTimeout(() => setDryRunError(null), 3000)
       return
@@ -149,7 +140,7 @@ export default function WorkflowEditor() {
     setDryRunError(null)
 
     try {
-      const result = await workflowAPI.dryRun(validatedId, {})
+      const result = await workflowAPI.dryRun(workflowId, {})
       setDryRunResult(result)
       setShowDryRunResults(true)
     } catch (err) {
