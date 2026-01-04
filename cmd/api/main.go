@@ -97,18 +97,22 @@ import (
 // @tag.description Role-based access control and permissions management
 
 func main() {
-	// Initialize structured logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	slog.SetDefault(logger)
-
-	// Load configuration
+	// Load configuration first (we need it to configure logging)
 	cfg, err := config.Load()
 	if err != nil {
+		// Use default logger for startup errors
 		slog.Error("failed to load configuration", "error", err)
 		os.Exit(1)
 	}
+
+	// Parse log level from configuration
+	logLevel := parseLogLevel(cfg.Log.Level)
+
+	// Initialize structured logger with configured level
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	}))
+	slog.SetDefault(logger)
 
 	// Validate production configuration
 	// This prevents the application from starting with insecure development settings
@@ -178,4 +182,21 @@ func main() {
 	}
 
 	slog.Info("server stopped")
+}
+
+// parseLogLevel converts string log level to slog.Level
+func parseLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		// Default to info if invalid level specified
+		return slog.LevelInfo
+	}
 }

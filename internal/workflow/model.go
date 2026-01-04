@@ -10,16 +10,17 @@ import (
 
 // Workflow represents a workflow definition
 type Workflow struct {
-	ID          string          `db:"id" json:"id"`
-	TenantID    string          `db:"tenant_id" json:"tenant_id"`
-	Name        string          `db:"name" json:"name"`
-	Description string          `db:"description" json:"description"`
-	Definition  json.RawMessage `db:"definition" json:"definition"`
-	Status      string          `db:"status" json:"status"`
-	Version     int             `db:"version" json:"version"`
-	CreatedBy   string          `db:"created_by" json:"created_by"`
-	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
+	ID               string          `db:"id" json:"id"`
+	TenantID         string          `db:"tenant_id" json:"tenant_id"`
+	Name             string          `db:"name" json:"name"`
+	Description      string          `db:"description" json:"description"`
+	Definition       json.RawMessage `db:"definition" json:"definition"`
+	Status           string          `db:"status" json:"status"`
+	Version          int             `db:"version" json:"version"`
+	CreatedBy        string          `db:"created_by" json:"created_by"`
+	CreatedAt        time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
+	ErrorStatistics  json.RawMessage `db:"error_statistics" json:"error_statistics,omitempty"`
 }
 
 // WorkflowDefinition represents the full workflow structure

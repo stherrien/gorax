@@ -30,6 +30,7 @@ type Config struct {
 	FormulaCache   FormulaCacheConfig
 	OAuth          OAuthConfig
 	Audit          AuditConfig
+	Log            LogConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -418,6 +419,7 @@ func Load() (*Config, error) {
 		FormulaCache: loadFormulaCacheConfig(),
 		OAuth:        loadOAuthConfig(),
 		Audit:        loadAuditConfig(),
+		Log:          loadLogConfig(),
 	}
 
 	return cfg, nil
@@ -650,5 +652,24 @@ func loadAuditConfig() AuditConfig {
 		ArchiveEnabled:    getEnvAsBool("AUDIT_ARCHIVE_ENABLED", true),
 		ArchiveBucket:     getEnv("AUDIT_ARCHIVE_BUCKET", "audit-logs"),
 		PurgeEnabled:      getEnvAsBool("AUDIT_PURGE_ENABLED", true),
+	}
+}
+
+// LogConfig holds application logging configuration
+type LogConfig struct {
+	// Level is the minimum log level (debug, info, warn, error)
+	Level string
+	// HTTPLogLevel is the log level for HTTP access logs (debug, info, warn, error)
+	// Set to "debug" to reduce noise from successful requests in development
+	HTTPLogLevel string
+	// Format is the log format (json or text)
+	Format string
+}
+
+func loadLogConfig() LogConfig {
+	return LogConfig{
+		Level:        getEnv("LOG_LEVEL", "info"),
+		HTTPLogLevel: getEnv("HTTP_LOG_LEVEL", "debug"),
+		Format:       getEnv("LOG_FORMAT", "json"),
 	}
 }

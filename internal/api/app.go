@@ -507,7 +507,12 @@ func (a *App) setupRouter() {
 	// Global middleware
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(apiMiddleware.StructuredLogger(a.logger))
+
+	// HTTP logging with configured level
+	httpLogLevel := parseHTTPLogLevel(a.config.Log.HTTPLogLevel)
+	r.Use(apiMiddleware.StructuredLoggerWithConfig(a.logger, apiMiddleware.HTTPLoggerConfig{
+		LogLevel: httpLogLevel,
+	}))
 
 	// Security headers middleware
 	securityHeadersConfig := apiMiddleware.SecurityHeadersConfig{
@@ -988,4 +993,21 @@ func (w *workflowServiceMarketplaceAdapter) CreateFromTemplate(ctx context.Conte
 		return "", err
 	}
 	return created.ID, nil
+}
+
+// parseHTTPLogLevel converts string log level to slog.Level for HTTP access logs
+func parseHTTPLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		// Default to debug for HTTP logs to reduce noise
+		return slog.LevelDebug
+	}
 }
