@@ -5,6 +5,7 @@ import type {
   WorkflowCreateInput,
   WorkflowUpdateInput,
 } from '../api/workflows'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of workflows
@@ -32,7 +33,7 @@ export function useWorkflow(id: string | null) {
   const query = useQuery({
     queryKey: ['workflow', id],
     queryFn: () => workflowAPI.get(id!),
-    enabled: !!id,
+    enabled: isValidResourceId(id),
     staleTime: 30000, // 30 seconds
   })
 

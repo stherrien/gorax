@@ -10,14 +10,18 @@ import { useWorkflow, useWorkflowMutations } from '../hooks/useWorkflows'
 import { useTemplateMutations } from '../hooks/useTemplates'
 import { workflowAPI, type DryRunResult } from '../api/workflows'
 import type { Template } from '../api/templates'
+import { isValidResourceId } from '../utils/routing'
 
 export default function WorkflowEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isNewWorkflow = id === 'new'
 
+  // Validate ID for existing workflows (not 'new')
+  const validatedId = !isNewWorkflow && id && isValidResourceId(id) ? id : null
+
   // Load existing workflow if editing
-  const { workflow, loading, error } = useWorkflow(isNewWorkflow ? null : id || null)
+  const { workflow, loading, error } = useWorkflow(validatedId)
   const { createWorkflow, updateWorkflow, creating, updating } = useWorkflowMutations()
 
   // Form state
@@ -112,10 +116,12 @@ export default function WorkflowEditor() {
       if (isNewWorkflow) {
         const newWorkflow = await createWorkflow(workflowData)
         navigate(`/workflows/${newWorkflow.id}`)
-      } else {
-        await updateWorkflow(id!, workflowData)
+      } else if (validatedId) {
+        await updateWorkflow(validatedId, workflowData)
         setSaveSuccess('Workflow saved successfully')
         setTimeout(() => setSaveSuccess(null), 3000)
+      } else {
+        setSaveError('Invalid workflow ID')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow'
@@ -125,7 +131,7 @@ export default function WorkflowEditor() {
   }
 
   const handleTestWorkflow = async () => {
-    if (isNewWorkflow || !id) {
+    if (isNewWorkflow || !validatedId) {
       setDryRunError('Please save the workflow before testing')
       setTimeout(() => setDryRunError(null), 3000)
       return
@@ -135,7 +141,7 @@ export default function WorkflowEditor() {
     setDryRunError(null)
 
     try {
-      const result = await workflowAPI.dryRun(id, {})
+      const result = await workflowAPI.dryRun(validatedId, {})
       setDryRunResult(result)
       setShowDryRunResults(true)
     } catch (err) {

@@ -4,6 +4,7 @@ import type {
   ExecutionListParams,
   DashboardStatsParams,
 } from '../api/executions'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of executions
@@ -31,7 +32,7 @@ export function useExecution(id: string | null) {
   const query = useQuery({
     queryKey: ['execution', id],
     queryFn: () => executionAPI.get(id!),
-    enabled: !!id,
+    enabled: isValidResourceId(id),
     staleTime: 30000, // 30 seconds
   })
 

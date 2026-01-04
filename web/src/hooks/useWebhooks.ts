@@ -6,6 +6,7 @@ import type {
   WebhookUpdateInput,
   TestWebhookInput,
 } from '../api/webhooks'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of webhooks
@@ -33,7 +34,7 @@ export function useWebhook(id: string | null) {
   const query = useQuery({
     queryKey: ['webhook', id],
     queryFn: () => webhookAPI.get(id!),
-    enabled: !!id,
+    enabled: isValidResourceId(id),
     staleTime: 30000, // 30 seconds
   })
 
@@ -55,7 +56,7 @@ export function useWebhookEvents(
   const query = useQuery({
     queryKey: ['webhook-events', webhookId, params],
     queryFn: () => webhookAPI.getEvents(webhookId!, params),
-    enabled: !!webhookId,
+    enabled: isValidResourceId(webhookId),
     staleTime: 30000, // 30 seconds
   })
 

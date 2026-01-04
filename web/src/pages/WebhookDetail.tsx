@@ -1,14 +1,21 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { useWebhook, useWebhookEvents, useWebhookMutations } from '../hooks/useWebhooks'
 import { useWorkflows } from '../hooks/useWorkflows'
 import type { WebhookAuthType } from '../api/webhooks'
 import FilterBuilder from '../components/webhooks/FilterBuilder'
+import { isValidResourceId } from '../utils/routing'
 
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>()
-  const { webhook, loading, error, refetch } = useWebhook(id || null)
-  const { events, loading: eventsLoading } = useWebhookEvents(id || null, { limit: 10 })
+
+  // Guard against invalid IDs (including 'new', 'create', etc.)
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/webhooks" replace />
+  }
+
+  const { webhook, loading, error, refetch } = useWebhook(id)
+  const { events, loading: eventsLoading } = useWebhookEvents(id, { limit: 10 })
   const { updateWebhook, regenerateSecret, updating, regenerating } = useWebhookMutations()
   const { workflows } = useWorkflows()
 

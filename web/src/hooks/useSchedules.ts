@@ -5,6 +5,7 @@ import type {
   ScheduleCreateInput,
   ScheduleUpdateInput,
 } from '../api/schedules'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of schedules
@@ -32,7 +33,7 @@ export function useSchedule(id: string | null) {
   const query = useQuery({
     queryKey: ['schedule', id],
     queryFn: () => scheduleAPI.get(id!),
-    enabled: !!id,
+    enabled: isValidResourceId(id),
     staleTime: 30000, // 30 seconds
   })
 

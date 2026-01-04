@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { useExecution } from '../hooks/useExecutions'
 import { executionAPI } from '../api/executions'
 import type { ExecutionStep, ExecutionStatus } from '../api/executions'
+import { isValidResourceId } from '../utils/routing'
 
 export default function ExecutionDetail() {
   const { id } = useParams()
-  const { execution, loading, error, refetch } = useExecution(id || null)
+
+  // Guard against invalid IDs
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/executions" replace />
+  }
+
+  const { execution, loading, error, refetch } = useExecution(id)
 
   const [steps, setSteps] = useState<ExecutionStep[]>([])
   const [stepsLoading, setStepsLoading] = useState(false)

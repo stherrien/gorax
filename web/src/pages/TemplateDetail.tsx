@@ -9,6 +9,7 @@ import {
   TemplateCard,
 } from '../components/marketplace'
 import { useMarketplaceTemplate, useRatingDistribution } from '../hooks/useMarketplace'
+import { isValidResourceId } from '../utils/routing'
 
 export const TemplateDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -17,8 +18,11 @@ export const TemplateDetail: React.FC = () => {
   const [showInstallModal, setShowInstallModal] = useState(false)
   const [workflowName, setWorkflowName] = useState('')
 
-  const { template, loading, error, install } = useMarketplaceTemplate(id || '')
-  const { distribution } = useRatingDistribution(id || '')
+  // Validate ID - if invalid, show error state (handled below)
+  const validatedId = isValidResourceId(id) ? id : null
+
+  const { template, loading, error, install } = useMarketplaceTemplate(validatedId || '')
+  const { distribution } = useRatingDistribution(validatedId || '')
 
   const handleInstall = async () => {
     if (!workflowName.trim()) {
@@ -50,12 +54,17 @@ export const TemplateDetail: React.FC = () => {
     )
   }
 
-  if (error || !template) {
+  if (!validatedId || error || !template) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Template Not Found</h2>
-          <p className="text-gray-600 mb-4">{error?.message || 'The requested template could not be found.'}</p>
+          <p className="text-gray-600 mb-4">
+            {!validatedId
+              ? 'Invalid template ID.'
+              : error?.message || 'The requested template could not be found.'
+            }
+          </p>
           <button
             onClick={() => navigate('/marketplace')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
