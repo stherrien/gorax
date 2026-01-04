@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { useWebhooks, useWebhook, useWebhookEvents, useWebhookMutations } from './useWebhooks'
 import type { Webhook, WebhookEvent } from '../api/webhooks'
 
@@ -18,6 +20,23 @@ vi.mock('../api/webhooks', () => ({
 }))
 
 import { webhookAPI } from '../api/webhooks'
+
+// Helper to create a wrapper with QueryClient
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  })
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
 
 describe('useWebhooks', () => {
   const mockWebhook: Webhook = {
@@ -59,7 +78,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
       expect(result.current.webhooks).toEqual([])
@@ -79,7 +98,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -93,7 +112,7 @@ describe('useWebhooks', () => {
       const error = new Error('Failed to load webhooks')
       ;(webhookAPI.list as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -108,7 +127,7 @@ describe('useWebhooks', () => {
       const error = new Error('Network error')
       ;(webhookAPI.list as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.error).toBe(error)
@@ -136,7 +155,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -158,7 +177,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -179,7 +198,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      renderHook(() => useWebhooks({ workflowId: 'wf-123', page: 2 }))
+      renderHook(() => useWebhooks({ workflowId: 'wf-123', page: 2 }), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(webhookAPI.list).toHaveBeenCalledWith({ workflowId: 'wf-123', page: 2 })
@@ -192,7 +211,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      renderHook(() => useWebhooks({ enabled: true }))
+      renderHook(() => useWebhooks({ enabled: true }), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(webhookAPI.list).toHaveBeenCalledWith({ enabled: true })
@@ -211,7 +230,7 @@ describe('useWebhooks', () => {
         total: 2,
       })
 
-      const { result } = renderHook(() => useWebhooks())
+      const { result } = renderHook(() => useWebhooks(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -229,7 +248,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      renderHook(() => useWebhooks({ page: 3, limit: 25 }))
+      renderHook(() => useWebhooks({ page: 3, limit: 25 }), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(webhookAPI.list).toHaveBeenCalledWith({ page: 3, limit: 25 })
@@ -241,7 +260,7 @@ describe('useWebhooks', () => {
     it('should load webhook by ID on mount', async () => {
       (webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'))
+      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -255,7 +274,7 @@ describe('useWebhooks', () => {
     })
 
     it('should not load if ID is null', () => {
-      const { result } = renderHook(() => useWebhook(null))
+      const { result } = renderHook(() => useWebhook(null), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(false)
       expect(result.current.webhook).toBeNull()
@@ -268,7 +287,7 @@ describe('useWebhooks', () => {
       error.name = 'NotFoundError'
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('invalid-id'))
+      const { result } = renderHook(() => useWebhook('invalid-id'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -282,7 +301,7 @@ describe('useWebhooks', () => {
       const error = new Error('Network timeout')
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('wh-123'))
+      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -296,7 +315,7 @@ describe('useWebhooks', () => {
       const error = new Error('Initial error')
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('wh-123'))
+      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.error).toBe(error)
@@ -316,7 +335,7 @@ describe('useWebhooks', () => {
     it('should refetch webhook', async () => {
       (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'))
+      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -332,7 +351,7 @@ describe('useWebhooks', () => {
     it('should show loading state during refetch', async () => {
       (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'))
+      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -358,7 +377,7 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ id }) => useWebhook(id),
-        { initialProps: { id: 'wh-123' } }
+        { initialProps: { id: 'wh-123' }, wrapper: createWrapper() }
       )
 
       await waitFor(() => {
@@ -384,7 +403,7 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ id }) => useWebhook(id),
-        { initialProps: { id: null } }
+        { initialProps: { id: null }, wrapper: createWrapper() }
       )
 
       expect(result.current.loading).toBe(false)
@@ -408,7 +427,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
       expect(result.current.events).toEqual([])
@@ -424,7 +443,7 @@ describe('useWebhooks', () => {
     })
 
     it('should not load if webhook ID is null', () => {
-      const { result } = renderHook(() => useWebhookEvents(null))
+      const { result } = renderHook(() => useWebhookEvents(null), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(false)
       expect(result.current.events).toEqual([])
@@ -438,7 +457,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -454,7 +473,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      renderHook(() => useWebhookEvents('wh-123', { page: 2, limit: 50 }))
+      renderHook(() => useWebhookEvents('wh-123', { page: 2, limit: 50 }), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(webhookAPI.getEvents).toHaveBeenCalledWith('wh-123', { page: 2, limit: 50 })
@@ -465,7 +484,7 @@ describe('useWebhooks', () => {
       const error = new Error('Failed to load events')
       ;(webhookAPI.getEvents as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -480,7 +499,7 @@ describe('useWebhooks', () => {
       const error = new Error('Failed to load')
       ;(webhookAPI.getEvents as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.error).toBe(error)
@@ -507,7 +526,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -528,7 +547,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -556,7 +575,7 @@ describe('useWebhooks', () => {
         total: 2,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'))
+      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -582,7 +601,7 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ webhookId }) => useWebhookEvents(webhookId),
-        { initialProps: { webhookId: 'wh-123' } }
+        { initialProps: { webhookId: 'wh-123' }, wrapper: createWrapper() }
       )
 
       await waitFor(() => {
@@ -613,7 +632,7 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ webhookId }) => useWebhookEvents(webhookId),
-        { initialProps: { webhookId: null } }
+        { initialProps: { webhookId: null }, wrapper: createWrapper() }
       )
 
       expect(result.current.loading).toBe(false)
@@ -644,7 +663,7 @@ describe('useWebhooks', () => {
         ...newWebhook,
       })
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       expect(result.current.creating).toBe(false)
 
@@ -662,7 +681,7 @@ describe('useWebhooks', () => {
       const error = new Error('Validation failed')
       ;(webhookAPI.create as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(
         result.current.createWebhook({
@@ -680,7 +699,7 @@ describe('useWebhooks', () => {
       const error = new Error('Network error')
       ;(webhookAPI.create as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await act(async () => {
         await expect(
@@ -703,7 +722,7 @@ describe('useWebhooks', () => {
         ...updates,
       })
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       expect(result.current.updating).toBe(false)
 
@@ -721,7 +740,7 @@ describe('useWebhooks', () => {
       const error = new Error('Update failed')
       ;(webhookAPI.update as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(
         result.current.updateWebhook('wh-123', { name: 'Updated' })
@@ -733,7 +752,7 @@ describe('useWebhooks', () => {
     it('should delete webhook', async () => {
       (webhookAPI.delete as any).mockResolvedValueOnce(undefined)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       expect(result.current.deleting).toBe(false)
 
@@ -749,7 +768,7 @@ describe('useWebhooks', () => {
       const error = new Error('Delete failed')
       ;(webhookAPI.delete as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(result.current.deleteWebhook('wh-123')).rejects.toThrow('Delete failed')
 
@@ -760,7 +779,7 @@ describe('useWebhooks', () => {
       const secretResponse = { secret: 'new-secret-key' }
       ;(webhookAPI.regenerateSecret as any).mockResolvedValueOnce(secretResponse)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       expect(result.current.regenerating).toBe(false)
 
@@ -778,7 +797,7 @@ describe('useWebhooks', () => {
       const error = new Error('Regenerate failed')
       ;(webhookAPI.regenerateSecret as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(result.current.regenerateSecret('wh-123')).rejects.toThrow(
         'Regenerate failed'
@@ -796,7 +815,7 @@ describe('useWebhooks', () => {
       }
       ;(webhookAPI.test as any).mockResolvedValueOnce(testResponse)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       expect(result.current.testing).toBe(false)
 
@@ -821,7 +840,7 @@ describe('useWebhooks', () => {
       }
       ;(webhookAPI.test as any).mockResolvedValueOnce(testResponse)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await result.current.testWebhook('wh-123')
 
@@ -832,7 +851,7 @@ describe('useWebhooks', () => {
       const error = new Error('Test failed')
       ;(webhookAPI.test as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(result.current.testWebhook('wh-123')).rejects.toThrow('Test failed')
 
@@ -848,7 +867,7 @@ describe('useWebhooks', () => {
       }
       ;(webhookAPI.test as any).mockResolvedValueOnce(testResponse)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       const response = await result.current.testWebhook('wh-123')
 
@@ -871,7 +890,7 @@ describe('useWebhooks', () => {
 
       ;(webhookAPI.test as any).mockResolvedValueOnce(testResponse)
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await result.current.testWebhook('wh-123', testData)
 
@@ -886,7 +905,7 @@ describe('useWebhooks', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(mockWebhook), 50))
       )
 
-      const { result } = renderHook(() => useWebhookMutations())
+      const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await act(async () => {
         const createPromise = result.current.createWebhook({

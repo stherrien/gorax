@@ -11,10 +11,8 @@ export default defineConfig({
         target: 'http://localhost:8181',
         changeOrigin: true,
       },
-      '/webhooks': {
-        target: 'http://localhost:8181',
-        changeOrigin: true,
-      },
+      // Note: Do NOT proxy /webhooks as it's a frontend route
+      // Only /api/v1/webhooks should be proxied (covered by /api above)
     },
   },
   build: {
