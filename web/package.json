@@ -13,6 +13,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@heroicons/react": "^2.2.0",
     "@sentry/react": "^10.32.1",
     "@tanstack/react-query": "^5.90.12",
     "@testing-library/dom": "^10.4.1",
