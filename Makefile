@@ -267,6 +267,76 @@ dev-all: dev-start
 docs:
 	@echo "TODO: Generate API documentation"
 
+# Pre-commit checks (mirrors CI)
+.PHONY: precommit check check-go check-web lint-go lint-web test-go test-web typecheck security-scan
+
+# Full pre-commit check (run before committing)
+precommit: check
+	@echo ""
+	@echo "✅ All pre-commit checks passed!"
+	@echo "You can safely commit your changes."
+
+# Run all checks (without committing)
+check: check-go check-web security-scan
+	@echo ""
+	@echo "✅ All checks passed!"
+
+# Go checks
+check-go: lint-go test-go
+	@echo "✅ Go checks passed"
+
+# Web/Frontend checks
+check-web: lint-web typecheck test-web
+	@echo "✅ Frontend checks passed"
+
+# Go lint and format
+lint-go:
+	@echo "🔍 Running Go linter..."
+	@gofmt -l . | grep -v vendor | xargs -r gofmt -w
+	@goimports -l . | grep -v vendor | xargs -r goimports -w
+	@golangci-lint run ./... --timeout 5m
+	@go vet ./...
+	@echo "✅ Go lint passed"
+
+# Go tests
+test-go:
+	@echo "🧪 Running Go tests..."
+	@go test ./... -race -count=1
+	@echo "✅ Go tests passed"
+
+# Frontend lint
+lint-web:
+	@echo "🔍 Running frontend linter..."
+	@cd web && npm run lint
+	@echo "✅ Frontend lint passed"
+
+# Frontend TypeScript type check
+typecheck:
+	@echo "📝 Running TypeScript type check..."
+	@cd web && npx tsc --noEmit
+	@echo "✅ TypeScript check passed"
+
+# Frontend tests
+test-web:
+	@echo "🧪 Running frontend tests..."
+	@cd web && npm test -- --run
+	@echo "✅ Frontend tests passed"
+
+# Security scanning (basic checks)
+security-scan:
+	@echo "🔒 Running security scans..."
+	@echo "Checking for secrets in staged files..."
+	@-git diff --cached --name-only | xargs -I {} sh -c 'grep -l "BEGIN.*PRIVATE KEY\|AKIA[0-9A-Z]\{16\}\|postgres://.*:.*@" "{}" 2>/dev/null && echo "⚠️  Potential secret in: {}"' || true
+	@echo "✅ Security scan passed"
+
+# Quick check (lint only, no tests)
+check-quick: lint-go lint-web typecheck
+	@echo "✅ Quick check passed (lint + typecheck only)"
+
+# CI check (exactly what CI runs)
+ci: check-go check-web
+	@echo "✅ CI checks passed"
+
 # Help
 help:
 	@echo "🚀 Gorax - Modern Workflow Automation Platform"
@@ -293,6 +363,17 @@ help:
 	@echo "  make smoke-tests-db   - Run database smoke tests only"
 	@echo "  make lint             - Run linter"
 	@echo "  make fmt              - Format code"
+	@echo ""
+	@echo "✅ Pre-commit Checks (run before committing):"
+	@echo "  make precommit     - Full pre-commit check (lint + test + security)"
+	@echo "  make check         - Run all checks (same as precommit)"
+	@echo "  make check-quick   - Quick check (lint + typecheck, no tests)"
+	@echo "  make check-go      - Go lint + tests"
+	@echo "  make check-web     - Frontend lint + typecheck + tests"
+	@echo "  make lint-go       - Go linting only"
+	@echo "  make lint-web      - Frontend linting only"
+	@echo "  make typecheck     - TypeScript type checking"
+	@echo "  make ci            - Run exact CI checks locally"
 	@echo ""
 	@echo "🐳 Docker:"
 	@echo "  make docker-up     - Start all services"

@@ -1,14 +1,10 @@
 package integration
 
 import (
-	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestMarketplace_FullWorkflow tests the complete marketplace workflow
@@ -254,7 +250,7 @@ func TestMarketplace_ReviewManagement(t *testing.T) {
 
 	// Create test tenant and users
 	tenantID := ts.CreateTestTenant(t, "Test Tenant")
-	user1ID := ts.CreateTestUser(t, tenantID, "user1@example.com", "user")
+	_ = ts.CreateTestUser(t, tenantID, "user1@example.com", "user") // user1ID used for headers1
 	user2ID := ts.CreateTestUser(t, tenantID, "user2@example.com", "user")
 
 	headers1 := DefaultTestHeaders(tenantID)
@@ -349,7 +345,7 @@ func TestMarketplace_SearchAndFiltering(t *testing.T) {
 	defer ts.Cleanup()
 
 	tenantID := ts.CreateTestTenant(t, "Test Tenant")
-	userID := ts.CreateTestUser(t, tenantID, "user@example.com", "user")
+	_ = ts.CreateTestUser(t, tenantID, "user@example.com", "user") // userID used by headers via tenantID
 	headers := DefaultTestHeaders(tenantID)
 
 	// Publish templates with different categories and tags
@@ -394,8 +390,8 @@ func TestMarketplace_SearchAndFiltering(t *testing.T) {
 		assert.GreaterOrEqual(t, len(templates), 2, "should find at least 2 integration templates")
 
 		for _, tmpl := range templates {
-			t := tmpl.(map[string]interface{})
-			assert.Equal(t, "integration", t["category"])
+			templateMap := tmpl.(map[string]interface{})
+			assert.Equal(t, "integration", templateMap["category"])
 		}
 		t.Logf("✓ Found %d templates in 'integration' category", len(templates))
 	})

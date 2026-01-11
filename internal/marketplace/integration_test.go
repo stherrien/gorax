@@ -671,6 +671,23 @@ func (m *mockRepository) CreateReviewReport(ctx context.Context, report *ReviewR
 	return nil
 }
 
+func (m *mockRepository) GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error) {
+	template, ok := m.templates[templateID]
+	if !ok {
+		return nil, ErrTemplateNotFound
+	}
+
+	return &RatingDistribution{
+		Rating1Count:  template.Rating1Count,
+		Rating2Count:  template.Rating2Count,
+		Rating3Count:  template.Rating3Count,
+		Rating4Count:  template.Rating4Count,
+		Rating5Count:  template.Rating5Count,
+		TotalRatings:  template.TotalRatings,
+		AverageRating: template.AverageRating,
+	}, nil
+}
+
 func (m *mockRepository) DeleteReview(ctx context.Context, tenantID, reviewID string) error {
 	for key, review := range m.reviews {
 		if review.ID == reviewID && review.TenantID == tenantID {

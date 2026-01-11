@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -289,10 +288,10 @@ func TestAudit_Retention(t *testing.T) {
 		daysAgo int
 		action  string
 	}{
-		{1, "create"},    // Recent (hot)
-		{45, "update"},   // Medium age (hot)
-		{100, "delete"},  // Old (should be in warm)
-		{400, "create"},  // Very old (should be in cold)
+		{1, "create"},   // Recent (hot)
+		{45, "update"},  // Medium age (hot)
+		{100, "delete"}, // Old (should be in warm)
+		{400, "create"}, // Very old (should be in cold)
 	}
 
 	for i, log := range testLogs {
