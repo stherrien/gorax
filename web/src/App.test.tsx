@@ -81,7 +81,10 @@ vi.mock('./components/oauth/OAuthCallback', () => ({
 }))
 
 vi.mock('./components/Layout', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: () => {
+    const { Outlet } = require('react-router-dom')
+    return <div><Outlet /></div>
+  },
 }))
 
 describe('App Routing', () => {

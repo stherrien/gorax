@@ -1,6 +1,16 @@
 # Gitleaks ignore file for known false positives
 # https://github.com/gitleaks/gitleaks#gitleaksignore
 
+# Fingerprints for specific false positives (format: commit:file:rule:line)
+# Documentation example curl commands with placeholder tokens
+0347feb40c16823eb7fb1b9f7537e46b1c928369:docs/OAUTH_PROVIDERS.md:curl-auth-header:460
+0347feb40c16823eb7fb1b9f7537e46b1c928369:docs/OAUTH_PROVIDERS.md:curl-auth-header:466
+# E2E test mock API keys
+524f3b9e4975efb5584b99825a8f59e8a23fe049:web/e2e/credentials.spec.ts:generic-api-key:35
+# Secrets template file (example placeholders)
+5c6e4e746a77065865d359a0c17bd5ec88530392:.github/secrets.template.yml:private-key:263
+5c6e4e746a77065865d359a0c17bd5ec88530392:.github/secrets.template.yml:stripe-access-token:135
+
 # Template files with example secrets
 .github/secrets.template.yml
 
