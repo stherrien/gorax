@@ -5,9 +5,10 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/gorax/gorax/internal/credential"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/gorax/gorax/internal/credential"
 )
 
 // MockCredentialService is a mock for credential.Service

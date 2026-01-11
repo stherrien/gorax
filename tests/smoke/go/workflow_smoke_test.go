@@ -1,3 +1,4 @@
+//go:build smoke
 // +build smoke
 
 package smoke
@@ -6,9 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"

@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gorax/gorax/internal/communication"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
+
+	"github.com/gorax/gorax/internal/communication"
 )
 
 // SendGridProvider implements EmailProvider using SendGrid API.

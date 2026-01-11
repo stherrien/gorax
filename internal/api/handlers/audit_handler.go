@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/gorax/gorax/internal/audit"
 )
 
@@ -37,12 +38,12 @@ func (h *AuditHandler) QueryEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Parse query parameters
 	filter := audit.QueryFilter{
-		TenantID:  tenantID,
-		UserID:    r.URL.Query().Get("user_id"),
-		UserEmail: r.URL.Query().Get("user_email"),
-		Limit:     getIntParam(r, "limit", 50),
-		Offset:    getIntParam(r, "offset", 0),
-		SortBy:    r.URL.Query().Get("sort_by"),
+		TenantID:      tenantID,
+		UserID:        r.URL.Query().Get("user_id"),
+		UserEmail:     r.URL.Query().Get("user_email"),
+		Limit:         getIntParam(r, "limit", 50),
+		Offset:        getIntParam(r, "offset", 0),
+		SortBy:        r.URL.Query().Get("sort_by"),
 		SortDirection: r.URL.Query().Get("sort_direction"),
 	}
 
@@ -189,13 +190,13 @@ func (h *AuditHandler) ExportEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req struct {
-		TenantID      string              `json:"tenantId"`
-		Format        audit.ExportFormat  `json:"format"`
-		Categories    []audit.Category    `json:"categories"`
-		EventTypes    []audit.EventType   `json:"eventTypes"`
-		Severities    []audit.Severity    `json:"severities"`
-		StartDate     string              `json:"startDate"`
-		EndDate       string              `json:"endDate"`
+		TenantID   string             `json:"tenantId"`
+		Format     audit.ExportFormat `json:"format"`
+		Categories []audit.Category   `json:"categories"`
+		EventTypes []audit.EventType  `json:"eventTypes"`
+		Severities []audit.Severity   `json:"severities"`
+		StartDate  string             `json:"startDate"`
+		EndDate    string             `json:"endDate"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

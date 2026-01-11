@@ -11,60 +11,60 @@ import (
 
 func TestStructuredLogger(t *testing.T) {
 	tests := []struct {
-		name           string
-		statusCode     int
-		path           string
-		expectLogged   bool
-		expectedLevel  string
-		expectedMsg    string
+		name          string
+		statusCode    int
+		path          string
+		expectLogged  bool
+		expectedLevel string
+		expectedMsg   string
 	}{
 		{
-			name:           "successful request logged at debug",
-			statusCode:     200,
-			path:           "/api/v1/workflows",
-			expectLogged:   true,
-			expectedLevel:  "DEBUG",
-			expectedMsg:    "http request",
+			name:          "successful request logged at debug",
+			statusCode:    200,
+			path:          "/api/v1/workflows",
+			expectLogged:  true,
+			expectedLevel: "DEBUG",
+			expectedMsg:   "http request",
 		},
 		{
-			name:           "client error logged at warn",
-			statusCode:     400,
-			path:           "/api/v1/workflows",
-			expectLogged:   true,
-			expectedLevel:  "WARN",
-			expectedMsg:    "http client error",
+			name:          "client error logged at warn",
+			statusCode:    400,
+			path:          "/api/v1/workflows",
+			expectLogged:  true,
+			expectedLevel: "WARN",
+			expectedMsg:   "http client error",
 		},
 		{
-			name:           "not found logged at warn",
-			statusCode:     404,
-			path:           "/api/v1/workflows/notfound",
-			expectLogged:   true,
-			expectedLevel:  "WARN",
-			expectedMsg:    "http client error",
+			name:          "not found logged at warn",
+			statusCode:    404,
+			path:          "/api/v1/workflows/notfound",
+			expectLogged:  true,
+			expectedLevel: "WARN",
+			expectedMsg:   "http client error",
 		},
 		{
-			name:           "server error logged at error",
-			statusCode:     500,
-			path:           "/api/v1/workflows",
-			expectLogged:   true,
-			expectedLevel:  "ERROR",
-			expectedMsg:    "http server error",
+			name:          "server error logged at error",
+			statusCode:    500,
+			path:          "/api/v1/workflows",
+			expectLogged:  true,
+			expectedLevel: "ERROR",
+			expectedMsg:   "http server error",
 		},
 		{
-			name:           "health check not logged",
-			statusCode:     200,
-			path:           "/health",
-			expectLogged:   false,
-			expectedLevel:  "",
-			expectedMsg:    "",
+			name:          "health check not logged",
+			statusCode:    200,
+			path:          "/health",
+			expectLogged:  false,
+			expectedLevel: "",
+			expectedMsg:   "",
 		},
 		{
-			name:           "ready check not logged",
-			statusCode:     200,
-			path:           "/ready",
-			expectLogged:   false,
-			expectedLevel:  "",
-			expectedMsg:    "",
+			name:          "ready check not logged",
+			statusCode:    200,
+			path:          "/ready",
+			expectLogged:  false,
+			expectedLevel: "",
+			expectedMsg:   "",
 		},
 	}
 
@@ -118,28 +118,28 @@ func TestStructuredLogger(t *testing.T) {
 
 func TestStructuredLoggerWithConfig(t *testing.T) {
 	tests := []struct {
-		name          string
-		logLevel      slog.Level
-		statusCode    int
-		expectLogged  bool
+		name         string
+		logLevel     slog.Level
+		statusCode   int
+		expectLogged bool
 	}{
 		{
-			name:          "debug level shows successful requests",
-			logLevel:      slog.LevelDebug,
-			statusCode:    200,
-			expectLogged:  true,
+			name:         "debug level shows successful requests",
+			logLevel:     slog.LevelDebug,
+			statusCode:   200,
+			expectLogged: true,
 		},
 		{
-			name:          "info level hides debug successful requests",
-			logLevel:      slog.LevelInfo,
-			statusCode:    200,
-			expectLogged:  false,
+			name:         "info level hides debug successful requests",
+			logLevel:     slog.LevelInfo,
+			statusCode:   200,
+			expectLogged: false,
 		},
 		{
-			name:          "info level shows errors",
-			logLevel:      slog.LevelInfo,
-			statusCode:    500,
-			expectLogged:  true,
+			name:         "info level shows errors",
+			logLevel:     slog.LevelInfo,
+			statusCode:   500,
+			expectLogged: true,
 		},
 	}
 

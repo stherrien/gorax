@@ -528,7 +528,7 @@ func buildWhereClause(filter QueryFilter) (string, []interface{}) {
 	if !filter.EndDate.IsZero() {
 		conditions = append(conditions, fmt.Sprintf("created_at <= $%d", argPos))
 		args = append(args, filter.EndDate)
-		argPos++
+		_ = argPos // Final argPos value not used but maintains pattern for future conditions
 	}
 
 	whereClause := strings.Join(conditions, " AND ")

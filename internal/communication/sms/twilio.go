@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gorax/gorax/internal/communication"
 	"github.com/twilio/twilio-go"
 	twilioApi "github.com/twilio/twilio-go/rest/api/v2010"
+
+	"github.com/gorax/gorax/internal/communication"
 )
 
 // TwilioProvider implements SMSProvider using Twilio API.

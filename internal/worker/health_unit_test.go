@@ -208,8 +208,8 @@ func TestHealth_EncodesValidJSON(t *testing.T) {
 
 	// We can test that the response structure is correct
 	response := HealthResponse{
-		Status:    "healthy",
-		Version:   buildinfo.GetVersion(),
+		Status:  "healthy",
+		Version: buildinfo.GetVersion(),
 		WorkerInfo: WorkerInfo{
 			Concurrency:      10,
 			ActiveExecutions: 2,

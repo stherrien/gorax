@@ -104,18 +104,18 @@ type ReviewReport struct {
 
 // RatingDistribution represents the distribution of ratings for a template
 type RatingDistribution struct {
-	Rating1Count    int     `json:"rating_1_count"`
-	Rating2Count    int     `json:"rating_2_count"`
-	Rating3Count    int     `json:"rating_3_count"`
-	Rating4Count    int     `json:"rating_4_count"`
-	Rating5Count    int     `json:"rating_5_count"`
-	TotalRatings    int     `json:"total_ratings"`
-	AverageRating   float64 `json:"average_rating"`
-	Rating1Percent  float64 `json:"rating_1_percent"`
-	Rating2Percent  float64 `json:"rating_2_percent"`
-	Rating3Percent  float64 `json:"rating_3_percent"`
-	Rating4Percent  float64 `json:"rating_4_percent"`
-	Rating5Percent  float64 `json:"rating_5_percent"`
+	Rating1Count   int     `json:"rating_1_count"`
+	Rating2Count   int     `json:"rating_2_count"`
+	Rating3Count   int     `json:"rating_3_count"`
+	Rating4Count   int     `json:"rating_4_count"`
+	Rating5Count   int     `json:"rating_5_count"`
+	TotalRatings   int     `json:"total_ratings"`
+	AverageRating  float64 `json:"average_rating"`
+	Rating1Percent float64 `json:"rating_1_percent"`
+	Rating2Percent float64 `json:"rating_2_percent"`
+	Rating3Percent float64 `json:"rating_3_percent"`
+	Rating4Percent float64 `json:"rating_4_percent"`
+	Rating5Percent float64 `json:"rating_5_percent"`
 }
 
 // TemplateCategory represents marketplace template categories
@@ -175,17 +175,17 @@ type ReportReviewInput struct {
 type ReviewSortOption string
 
 const (
-	ReviewSortRecent   ReviewSortOption = "recent"
-	ReviewSortHelpful  ReviewSortOption = "helpful"
-	ReviewSortRatingH  ReviewSortOption = "rating_high"
-	ReviewSortRatingL  ReviewSortOption = "rating_low"
+	ReviewSortRecent  ReviewSortOption = "recent"
+	ReviewSortHelpful ReviewSortOption = "helpful"
+	ReviewSortRatingH ReviewSortOption = "rating_high"
+	ReviewSortRatingL ReviewSortOption = "rating_low"
 )
 
 // ReviewReportReason represents the reason for reporting a review
 type ReviewReportReason string
 
 const (
-	ReportReasonSpam         ReviewReportReason = "spam"
+	ReportReasonSpam          ReviewReportReason = "spam"
 	ReportReasonInappropriate ReviewReportReason = "inappropriate"
 	ReportReasonOffensive     ReviewReportReason = "offensive"
 	ReportReasonMisleading    ReviewReportReason = "misleading"
@@ -196,9 +196,9 @@ const (
 type ReviewReportStatus string
 
 const (
-	ReportStatusPending  ReviewReportStatus = "pending"
-	ReportStatusReviewed ReviewReportStatus = "reviewed"
-	ReportStatusActioned ReviewReportStatus = "actioned"
+	ReportStatusPending   ReviewReportStatus = "pending"
+	ReportStatusReviewed  ReviewReportStatus = "reviewed"
+	ReportStatusActioned  ReviewReportStatus = "actioned"
 	ReportStatusDismissed ReviewReportStatus = "dismissed"
 )
 
@@ -277,7 +277,7 @@ func (i ReportReviewInput) Validate() error {
 	}
 
 	validReasons := map[string]bool{
-		string(ReportReasonSpam):         true,
+		string(ReportReasonSpam):          true,
 		string(ReportReasonInappropriate): true,
 		string(ReportReasonOffensive):     true,
 		string(ReportReasonMisleading):    true,

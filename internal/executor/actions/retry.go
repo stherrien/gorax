@@ -99,13 +99,13 @@ func (a *RetryAction) Execute(ctx context.Context, input *ActionInput) (*ActionO
 
 		// Check if we should retry this error
 		if !a.shouldRetryError(err, &config) {
-			attempts = append(attempts, attemptData)
+			_ = append(attempts, attemptData) // Track attempt for potential future logging
 			return nil, fmt.Errorf("non-retryable error: %w", err)
 		}
 
 		// Check if we have more attempts
 		if attempt >= config.MaxAttempts {
-			attempts = append(attempts, attemptData)
+			_ = append(attempts, attemptData) // Track attempt for potential future logging
 			break
 		}
 

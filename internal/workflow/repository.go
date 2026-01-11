@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorax/gorax/internal/metrics"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/gorax/gorax/internal/metrics"
 )
 
 var (

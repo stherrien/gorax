@@ -373,7 +373,7 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{
@@ -430,7 +430,7 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		service.On("SearchTemplates", mock.Anything, mock.MatchedBy(func(filter marketplace.SearchFilter) bool {
 			return filter.Page == 2 && filter.Limit == 20
@@ -453,7 +453,7 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-1", Name: "Slack Integration", Description: "Send messages to Slack"},
@@ -488,7 +488,7 @@ func TestMarketplaceIntegration_PublishTemplate_ValidationScenarios(t *testing.T
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		definition := json.RawMessage(`{
 			"nodes": [
@@ -559,7 +559,7 @@ func TestMarketplaceIntegration_PublishTemplate_ValidationScenarios(t *testing.T
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 		input := marketplace.PublishTemplateInput{
@@ -604,7 +604,7 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{
 			WorkflowName: "My Custom Workflow",
@@ -657,7 +657,7 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{WorkflowName: "Test"}
 
@@ -697,7 +697,7 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{WorkflowName: "Duplicate"}
 
@@ -739,7 +739,7 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.RateTemplateInput{
 			Rating:  5,
@@ -801,7 +801,7 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		reviews := []*marketplace.TemplateReview{
 			{ID: "rev-1", Rating: 5, Comment: "Great!"},
@@ -845,7 +845,7 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-1", Name: "Trending 1", DownloadCount: 500, AverageRating: 4.9},
@@ -878,7 +878,7 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		categoryService := new(MockCategoryService)
-	handler := NewMarketplaceHandler(service, categoryService, logger)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-pop-1", Name: "Popular 1", DownloadCount: 1000, AverageRating: 5.0},

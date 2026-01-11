@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorax/gorax/internal/metrics"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+
+	"github.com/gorax/gorax/internal/metrics"
 )
 
 // Repository handles credential database operations

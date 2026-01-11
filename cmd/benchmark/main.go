@@ -6,9 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+
+	"github.com/gorax/gorax/internal/workflow"
 )
 
 func main() {

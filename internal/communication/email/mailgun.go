@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gorax/gorax/internal/communication"
 	"github.com/mailgun/mailgun-go/v4"
+
+	"github.com/gorax/gorax/internal/communication"
 )
 
 // MailgunProvider implements EmailProvider using Mailgun API.

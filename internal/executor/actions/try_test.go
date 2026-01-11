@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gorax/gorax/internal/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/workflow"
 )
 
 func TestTryAction_Execute_Success(t *testing.T) {
@@ -47,7 +48,7 @@ func TestTryAction_Execute_Success(t *testing.T) {
 func TestTryAction_Execute_WithFinally(t *testing.T) {
 	// Test successful try block with finally block
 	nodeOutputs := map[string]interface{}{
-		"node1":   map[string]interface{}{"result": "success"},
+		"node1":    map[string]interface{}{"result": "success"},
 		"finally1": map[string]interface{}{"cleanup": "done"},
 	}
 

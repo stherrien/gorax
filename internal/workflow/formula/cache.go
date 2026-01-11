@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/expr-lang/expr/vm"
-	"github.com/gorax/gorax/internal/metrics"
 	lru "github.com/hashicorp/golang-lru/v2"
+
+	"github.com/gorax/gorax/internal/metrics"
 )
 
 // CachedExpression represents a compiled expression in the cache

@@ -725,6 +725,41 @@ func (m *mockRepository) UpdateTemplateRating(ctx context.Context, templateID st
 	return nil
 }
 
+func (m *mockRepository) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error) {
+	// Return empty list for mock - not used in integration tests
+	return []*ReviewReport{}, nil
+}
+
+func (m *mockRepository) HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error) {
+	// Return false for mock - not used in integration tests
+	return false, nil
+}
+
+func (m *mockRepository) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UnhideReview(ctx context.Context, reviewID string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UpdateReviewReportStatus(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) VoteReviewHelpful(ctx context.Context, vote *ReviewHelpfulVote) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
 // Error definitions
 var (
 	ErrTemplateNotFound = &templateError{message: "template not found"}

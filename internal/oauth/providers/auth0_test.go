@@ -9,9 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorax/gorax/internal/oauth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/oauth"
 )
 
 func TestAuth0Provider_Key(t *testing.T) {

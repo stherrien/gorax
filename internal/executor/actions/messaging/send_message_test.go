@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorax/gorax/internal/credential"
-	"github.com/gorax/gorax/internal/messaging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/messaging"
 )
 
 // MockCredentialService is a mock implementation of the credential service
