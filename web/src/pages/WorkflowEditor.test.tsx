@@ -88,7 +88,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -115,7 +115,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -140,7 +140,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -174,13 +174,13 @@ describe('WorkflowEditor', () => {
         updatedAt: '2025-01-15T10:00:00Z',
       }
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -208,7 +208,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -229,13 +229,13 @@ describe('WorkflowEditor', () => {
     it('should show error if workflow load fails', () => {
       const error = new Error('Failed to load workflow')
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -263,7 +263,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -285,13 +285,13 @@ describe('WorkflowEditor', () => {
       const user = userEvent.setup()
       const createWorkflow = vi.fn().mockResolvedValue({ id: 'new-wf-123' })
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow,
         updateWorkflow: vi.fn(),
         creating: false,
@@ -338,13 +338,13 @@ describe('WorkflowEditor', () => {
         updatedAt: '2025-01-15T10:00:00Z',
       }
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow,
         creating: false,
@@ -371,13 +371,13 @@ describe('WorkflowEditor', () => {
       const user = userEvent.setup()
       const createWorkflow = vi.fn()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow,
         updateWorkflow: vi.fn(),
         creating: false,
@@ -411,7 +411,7 @@ describe('WorkflowEditor', () => {
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -444,13 +444,13 @@ describe('WorkflowEditor', () => {
     }
 
     beforeEach(() => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -471,7 +471,7 @@ describe('WorkflowEditor', () => {
     })
 
     it('should not show Test Workflow button for new workflows', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
@@ -630,13 +630,13 @@ describe('WorkflowEditor', () => {
 
   describe('Template Browser', () => {
     it('should show Browse Templates button', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -657,13 +657,13 @@ describe('WorkflowEditor', () => {
     it('should open template browser when button clicked', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -688,13 +688,13 @@ describe('WorkflowEditor', () => {
     it('should close template browser', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -729,15 +729,15 @@ describe('WorkflowEditor', () => {
         workflowName: 'Template Workflow',
       })
 
-      ;(useTemplateMutations as any).mockReturnValue({ instantiateTemplate })
+      (useTemplateMutations as any).mockReturnValue({ instantiateTemplate })
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -774,13 +774,13 @@ describe('WorkflowEditor', () => {
     }
 
     it('should show Save as Template button for existing workflows', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -799,13 +799,13 @@ describe('WorkflowEditor', () => {
     })
 
     it('should not show Save as Template button for new workflows', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -826,13 +826,13 @@ describe('WorkflowEditor', () => {
     it('should open Save as Template modal when clicked', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -857,13 +857,13 @@ describe('WorkflowEditor', () => {
     it('should close Save as Template modal on cancel', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -889,13 +889,13 @@ describe('WorkflowEditor', () => {
     it('should show success message when template saved', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -934,13 +934,13 @@ describe('WorkflowEditor', () => {
     }
 
     it('should show Version History button for existing workflows', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -959,13 +959,13 @@ describe('WorkflowEditor', () => {
     })
 
     it('should show version number for existing workflows', () => {
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -986,13 +986,13 @@ describe('WorkflowEditor', () => {
     it('should open Version History panel when clicked', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -1017,13 +1017,13 @@ describe('WorkflowEditor', () => {
     it('should close Version History panel', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,
@@ -1052,13 +1052,13 @@ describe('WorkflowEditor', () => {
       const user = userEvent.setup()
       const createWorkflow = vi.fn().mockRejectedValue(new Error('Network error'))
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow,
         updateWorkflow: vi.fn(),
         creating: false,
@@ -1095,13 +1095,13 @@ describe('WorkflowEditor', () => {
         updatedAt: '2025-01-15T10:00:00Z',
       }
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: mockWorkflow,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow,
         creating: false,
@@ -1126,13 +1126,13 @@ describe('WorkflowEditor', () => {
     it('should clear validation error when name is entered', async () => {
       const user = userEvent.setup()
 
-      ;(useWorkflow as any).mockReturnValue({
+      (useWorkflow as any).mockReturnValue({
         workflow: null,
         loading: false,
         error: null,
       })
 
-      ;(useWorkflowMutations as any).mockReturnValue({
+      (useWorkflowMutations as any).mockReturnValue({
         createWorkflow: vi.fn(),
         updateWorkflow: vi.fn(),
         creating: false,

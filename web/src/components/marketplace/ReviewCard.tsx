@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { StarRating } from './StarRating'
 import { useReviewHelpful, useReportReview } from '../../hooks/useMarketplace'
-import type { TemplateReview, ReportReviewReason } from '../../types/marketplace'
+import type { TemplateReview, ReviewReportReason } from '../../types/marketplace'
 
 export interface ReviewCardProps {
   review: TemplateReview
@@ -14,7 +14,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, onDelete, canDel
   const { hasVoted, loading: voteLoading, toggleVote } = useReviewHelpful(review.id)
   const { report, loading: reportLoading } = useReportReview()
   const [showReportModal, setShowReportModal] = useState(false)
-  const [reportReason, setReportReason] = useState<ReportReviewReason>('spam')
+  const [reportReason, setReportReason] = useState<ReviewReportReason>('spam')
   const [reportDetails, setReportDetails] = useState('')
 
   const handleReportSubmit = async () => {
@@ -99,7 +99,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, onDelete, canDel
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={reportReason}
-                onChange={(e) => setReportReason(e.target.value as ReportReviewReason)}
+                onChange={(e) => setReportReason(e.target.value as ReviewReportReason)}
               >
                 <option value="spam">Spam</option>
                 <option value="inappropriate">Inappropriate Content</option>

@@ -238,7 +238,7 @@ func TestGetReviews(t *testing.T) {
 	repo := NewRepository(db)
 	ctx := context.Background()
 
-	reviews, err := repo.GetReviews(ctx, "template-1", 10, 0)
+	reviews, err := repo.GetReviews(ctx, "template-1", ReviewSortRecent, 10, 0)
 	require.NoError(t, err)
 	assert.NotNil(t, reviews)
 }

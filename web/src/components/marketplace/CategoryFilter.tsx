@@ -1,6 +1,5 @@
 import React from 'react'
 import { useCategories } from '../../hooks/useMarketplace'
-import type { Category } from '../../types/marketplace'
 
 export interface CategoryFilterProps {
   selectedCategories: string[]

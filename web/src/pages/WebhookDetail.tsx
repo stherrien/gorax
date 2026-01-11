@@ -9,20 +9,20 @@ import { isValidResourceId } from '../utils/routing'
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>()
 
-  // Guard against invalid IDs (including 'new', 'create', etc.)
-  if (!isValidResourceId(id)) {
-    return <Navigate to="/webhooks" replace />
-  }
-
-  const { webhook, loading, error, refetch } = useWebhook(id)
-  const { events, loading: eventsLoading } = useWebhookEvents(id, { limit: 10 })
+  // Hooks must be called unconditionally before any early returns
+  const { webhook, loading, error, refetch } = useWebhook(id || '')
+  const { events, loading: eventsLoading } = useWebhookEvents(id || '', { limit: 10 })
   const { updateWebhook, regenerateSecret, updating, regenerating } = useWebhookMutations()
   const { workflows } = useWorkflows()
-
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false)
   const [newSecret, setNewSecret] = useState<string | null>(null)
   const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  // Guard against invalid IDs (after all hooks are called)
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/webhooks" replace />
+  }
 
   const getWorkflowName = (workflowId: string) => {
     const workflow = workflows.find((w) => w.id === workflowId)

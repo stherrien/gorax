@@ -138,12 +138,8 @@ export function useMarketplaceReviews(
   }, [templateId, sortBy, limit, offset])
 
   const deleteReview = async (reviewId: string) => {
-    try {
-      await marketplaceAPI.deleteReview(templateId, reviewId)
-      setReviews((prev) => prev.filter((r) => r.id !== reviewId))
-    } catch (err) {
-      throw err
-    }
+    await marketplaceAPI.deleteReview(templateId, reviewId)
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId))
   }
 
   const refresh = async () => {

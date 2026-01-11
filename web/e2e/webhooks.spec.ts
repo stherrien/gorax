@@ -128,7 +128,7 @@ test.describe('Webhook Management E2E', () => {
       await page.waitForTimeout(1000)
 
       // Should show webhook URL
-      const hasUrl = await page.locator('text=/https?:\/\//').isVisible()
+      const hasUrl = await page.locator('text=/https?://').isVisible()
       const hasCopyButton = await page.locator('button:has-text("Copy"), button[aria-label*="copy" i]').isVisible()
 
       expect(hasUrl || hasCopyButton).toBeTruthy()

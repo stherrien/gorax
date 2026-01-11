@@ -6,7 +6,6 @@ import {
   ReviewList,
   ReviewForm,
   FeaturedBadge,
-  TemplateCard,
 } from '../components/marketplace'
 import { useMarketplaceTemplate, useRatingDistribution } from '../hooks/useMarketplace'
 import { isValidResourceId } from '../utils/routing'

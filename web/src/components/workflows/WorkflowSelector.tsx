@@ -1,13 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { workflowAPI } from '../../api/workflows'
-
-interface Workflow {
-  id: string
-  name: string
-  description?: string
-  status: string
-  created_at: string
-}
+import { workflowAPI, type Workflow } from '../../api/workflows'
 
 interface WorkflowSelectorProps {
   value?: string
@@ -37,7 +29,7 @@ export default function WorkflowSelector({
         setLoading(true)
         setError(null)
         const data = await workflowAPI.list()
-        setWorkflows(data)
+        setWorkflows(data.workflows)
       } catch (err) {
         setError('Failed to load workflows')
         console.error('Error fetching workflows:', err)
@@ -76,7 +68,7 @@ export default function WorkflowSelector({
       })
       .sort((a, b) => {
         // Sort by created date (newest first)
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
   }, [workflows, searchTerm, excludeWorkflowId])
 

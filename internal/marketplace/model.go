@@ -28,6 +28,9 @@ type MarketplaceTemplate struct {
 	Rating4Count     int             `db:"rating_4_count" json:"rating_4_count"`
 	Rating5Count     int             `db:"rating_5_count" json:"rating_5_count"`
 	IsVerified       bool            `db:"is_verified" json:"is_verified"`
+	IsFeatured       bool            `db:"is_featured" json:"is_featured"`
+	FeaturedAt       *time.Time      `db:"featured_at" json:"featured_at,omitempty"`
+	FeaturedBy       *string         `db:"featured_by" json:"featured_by,omitempty"`
 	SourceTenantID   *string         `db:"source_tenant_id" json:"source_tenant_id,omitempty"`
 	SourceTemplateID *string         `db:"source_template_id" json:"source_template_id,omitempty"`
 	PublishedAt      time.Time       `db:"published_at" json:"published_at"`

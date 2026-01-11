@@ -10,7 +10,6 @@ import { useWorkflow, useWorkflowMutations } from '../hooks/useWorkflows'
 import { useTemplateMutations } from '../hooks/useTemplates'
 import { workflowAPI, type DryRunResult } from '../api/workflows'
 import type { Template } from '../api/templates'
-import { isValidResourceId } from '../utils/routing'
 
 export default function WorkflowEditor() {
   const { id } = useParams()

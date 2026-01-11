@@ -8,15 +8,15 @@ export default function EditSchedule() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
-  // Guard against invalid IDs
+  // Hooks must be called unconditionally before any early returns
+  const { schedule, loading, error } = useSchedule(id || '')
+  const { updateSchedule } = useScheduleMutations()
+  const [updateError, setUpdateError] = useState<string | null>(null)
+
+  // Guard against invalid IDs (after all hooks are called)
   if (!isValidResourceId(id)) {
     return <Navigate to="/schedules" replace />
   }
-
-  const { schedule, loading, error } = useSchedule(id)
-  const { updateSchedule } = useScheduleMutations()
-
-  const [updateError, setUpdateError] = useState<string | null>(null)
 
   const handleSubmit = async (data: ScheduleFormData) => {
     try {

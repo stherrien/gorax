@@ -264,7 +264,7 @@ func TestIntegration_RateAndReviewTemplate(t *testing.T) {
 	t.Logf("✓ Average rating after update: %.1f (%d ratings)", retrieved.AverageRating, retrieved.TotalRatings)
 
 	// Step 8: Get all reviews
-	reviews, err := service.GetReviews(ctx, template.ID, 10, 0)
+	reviews, err := service.GetReviews(ctx, template.ID, ReviewSortRecent, 10, 0)
 	require.NoError(t, err)
 	assert.Len(t, reviews, 2)
 	t.Logf("✓ Retrieved %d reviews", len(reviews))
@@ -656,7 +656,7 @@ func (m *mockRepository) UpdateReview(ctx context.Context, tenantID, reviewID st
 	return ErrReviewNotFound
 }
 
-func (m *mockRepository) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error) {
+func (m *mockRepository) GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error) {
 	var results []*TemplateReview
 	for _, review := range m.reviews {
 		if review.TemplateID == templateID {
@@ -664,6 +664,11 @@ func (m *mockRepository) GetReviews(ctx context.Context, templateID string, limi
 		}
 	}
 	return results, nil
+}
+
+func (m *mockRepository) CreateReviewReport(ctx context.Context, report *ReviewReport) error {
+	// Mock implementation - just accept the report
+	return nil
 }
 
 func (m *mockRepository) DeleteReview(ctx context.Context, tenantID, reviewID string) error {
