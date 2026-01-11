@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -309,8 +310,10 @@ func extractArrayIndices(indexPart string) []int {
 
 	for _, match := range matches {
 		if len(match) > 1 {
-			var idx int
-			fmt.Sscanf(match[1], "%d", &idx)
+			idx, err := strconv.Atoi(match[1])
+			if err != nil {
+				continue // Skip invalid indices
+			}
 			indices = append(indices, idx)
 		}
 	}

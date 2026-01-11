@@ -67,21 +67,18 @@ func (c *Client) CreateIssue(ctx context.Context, req CreateIssueRequest) (*Issu
 		return nil, err
 	}
 
-	payload := map[string]interface{}{
-		"fields": map[string]interface{}{
-			"project": map[string]interface{}{
-				"key": req.Project,
-			},
-			"issuetype": map[string]interface{}{
-				"name": req.IssueType,
-			},
-			"summary":     req.Summary,
-			"description": req.Description,
+	fields := map[string]interface{}{
+		"project": map[string]interface{}{
+			"key": req.Project,
 		},
+		"issuetype": map[string]interface{}{
+			"name": req.IssueType,
+		},
+		"summary":     req.Summary,
+		"description": req.Description,
 	}
 
 	// Add optional fields
-	fields := payload["fields"].(map[string]interface{})
 	if req.Priority != "" {
 		fields["priority"] = map[string]interface{}{"name": req.Priority}
 	}
@@ -93,10 +90,14 @@ func (c *Client) CreateIssue(ctx context.Context, req CreateIssueRequest) (*Issu
 	}
 	if len(req.Components) > 0 {
 		components := make([]map[string]interface{}, len(req.Components))
-		for i, c := range req.Components {
-			components[i] = map[string]interface{}{"name": c}
+		for i, comp := range req.Components {
+			components[i] = map[string]interface{}{"name": comp}
 		}
 		fields["components"] = components
+	}
+
+	payload := map[string]interface{}{
+		"fields": fields,
 	}
 
 	var resp struct {

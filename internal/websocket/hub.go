@@ -221,10 +221,11 @@ func (c *Client) ReadPump() {
 		c.Conn.Close()
 	}()
 
-	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		c.Hub.logger.Warn("failed to set read deadline", "error", err, "client_id", c.ID)
+	}
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
+		return c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
 	c.Conn.SetReadLimit(maxMessageSize)
@@ -254,10 +255,13 @@ func (c *Client) WritePump() {
 	for {
 		select {
 		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.Hub.logger.Warn("failed to set write deadline", "error", err, "client_id", c.ID)
+				return
+			}
 			if !ok {
 				// The hub closed the channel
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{}) //nolint:errcheck // best effort close
 				return
 			}
 
@@ -265,13 +269,20 @@ func (c *Client) WritePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			if _, err := w.Write(message); err != nil {
+				c.Hub.logger.Warn("failed to write message", "error", err, "client_id", c.ID)
+				return
+			}
 
 			// Add queued messages to the current websocket message
 			n := len(c.Send)
 			for i := 0; i < n; i++ {
-				w.Write([]byte{'\n'})
-				w.Write(<-c.Send)
+				if _, err := w.Write([]byte{'\n'}); err != nil {
+					break
+				}
+				if _, err := w.Write(<-c.Send); err != nil {
+					break
+				}
 			}
 
 			if err := w.Close(); err != nil {
@@ -279,7 +290,9 @@ func (c *Client) WritePump() {
 			}
 
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return
+			}
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

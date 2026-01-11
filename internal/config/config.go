@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config holds all application configuration
@@ -25,6 +26,11 @@ type Config struct {
 	SecurityHeader SecurityHeaderConfig
 	AIBuilder      AIBuilderConfig
 	WebSocket      WebSocketConfig
+	SSRF           SSRFConfig
+	FormulaCache   FormulaCacheConfig
+	OAuth          OAuthConfig
+	Audit          AuditConfig
+	Log            LogConfig
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -65,12 +71,16 @@ type ServerConfig struct {
 
 // DatabaseConfig holds PostgreSQL configuration
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host            string
+	Port            int
+	User            string
+	Password        string
+	DBName          string
+	SSLMode         string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 // ConnectionString returns the PostgreSQL connection string
@@ -232,6 +242,61 @@ type SecurityHeaderConfig struct {
 	FrameOptions string
 }
 
+// SSRFConfig holds SSRF protection configuration
+type SSRFConfig struct {
+	// Enabled controls whether SSRF protection is active (default: true)
+	Enabled bool
+	// AllowedNetworks are CIDR ranges that are explicitly allowed (overrides blocklist)
+	// Example: "192.168.1.0/24" to allow internal network access
+	AllowedNetworks []string
+	// BlockedNetworks are additional CIDR ranges to block beyond defaults
+	// Example: "203.0.113.0/24" to block a specific public range
+	BlockedNetworks []string
+}
+
+// FormulaCacheConfig holds formula evaluator cache configuration
+type FormulaCacheConfig struct {
+	// Enabled controls whether formula caching is active (default: true)
+	Enabled bool
+	// Size is the maximum number of compiled expressions to cache (default: 1000)
+	Size int
+	// LogInterval is how often to log cache statistics (default: 0 = disabled)
+	// Format: "5m" for every 5 minutes, "1h" for every hour
+	LogInterval time.Duration
+}
+
+// OAuthConfig holds OAuth 2.0 configuration
+type OAuthConfig struct {
+	// BaseURL is the base URL for OAuth callbacks (e.g., "https://gorax.example.com")
+	BaseURL string
+	// GitHub OAuth application credentials
+	GitHubClientID     string
+	GitHubClientSecret string
+	// Google OAuth application credentials
+	GoogleClientID     string
+	GoogleClientSecret string
+	// Slack OAuth application credentials
+	SlackClientID     string
+	SlackClientSecret string
+	// Microsoft OAuth application credentials
+	MicrosoftClientID     string
+	MicrosoftClientSecret string
+	// Twitter OAuth application credentials
+	TwitterClientID     string
+	TwitterClientSecret string
+	// LinkedIn OAuth application credentials
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	// Salesforce OAuth application credentials
+	SalesforceClientID     string
+	SalesforceClientSecret string
+	SalesforceEnvironment  string // "production" or "sandbox"
+	// Auth0 OAuth application credentials
+	Auth0Domain       string
+	Auth0ClientID     string
+	Auth0ClientSecret string
+}
+
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
@@ -240,12 +305,16 @@ func Load() (*Config, error) {
 			Env:     getEnv("APP_ENV", "development"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5433),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "postgres"),
-			DBName:   getEnv("DB_NAME", "gorax"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+			Host:            getEnv("DB_HOST", "localhost"),
+			Port:            getEnvAsInt("DB_PORT", 5433),
+			User:            getEnv("DB_USER", "postgres"),
+			Password:        getEnv("DB_PASSWORD", "postgres"),
+			DBName:          getEnv("DB_NAME", "gorax"),
+			SSLMode:         getEnv("DB_SSLMODE", "disable"),
+			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 150),
+			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 25),
+			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+			ConnMaxIdleTime: getEnvAsDuration("DB_CONN_MAX_IDLE_TIME", 10*time.Minute),
 		},
 		Redis: RedisConfig{
 			Address:  getEnv("REDIS_ADDRESS", "localhost:6379"),
@@ -345,7 +414,12 @@ func Load() (*Config, error) {
 			MaxTokens:   getEnvAsInt("AI_BUILDER_MAX_TOKENS", 4096),
 			Temperature: getEnvAsFloat("AI_BUILDER_TEMPERATURE", 0.7),
 		},
-		WebSocket: loadWebSocketConfig(),
+		WebSocket:    loadWebSocketConfig(),
+		SSRF:         loadSSRFConfig(),
+		FormulaCache: loadFormulaCacheConfig(),
+		OAuth:        loadOAuthConfig(),
+		Audit:        loadAuditConfig(),
+		Log:          loadLogConfig(),
 	}
 
 	return cfg, nil
@@ -483,5 +557,119 @@ func loadSecurityHeaderConfig() SecurityHeaderConfig {
 		HSTSMaxAge:    getEnvAsInt("SECURITY_HEADER_HSTS_MAX_AGE", defaultHSTSMaxAge),
 		CSPDirectives: getEnv("SECURITY_HEADER_CSP_DIRECTIVES", defaultCSPDirectives),
 		FrameOptions:  getEnv("SECURITY_HEADER_FRAME_OPTIONS", defaultFrameOptions),
+	}
+}
+
+func loadSSRFConfig() SSRFConfig {
+	return SSRFConfig{
+		// SSRF protection is enabled by default for security
+		Enabled: getEnvAsBool("SSRF_PROTECTION_ENABLED", true),
+		// AllowedNetworks can be configured to allow specific internal networks
+		// Example: SSRF_ALLOWED_NETWORKS=192.168.1.0/24,10.0.0.0/8
+		AllowedNetworks: getEnvAsSlice("SSRF_ALLOWED_NETWORKS", []string{}),
+		// BlockedNetworks can be configured to block additional networks
+		// Example: SSRF_BLOCKED_NETWORKS=203.0.113.0/24
+		BlockedNetworks: getEnvAsSlice("SSRF_BLOCKED_NETWORKS", []string{}),
+	}
+}
+
+// getEnvAsDuration parses an environment variable as a duration
+func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
+}
+
+func loadFormulaCacheConfig() FormulaCacheConfig {
+	return FormulaCacheConfig{
+		// Formula caching enabled by default for performance
+		Enabled: getEnvAsBool("FORMULA_CACHE_ENABLED", true),
+		// Default cache size of 1000 expressions
+		Size: getEnvAsInt("FORMULA_CACHE_SIZE", 1000),
+		// Log interval defaults to 0 (disabled)
+		// Set to "5m", "1h", etc. to enable periodic logging
+		LogInterval: getEnvAsDuration("FORMULA_CACHE_LOG_INTERVAL", 0),
+	}
+}
+
+func loadOAuthConfig() OAuthConfig {
+	return OAuthConfig{
+		BaseURL:                getEnv("OAUTH_BASE_URL", "http://localhost:8080"),
+		GitHubClientID:         getEnv("OAUTH_GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:     getEnv("OAUTH_GITHUB_CLIENT_SECRET", ""),
+		GoogleClientID:         getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:     getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+		SlackClientID:          getEnv("OAUTH_SLACK_CLIENT_ID", ""),
+		SlackClientSecret:      getEnv("OAUTH_SLACK_CLIENT_SECRET", ""),
+		MicrosoftClientID:      getEnv("OAUTH_MICROSOFT_CLIENT_ID", ""),
+		MicrosoftClientSecret:  getEnv("OAUTH_MICROSOFT_CLIENT_SECRET", ""),
+		TwitterClientID:        getEnv("OAUTH_TWITTER_CLIENT_ID", ""),
+		TwitterClientSecret:    getEnv("OAUTH_TWITTER_CLIENT_SECRET", ""),
+		LinkedInClientID:       getEnv("OAUTH_LINKEDIN_CLIENT_ID", ""),
+		LinkedInClientSecret:   getEnv("OAUTH_LINKEDIN_CLIENT_SECRET", ""),
+		SalesforceClientID:     getEnv("OAUTH_SALESFORCE_CLIENT_ID", ""),
+		SalesforceClientSecret: getEnv("OAUTH_SALESFORCE_CLIENT_SECRET", ""),
+		SalesforceEnvironment:  getEnv("OAUTH_SALESFORCE_ENVIRONMENT", "production"),
+		Auth0Domain:            getEnv("OAUTH_AUTH0_DOMAIN", "your-tenant.auth0.com"),
+		Auth0ClientID:          getEnv("OAUTH_AUTH0_CLIENT_ID", ""),
+		Auth0ClientSecret:      getEnv("OAUTH_AUTH0_CLIENT_SECRET", ""),
+	}
+}
+
+// AuditConfig holds audit logging configuration
+type AuditConfig struct {
+	// Enabled controls whether audit logging is active (default: true)
+	Enabled bool
+	// BufferSize is the number of events to buffer before flushing (default: 100)
+	BufferSize int
+	// FlushInterval is how often to flush buffered events (default: 5s)
+	FlushInterval time.Duration
+	// HotRetentionDays is days to keep in main database (default: 90)
+	HotRetentionDays int
+	// WarmRetentionDays is days to keep in compressed form (default: 365)
+	WarmRetentionDays int
+	// ColdRetentionDays is days to keep in archive storage (default: 2555 = 7 years)
+	ColdRetentionDays int
+	// ArchiveEnabled controls whether to archive old logs (default: true)
+	ArchiveEnabled bool
+	// ArchiveBucket is the S3/GCS bucket for archived logs
+	ArchiveBucket string
+	// PurgeEnabled controls whether to purge expired logs (default: true)
+	PurgeEnabled bool
+}
+
+func loadAuditConfig() AuditConfig {
+	return AuditConfig{
+		Enabled:           getEnvAsBool("AUDIT_ENABLED", true),
+		BufferSize:        getEnvAsInt("AUDIT_BUFFER_SIZE", 100),
+		FlushInterval:     getEnvAsDuration("AUDIT_FLUSH_INTERVAL", 5*time.Second),
+		HotRetentionDays:  getEnvAsInt("AUDIT_HOT_RETENTION_DAYS", 90),
+		WarmRetentionDays: getEnvAsInt("AUDIT_WARM_RETENTION_DAYS", 365),
+		ColdRetentionDays: getEnvAsInt("AUDIT_COLD_RETENTION_DAYS", 2555),
+		ArchiveEnabled:    getEnvAsBool("AUDIT_ARCHIVE_ENABLED", true),
+		ArchiveBucket:     getEnv("AUDIT_ARCHIVE_BUCKET", "audit-logs"),
+		PurgeEnabled:      getEnvAsBool("AUDIT_PURGE_ENABLED", true),
+	}
+}
+
+// LogConfig holds application logging configuration
+type LogConfig struct {
+	// Level is the minimum log level (debug, info, warn, error)
+	Level string
+	// HTTPLogLevel is the log level for HTTP access logs (debug, info, warn, error)
+	// Set to "debug" to reduce noise from successful requests in development
+	HTTPLogLevel string
+	// Format is the log format (json or text)
+	Format string
+}
+
+func loadLogConfig() LogConfig {
+	return LogConfig{
+		Level:        getEnv("LOG_LEVEL", "info"),
+		HTTPLogLevel: getEnv("HTTP_LOG_LEVEL", "debug"),
+		Format:       getEnv("LOG_FORMAT", "json"),
 	}
 }

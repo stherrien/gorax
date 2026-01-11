@@ -1,20 +1,28 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { useWebhook, useWebhookEvents, useWebhookMutations } from '../hooks/useWebhooks'
 import { useWorkflows } from '../hooks/useWorkflows'
 import type { WebhookAuthType } from '../api/webhooks'
+import FilterBuilder from '../components/webhooks/FilterBuilder'
+import { isValidResourceId } from '../utils/routing'
 
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>()
-  const { webhook, loading, error, refetch } = useWebhook(id || null)
-  const { events, loading: eventsLoading } = useWebhookEvents(id || null, { limit: 10 })
+
+  // Hooks must be called unconditionally before any early returns
+  const { webhook, loading, error, refetch } = useWebhook(id || '')
+  const { events, loading: eventsLoading } = useWebhookEvents(id || '', { limit: 10 })
   const { updateWebhook, regenerateSecret, updating, regenerating } = useWebhookMutations()
   const { workflows } = useWorkflows()
-
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false)
   const [newSecret, setNewSecret] = useState<string | null>(null)
   const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  // Guard against invalid IDs (after all hooks are called)
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/webhooks" replace />
+  }
 
   const getWorkflowName = (workflowId: string) => {
     const workflow = workflows.find((w) => w.id === workflowId)
@@ -246,6 +254,18 @@ export default function WebhookDetail() {
               )}
             </div>
           )}
+
+          {/* Event Filters */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white mb-2">Event Filters</h2>
+              <p className="text-gray-400 text-sm">
+                Configure filters to control which webhook events trigger workflow execution. Events
+                that don't match all filters will be ignored.
+              </p>
+            </div>
+            <FilterBuilder webhookId={webhook.id} />
+          </div>
 
           {/* Event History */}
           <div className="bg-gray-800 rounded-lg p-6">

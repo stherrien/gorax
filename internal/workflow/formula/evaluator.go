@@ -275,3 +275,21 @@ func GetFunctionInfo() []FunctionInfo {
 func timeToExpr(t time.Time) interface{} {
 	return t
 }
+
+// compileExpression compiles an expression with the given environment
+func compileExpression(expression string, env map[string]interface{}) (*vm.Program, error) {
+	program, err := expr.Compile(expression, expr.Env(env))
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile expression: %w", err)
+	}
+	return program, nil
+}
+
+// runProgram executes a compiled program with the given environment
+func runProgram(program *vm.Program, env map[string]interface{}) (interface{}, error) {
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

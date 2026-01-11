@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 // LogExportService handles log export operations
@@ -42,7 +43,11 @@ func (s *LogExportService) ExportLogs(execution *Execution, steps []*StepExecuti
 	case "json":
 		return s.exporter.ExportJSON(execution, steps), "application/json", nil
 	case "csv":
-		return s.exporter.ExportCSV(execution, steps), "text/csv", nil
+		data, err := s.exporter.ExportCSV(execution, steps)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to export CSV: %w", err)
+		}
+		return data, "text/csv", nil
 	default:
 		return nil, "", errors.New("unsupported format")
 	}

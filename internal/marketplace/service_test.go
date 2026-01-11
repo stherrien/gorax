@@ -89,8 +89,11 @@ func (m *MockRepository) DeleteReview(ctx context.Context, tenantID, reviewID st
 	return args.Error(0)
 }
 
-func (m *MockRepository) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error) {
-	args := m.Called(ctx, templateID, limit, offset)
+func (m *MockRepository) GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error) {
+	args := m.Called(ctx, templateID, sortBy, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]*TemplateReview), args.Error(1)
 }
 
@@ -105,6 +108,57 @@ func (m *MockRepository) GetUserReview(ctx context.Context, tenantID, templateID
 func (m *MockRepository) UpdateTemplateRating(ctx context.Context, templateID string) error {
 	args := m.Called(ctx, templateID)
 	return args.Error(0)
+}
+
+func (m *MockRepository) VoteReviewHelpful(ctx context.Context, vote *ReviewHelpfulVote) error {
+	args := m.Called(ctx, vote)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error) {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepository) CreateReviewReport(ctx context.Context, report *ReviewReport) error {
+	args := m.Called(ctx, report)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error) {
+	args := m.Called(ctx, status, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*ReviewReport), args.Error(1)
+}
+
+func (m *MockRepository) UpdateReviewReportStatus(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	args := m.Called(ctx, reportID, status, resolvedBy, notes)
+	return args.Error(0)
+}
+
+func (m *MockRepository) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	args := m.Called(ctx, reviewID, reason, hiddenBy)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UnhideReview(ctx context.Context, reviewID string) error {
+	args := m.Called(ctx, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error) {
+	args := m.Called(ctx, templateID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*RatingDistribution), args.Error(1)
 }
 
 // MockWorkflowService is a mock implementation of WorkflowService
@@ -359,9 +413,9 @@ func TestService_GetReviews(t *testing.T) {
 		{ID: "2", Rating: 4},
 	}
 
-	repo.On("GetReviews", ctx, "template-1", 10, 0).Return(expectedReviews, nil)
+	repo.On("GetReviews", ctx, "template-1", ReviewSortRecent, 10, 0).Return(expectedReviews, nil)
 
-	reviews, err := service.GetReviews(ctx, "template-1", 10, 0)
+	reviews, err := service.GetReviews(ctx, "template-1", ReviewSortRecent, 10, 0)
 	require.NoError(t, err)
 	assert.Equal(t, expectedReviews, reviews)
 	repo.AssertExpectations(t)
@@ -469,9 +523,9 @@ func TestService_GetReviews_RepositoryError(t *testing.T) {
 	service := NewService(repo, nil, logger)
 	ctx := context.Background()
 
-	repo.On("GetReviews", ctx, "template-1", 10, 0).Return(([]*TemplateReview)(nil), errors.New("query timeout"))
+	repo.On("GetReviews", ctx, "template-1", ReviewSortRecent, 10, 0).Return(([]*TemplateReview)(nil), errors.New("query timeout"))
 
-	reviews, err := service.GetReviews(ctx, "template-1", 10, 0)
+	reviews, err := service.GetReviews(ctx, "template-1", ReviewSortRecent, 10, 0)
 	assert.Error(t, err)
 	assert.Nil(t, reviews)
 	assert.Contains(t, err.Error(), "get reviews")
@@ -685,12 +739,321 @@ func TestService_GetReviews_DefaultLimit(t *testing.T) {
 	ctx := context.Background()
 
 	// When limit is 0 or negative, it should default to 10
-	repo.On("GetReviews", ctx, "template-1", 10, 0).Return([]*TemplateReview{}, nil)
+	repo.On("GetReviews", ctx, "template-1", ReviewSortRecent, 10, 0).Return([]*TemplateReview{}, nil)
 
-	_, err := service.GetReviews(ctx, "template-1", 0, 0)
+	_, err := service.GetReviews(ctx, "template-1", ReviewSortRecent, 0, 0)
 	assert.NoError(t, err)
 
-	_, err = service.GetReviews(ctx, "template-1", -5, 0)
+	_, err = service.GetReviews(ctx, "template-1", ReviewSortRecent, -5, 0)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
+}
+
+// ==================== Enhanced Review Feature Tests ====================
+
+func TestVoteReviewHelpful(t *testing.T) {
+	tests := []struct {
+		name      string
+		reviewID  string
+		tenantID  string
+		userID    string
+		mockError error
+		wantError bool
+	}{
+		{
+			name:      "successful vote",
+			reviewID:  "review-1",
+			tenantID:  "tenant-1",
+			userID:    "user-1",
+			mockError: nil,
+			wantError: false,
+		},
+		{
+			name:      "duplicate vote",
+			reviewID:  "review-1",
+			tenantID:  "tenant-1",
+			userID:    "user-1",
+			mockError: errors.New("duplicate vote"),
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(MockRepository)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			service := NewService(repo, nil, logger)
+
+			repo.On("VoteReviewHelpful", mock.Anything, mock.AnythingOfType("*marketplace.ReviewHelpfulVote")).
+				Return(tt.mockError)
+
+			err := service.VoteReviewHelpful(context.Background(), tt.tenantID, tt.userID, tt.reviewID)
+
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			repo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUnvoteReviewHelpful(t *testing.T) {
+	repo := new(MockRepository)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	service := NewService(repo, nil, logger)
+	ctx := context.Background()
+
+	repo.On("UnvoteReviewHelpful", ctx, "tenant-1", "user-1", "review-1").Return(nil)
+
+	err := service.UnvoteReviewHelpful(ctx, "tenant-1", "user-1", "review-1")
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestReportReview(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     ReportReviewInput
+		mockError error
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name: "valid spam report",
+			input: ReportReviewInput{
+				Reason:  "spam",
+				Details: "This is spam content",
+			},
+			wantError: false,
+		},
+		{
+			name: "valid offensive report",
+			input: ReportReviewInput{
+				Reason:  "offensive",
+				Details: "Offensive language",
+			},
+			wantError: false,
+		},
+		{
+			name: "invalid reason",
+			input: ReportReviewInput{
+				Reason:  "invalid",
+				Details: "Details",
+			},
+			wantError: true,
+			errorMsg:  "invalid input",
+		},
+		{
+			name: "empty reason",
+			input: ReportReviewInput{
+				Reason:  "",
+				Details: "Details",
+			},
+			wantError: true,
+			errorMsg:  "invalid input",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(MockRepository)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			service := NewService(repo, nil, logger)
+
+			if tt.input.Validate() == nil {
+				repo.On("CreateReviewReport", mock.Anything, mock.AnythingOfType("*marketplace.ReviewReport")).
+					Return(tt.mockError)
+			}
+
+			err := service.ReportReview(context.Background(), "tenant-1", "user-1", "review-1", tt.input)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			repo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetReviewsWithSorting(t *testing.T) {
+	tests := []struct {
+		name   string
+		sortBy ReviewSortOption
+	}{
+		{"sort by recent", ReviewSortRecent},
+		{"sort by helpful", ReviewSortHelpful},
+		{"sort by rating high", ReviewSortRatingH},
+		{"sort by rating low", ReviewSortRatingL},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(MockRepository)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			service := NewService(repo, nil, logger)
+			ctx := context.Background()
+
+			expectedReviews := []*TemplateReview{
+				{ID: "review-1", Rating: 5},
+				{ID: "review-2", Rating: 4},
+			}
+
+			repo.On("GetReviews", ctx, "template-1", tt.sortBy, 10, 0).Return(expectedReviews, nil)
+
+			reviews, err := service.GetReviews(ctx, "template-1", tt.sortBy, 10, 0)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedReviews, reviews)
+
+			repo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHideReview(t *testing.T) {
+	repo := new(MockRepository)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	service := NewService(repo, nil, logger)
+	ctx := context.Background()
+
+	repo.On("HideReview", ctx, "review-1", "spam", "admin-1").Return(nil)
+
+	err := service.HideReview(ctx, "review-1", "spam", "admin-1")
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestGetRatingDistribution(t *testing.T) {
+	repo := new(MockRepository)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	service := NewService(repo, nil, logger)
+	ctx := context.Background()
+
+	expectedDist := &RatingDistribution{
+		Rating1Count:   5,
+		Rating2Count:   10,
+		Rating3Count:   15,
+		Rating4Count:   20,
+		Rating5Count:   50,
+		TotalRatings:   100,
+		AverageRating:  4.0,
+		Rating1Percent: 5.0,
+		Rating2Percent: 10.0,
+		Rating3Percent: 15.0,
+		Rating4Percent: 20.0,
+		Rating5Percent: 50.0,
+	}
+
+	repo.On("GetRatingDistribution", ctx, "template-1").Return(expectedDist, nil)
+
+	dist, err := service.GetRatingDistribution(ctx, "template-1")
+	require.NoError(t, err)
+	assert.Equal(t, expectedDist, dist)
+	repo.AssertExpectations(t)
+}
+
+func TestResolveReviewReport(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    string
+		wantError bool
+		errorMsg  string
+	}{
+		{"valid reviewed status", string(ReportStatusReviewed), false, ""},
+		{"valid actioned status", string(ReportStatusActioned), false, ""},
+		{"valid dismissed status", string(ReportStatusDismissed), false, ""},
+		{"invalid status", "invalid", true, "invalid status"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(MockRepository)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			service := NewService(repo, nil, logger)
+			ctx := context.Background()
+
+			if !tt.wantError {
+				repo.On("UpdateReviewReportStatus", ctx, "report-1", tt.status, "admin-1", (*string)(nil)).Return(nil)
+			}
+
+			err := service.ResolveReviewReport(ctx, "report-1", tt.status, "admin-1", nil)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			repo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReportReviewInput_Validate(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     ReportReviewInput
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name:      "valid spam",
+			input:     ReportReviewInput{Reason: "spam", Details: "This is spam"},
+			wantError: false,
+		},
+		{
+			name:      "valid inappropriate",
+			input:     ReportReviewInput{Reason: "inappropriate", Details: "Inappropriate content"},
+			wantError: false,
+		},
+		{
+			name:      "empty reason",
+			input:     ReportReviewInput{Reason: "", Details: "Details"},
+			wantError: true,
+			errorMsg:  "reason is required",
+		},
+		{
+			name:      "invalid reason",
+			input:     ReportReviewInput{Reason: "invalid", Details: "Details"},
+			wantError: true,
+			errorMsg:  "reason must be one of",
+		},
+		{
+			name:      "details too long",
+			input:     ReportReviewInput{Reason: "spam", Details: string(make([]byte, 1001))},
+			wantError: true,
+			errorMsg:  "details must be 1000 characters or less",
+		},
+		{
+			name:      "valid without details",
+			input:     ReportReviewInput{Reason: "spam", Details: ""},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.Validate()
+
+			if tt.wantError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

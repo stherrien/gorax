@@ -16,8 +16,11 @@ export default function WorkflowEditor() {
   const navigate = useNavigate()
   const isNewWorkflow = id === 'new'
 
+  // For existing workflows, use the ID directly - backend will validate
+  const workflowId = !isNewWorkflow && id ? id : null
+
   // Load existing workflow if editing
-  const { workflow, loading, error } = useWorkflow(isNewWorkflow ? null : id || null)
+  const { workflow, loading, error } = useWorkflow(workflowId)
   const { createWorkflow, updateWorkflow, creating, updating } = useWorkflowMutations()
 
   // Form state
@@ -112,20 +115,21 @@ export default function WorkflowEditor() {
       if (isNewWorkflow) {
         const newWorkflow = await createWorkflow(workflowData)
         navigate(`/workflows/${newWorkflow.id}`)
-      } else {
-        await updateWorkflow(id!, workflowData)
+      } else if (workflowId) {
+        await updateWorkflow(workflowId, workflowData)
         setSaveSuccess('Workflow saved successfully')
         setTimeout(() => setSaveSuccess(null), 3000)
+      } else {
+        setSaveError('Cannot save workflow without ID')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow'
       setSaveError(errorMessage)
-      console.error('Failed to save workflow:', err)
     }
   }
 
   const handleTestWorkflow = async () => {
-    if (isNewWorkflow || !id) {
+    if (isNewWorkflow || !workflowId) {
       setDryRunError('Please save the workflow before testing')
       setTimeout(() => setDryRunError(null), 3000)
       return
@@ -135,7 +139,7 @@ export default function WorkflowEditor() {
     setDryRunError(null)
 
     try {
-      const result = await workflowAPI.dryRun(id, {})
+      const result = await workflowAPI.dryRun(workflowId, {})
       setDryRunResult(result)
       setShowDryRunResults(true)
     } catch (err) {

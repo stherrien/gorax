@@ -272,6 +272,11 @@ export type FilterOperator =
   | 'not_in'
   | 'exists'
   | 'not_exists'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'between'
+  | 'matches_any'
+  | 'matches_all'
 
 export interface WebhookFilter {
   id: string

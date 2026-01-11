@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -84,10 +85,12 @@ func (hs *HealthServer) SetReady(ready bool) {
 // Returns 200 if worker process is alive
 func (hs *HealthServer) handleLiveness(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "alive",
 		"time":   time.Now().Format(time.RFC3339),
-	})
+	}); err != nil {
+		slog.Error("failed to encode liveness response", "error", err)
+	}
 }
 
 // handleReadiness handles Kubernetes readiness probe
@@ -95,10 +98,12 @@ func (hs *HealthServer) handleLiveness(w http.ResponseWriter, r *http.Request) {
 func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	if !hs.ready.Load() {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"status": "not_ready",
 			"time":   time.Now().Format(time.RFC3339),
-		})
+		}); err != nil {
+			slog.Error("failed to encode readiness not_ready response", "error", err)
+		}
 		return
 	}
 
@@ -107,18 +112,22 @@ func (hs *HealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) 
 	concurrencyInt32 := safeIntToInt32(hs.worker.concurrency)
 	if hs.worker.getActiveExecutions() >= concurrencyInt32 {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"status": "at_capacity",
 			"time":   time.Now().Format(time.RFC3339),
-		})
+		}); err != nil {
+			slog.Error("failed to encode readiness at_capacity response", "error", err)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "ready",
 		"time":   time.Now().Format(time.RFC3339),
-	})
+	}); err != nil {
+		slog.Error("failed to encode readiness ready response", "error", err)
+	}
 }
 
 // handleHealth provides detailed health information
@@ -152,7 +161,9 @@ func (hs *HealthServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode health response", "error", err)
+	}
 }
 
 // checkDatabase checks database connectivity
