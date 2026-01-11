@@ -80,12 +80,12 @@ vi.mock('./components/oauth/OAuthCallback', () => ({
   OAuthCallback: () => <div>OAuth Callback Page</div>,
 }))
 
-vi.mock('./components/Layout', () => ({
-  default: () => {
-    const { Outlet } = require('react-router-dom')
-    return <div><Outlet /></div>
-  },
-}))
+vi.mock('./components/Layout', async () => {
+  const { Outlet } = await import('react-router-dom')
+  return {
+    default: () => <div><Outlet /></div>,
+  }
+})
 
 describe('App Routing', () => {
   describe('Route Order - Specific Routes Before Dynamic', () => {
