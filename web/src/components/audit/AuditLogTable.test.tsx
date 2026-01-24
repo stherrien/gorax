@@ -87,14 +87,13 @@ describe('AuditLogTable', () => {
       />
     )
 
-    const nextButton = screen.getAllByRole('button').find((btn) =>
-      btn.querySelector('svg')
-    )
-    if (nextButton) {
-      fireEvent.click(nextButton)
-    }
+    // Get all buttons and find the "Next" button (the last one with an SVG)
+    const buttons = screen.getAllByRole('button')
+    // The Next button is the last button with an SVG
+    const nextButton = buttons[buttons.length - 1]
+    fireEvent.click(nextButton)
 
-    expect(onPageChange).toHaveBeenCalled()
+    expect(onPageChange).toHaveBeenCalledWith(2)
   })
 
   it('should handle row click to open modal', () => {
@@ -112,10 +111,13 @@ describe('AuditLogTable', () => {
   it('should show pagination info', () => {
     render(<AuditLogTable {...defaultProps} total={100} pageSize={50} currentPage={1} />)
 
+    // Check for the "Showing X to Y of Z results" text pattern
     expect(screen.getByText(/Showing/)).toBeInTheDocument()
-    expect(screen.getByText(/1/)).toBeInTheDocument()
-    expect(screen.getByText(/50/)).toBeInTheDocument()
-    expect(screen.getByText(/100/)).toBeInTheDocument()
+    // Check for the page indicator
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+    // Check that total is displayed within the pagination area
+    const container = screen.getByText(/Showing/).closest('div')
+    expect(container).toHaveTextContent('100')
   })
 
   it('should disable previous button on first page', () => {
