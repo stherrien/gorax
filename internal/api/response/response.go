@@ -1,4 +1,5 @@
-// Package response provides standardized HTTP response helpers.
+// Package response provides standardized HTTP response utilities for API handlers.
+// It centralizes JSON response handling with proper error handling and consistent formats.
 package response
 
 import (
@@ -7,36 +8,14 @@ import (
 	"net/http"
 )
 
-// ErrorCode represents standardized error codes.
-type ErrorCode string
-
-const (
-	// ErrCodeValidation indicates a validation error.
-	ErrCodeValidation ErrorCode = "validation_error"
-	// ErrCodeNotFound indicates a resource was not found.
-	ErrCodeNotFound ErrorCode = "not_found"
-	// ErrCodeBadRequest indicates a bad request.
-	ErrCodeBadRequest ErrorCode = "bad_request"
-	// ErrCodeUnauthorized indicates unauthorized access.
-	ErrCodeUnauthorized ErrorCode = "unauthorized"
-	// ErrCodeForbidden indicates forbidden access.
-	ErrCodeForbidden ErrorCode = "forbidden"
-	// ErrCodeInternal indicates an internal server error.
-	ErrCodeInternal ErrorCode = "internal_error"
-	// ErrCodeConflict indicates a resource conflict.
-	ErrCodeConflict ErrorCode = "conflict"
-	// ErrCodeRateLimit indicates rate limiting is active.
-	ErrCodeRateLimit ErrorCode = "rate_limit_exceeded"
-)
-
-// APIError represents a standardized error response.
-type APIError struct {
+// ErrorResponse represents a standardized error response structure.
+type ErrorResponse struct {
 	Error   string            `json:"error"`
-	Code    ErrorCode         `json:"code"`
+	Code    string            `json:"code,omitempty"`
 	Details map[string]string `json:"details,omitempty"`
 }
 
-// PaginatedResponse represents a paginated response.
+// PaginatedResponse wraps paginated data with metadata.
 type PaginatedResponse struct {
 	Data   any `json:"data"`
 	Limit  int `json:"limit"`
@@ -44,64 +23,58 @@ type PaginatedResponse struct {
 	Total  int `json:"total"`
 }
 
-// DataResponse represents a response with data wrapper.
-type DataResponse struct {
-	Data any `json:"data"`
-}
-
-// JSON sends a JSON response with proper error handling.
-// If encoding fails, it logs the error and returns a 500 status.
-func JSON(w http.ResponseWriter, logger *slog.Logger, status int, data any) {
+// JSON sends a JSON response with the given status code and data.
+// It properly handles encoding errors by logging them and returning an error.
+func JSON(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		if logger != nil {
-			logger.Error("failed to encode JSON response", "error", err)
-		}
+		// Log the error - at this point headers are already sent,
+		// so we can't change the response, but we should log the failure
+		slog.Error("failed to encode JSON response", "error", err)
+		return err
 	}
+
+	return nil
 }
 
-// Data sends a JSON response wrapped in a data envelope.
-func Data(w http.ResponseWriter, logger *slog.Logger, status int, data any) {
-	JSON(w, logger, status, DataResponse{Data: data})
-}
-
-// Error sends a standardized error response.
-func Error(w http.ResponseWriter, logger *slog.Logger, status int, message string, code ErrorCode) {
-	JSON(w, logger, status, APIError{
+// Error sends a standardized error response with the given status code and message.
+// The code parameter is optional and provides a machine-readable error identifier.
+func Error(w http.ResponseWriter, status int, message, code string) error {
+	resp := ErrorResponse{
 		Error: message,
 		Code:  code,
-	})
+	}
+	return JSON(w, status, resp)
 }
 
-// ErrorWithDetails sends an error response with additional details.
-func ErrorWithDetails(w http.ResponseWriter, logger *slog.Logger, status int, message string, code ErrorCode, details map[string]string) {
-	JSON(w, logger, status, APIError{
+// ErrorWithDetails sends a standardized error response with additional field-level details.
+// Useful for validation errors where multiple fields may have issues.
+func ErrorWithDetails(w http.ResponseWriter, status int, message, code string, details map[string]string) error {
+	resp := ErrorResponse{
 		Error:   message,
 		Code:    code,
 		Details: details,
-	})
+	}
+	return JSON(w, status, resp)
 }
 
 // Paginated sends paginated data with metadata.
-func Paginated(w http.ResponseWriter, logger *slog.Logger, data any, limit, offset, total int) {
-	JSON(w, logger, http.StatusOK, PaginatedResponse{
+// The data parameter should be the slice of items, and limit/offset/total provide pagination info.
+func Paginated(w http.ResponseWriter, data any, limit, offset, total int) error {
+	resp := PaginatedResponse{
 		Data:   data,
 		Limit:  limit,
 		Offset: offset,
 		Total:  total,
-	})
+	}
+	return JSON(w, http.StatusOK, resp)
 }
 
-// PaginatedWithStatus sends paginated data with a custom status code.
-func PaginatedWithStatus(w http.ResponseWriter, logger *slog.Logger, status int, data any, limit, offset, total int) {
-	JSON(w, logger, status, PaginatedResponse{
-		Data:   data,
-		Limit:  limit,
-		Offset: offset,
-		Total:  total,
-	})
+// Created sends a 201 Created response with the given data.
+func Created(w http.ResponseWriter, data any) error {
+	return JSON(w, http.StatusCreated, data)
 }
 
 // NoContent sends a 204 No Content response.
@@ -109,54 +82,49 @@ func NoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// BadRequest sends a 400 Bad Request error.
-func BadRequest(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusBadRequest, message, ErrCodeBadRequest)
+// BadRequest sends a 400 Bad Request error response.
+func BadRequest(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusBadRequest, message, "bad_request")
 }
 
-// ValidationError sends a 400 validation error with field details.
-func ValidationError(w http.ResponseWriter, logger *slog.Logger, message, field string) {
-	ErrorWithDetails(w, logger, http.StatusBadRequest, message, ErrCodeValidation, map[string]string{
-		"field": field,
-	})
+// Unauthorized sends a 401 Unauthorized error response.
+func Unauthorized(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusUnauthorized, message, "unauthorized")
 }
 
-// NotFound sends a 404 Not Found error.
-func NotFound(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusNotFound, message, ErrCodeNotFound)
+// Forbidden sends a 403 Forbidden error response.
+func Forbidden(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusForbidden, message, "forbidden")
 }
 
-// Unauthorized sends a 401 Unauthorized error.
-func Unauthorized(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusUnauthorized, message, ErrCodeUnauthorized)
+// NotFound sends a 404 Not Found error response.
+func NotFound(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusNotFound, message, "not_found")
 }
 
-// Forbidden sends a 403 Forbidden error.
-func Forbidden(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusForbidden, message, ErrCodeForbidden)
+// Conflict sends a 409 Conflict error response.
+func Conflict(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusConflict, message, "conflict")
 }
 
-// InternalError sends a 500 Internal Server Error.
-func InternalError(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusInternalServerError, message, ErrCodeInternal)
+// UnprocessableEntity sends a 422 Unprocessable Entity error response.
+// Useful for validation errors.
+func UnprocessableEntity(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusUnprocessableEntity, message, "unprocessable_entity")
 }
 
-// Conflict sends a 409 Conflict error.
-func Conflict(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusConflict, message, ErrCodeConflict)
+// ValidationError sends a 422 Unprocessable Entity error with field-level details.
+func ValidationError(w http.ResponseWriter, message string, details map[string]string) error {
+	return ErrorWithDetails(w, http.StatusUnprocessableEntity, message, "validation_error", details)
 }
 
-// TooManyRequests sends a 429 Too Many Requests error.
-func TooManyRequests(w http.ResponseWriter, logger *slog.Logger, message string) {
-	Error(w, logger, http.StatusTooManyRequests, message, ErrCodeRateLimit)
+// InternalError sends a 500 Internal Server Error response.
+// The actual error is not exposed to the client for security reasons.
+func InternalError(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusInternalServerError, message, "internal_error")
 }
 
-// Created sends a 201 Created response with data.
-func Created(w http.ResponseWriter, logger *slog.Logger, data any) {
-	Data(w, logger, http.StatusCreated, data)
-}
-
-// OK sends a 200 OK response with data.
-func OK(w http.ResponseWriter, logger *slog.Logger, data any) {
-	Data(w, logger, http.StatusOK, data)
+// ServiceUnavailable sends a 503 Service Unavailable error response.
+func ServiceUnavailable(w http.ResponseWriter, message string) error {
+	return Error(w, http.StatusServiceUnavailable, message, "service_unavailable")
 }

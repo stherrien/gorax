@@ -2,8 +2,6 @@ package response
 
 import (
 	"encoding/json"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,35 +11,40 @@ import (
 )
 
 func TestJSON(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	tests := []struct {
 		name       string
 		status     int
 		data       any
 		wantStatus int
-		wantBody   map[string]any
+		wantBody   string
 	}{
 		{
-			name:       "success response",
+			name:       "success with map",
 			status:     http.StatusOK,
 			data:       map[string]string{"message": "hello"},
 			wantStatus: http.StatusOK,
-			wantBody:   map[string]any{"message": "hello"},
+			wantBody:   `{"message":"hello"}`,
 		},
 		{
-			name:       "created response",
+			name:       "created with struct",
 			status:     http.StatusCreated,
-			data:       map[string]int{"id": 123},
+			data:       struct{ ID string `json:"id"` }{ID: "123"},
 			wantStatus: http.StatusCreated,
-			wantBody:   map[string]any{"id": float64(123)},
+			wantBody:   `{"id":"123"}`,
 		},
 		{
-			name:       "empty response",
+			name:       "empty slice",
 			status:     http.StatusOK,
-			data:       map[string]any{},
+			data:       []string{},
 			wantStatus: http.StatusOK,
-			wantBody:   map[string]any{},
+			wantBody:   `[]`,
+		},
+		{
+			name:       "nil data",
+			status:     http.StatusOK,
+			data:       nil,
+			wantStatus: http.StatusOK,
+			wantBody:   `null`,
 		},
 	}
 
@@ -49,105 +52,44 @@ func TestJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			JSON(w, logger, tt.status, tt.data)
+			err := JSON(w, tt.status, tt.data)
 
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, w.Code)
 			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-
-			var got map[string]any
-			err := json.NewDecoder(w.Body).Decode(&got)
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantBody, got)
-		})
-	}
-}
-
-func TestJSON_NilLogger(t *testing.T) {
-	w := httptest.NewRecorder()
-
-	// Should not panic with nil logger
-	JSON(w, nil, http.StatusOK, map[string]string{"test": "value"})
-
-	assert.Equal(t, http.StatusOK, w.Code)
-}
-
-func TestData(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
-	tests := []struct {
-		name       string
-		status     int
-		data       any
-		wantStatus int
-	}{
-		{
-			name:       "wraps data in envelope",
-			status:     http.StatusOK,
-			data:       map[string]string{"id": "abc"},
-			wantStatus: http.StatusOK,
-		},
-		{
-			name:       "created with data",
-			status:     http.StatusCreated,
-			data:       []string{"a", "b", "c"},
-			wantStatus: http.StatusCreated,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-
-			Data(w, logger, tt.status, tt.data)
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			var got DataResponse
-			err := json.NewDecoder(w.Body).Decode(&got)
-			require.NoError(t, err)
-			assert.NotNil(t, got.Data)
+			assert.JSONEq(t, tt.wantBody, w.Body.String())
 		})
 	}
 }
 
 func TestError(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	tests := []struct {
-		name        string
-		status      int
-		message     string
-		code        ErrorCode
-		wantStatus  int
-		wantMessage string
-		wantCode    string
+		name       string
+		status     int
+		message    string
+		code       string
+		wantStatus int
 	}{
 		{
-			name:        "bad request",
-			status:      http.StatusBadRequest,
-			message:     "invalid input",
-			code:        ErrCodeBadRequest,
-			wantStatus:  http.StatusBadRequest,
-			wantMessage: "invalid input",
-			wantCode:    "bad_request",
+			name:       "bad request",
+			status:     http.StatusBadRequest,
+			message:    "invalid input",
+			code:       "bad_request",
+			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name:        "not found",
-			status:      http.StatusNotFound,
-			message:     "resource not found",
-			code:        ErrCodeNotFound,
-			wantStatus:  http.StatusNotFound,
-			wantMessage: "resource not found",
-			wantCode:    "not_found",
+			name:       "not found",
+			status:     http.StatusNotFound,
+			message:    "resource not found",
+			code:       "not_found",
+			wantStatus: http.StatusNotFound,
 		},
 		{
-			name:        "internal error",
-			status:      http.StatusInternalServerError,
-			message:     "something went wrong",
-			code:        ErrCodeInternal,
-			wantStatus:  http.StatusInternalServerError,
-			wantMessage: "something went wrong",
-			wantCode:    "internal_error",
+			name:       "empty code",
+			status:     http.StatusBadRequest,
+			message:    "error message",
+			code:       "",
+			wantStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -155,83 +97,68 @@ func TestError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			Error(w, logger, tt.status, tt.message, tt.code)
+			err := Error(w, tt.status, tt.message, tt.code)
 
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, w.Code)
 
-			var got APIError
-			err := json.NewDecoder(w.Body).Decode(&got)
+			var resp ErrorResponse
+			err = json.NewDecoder(w.Body).Decode(&resp)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantMessage, got.Error)
-			assert.Equal(t, ErrorCode(tt.wantCode), got.Code)
+			assert.Equal(t, tt.message, resp.Error)
+			assert.Equal(t, tt.code, resp.Code)
 		})
 	}
 }
 
 func TestErrorWithDetails(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	w := httptest.NewRecorder()
-
 	details := map[string]string{
-		"field": "email",
-		"hint":  "must be a valid email",
+		"email": "invalid email format",
+		"name":  "name is required",
 	}
 
-	ErrorWithDetails(w, logger, http.StatusBadRequest, "validation failed", ErrCodeValidation, details)
+	err := ErrorWithDetails(w, http.StatusUnprocessableEntity, "validation failed", "validation_error", details)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	var got APIError
-	err := json.NewDecoder(w.Body).Decode(&got)
 	require.NoError(t, err)
-	assert.Equal(t, "validation failed", got.Error)
-	assert.Equal(t, ErrCodeValidation, got.Code)
-	assert.Equal(t, "email", got.Details["field"])
-	assert.Equal(t, "must be a valid email", got.Details["hint"])
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "validation failed", resp.Error)
+	assert.Equal(t, "validation_error", resp.Code)
+	assert.Equal(t, details, resp.Details)
 }
 
 func TestPaginated(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	tests := []struct {
-		name       string
-		data       any
-		limit      int
-		offset     int
-		total      int
-		wantLimit  int
-		wantOffset int
-		wantTotal  int
+		name   string
+		data   any
+		limit  int
+		offset int
+		total  int
 	}{
 		{
-			name:       "full page",
-			data:       []string{"a", "b", "c"},
-			limit:      10,
-			offset:     0,
-			total:      3,
-			wantLimit:  10,
-			wantOffset: 0,
-			wantTotal:  3,
+			name:   "first page",
+			data:   []string{"a", "b", "c"},
+			limit:  10,
+			offset: 0,
+			total:  100,
 		},
 		{
-			name:       "second page",
-			data:       []string{"d", "e"},
-			limit:      10,
-			offset:     10,
-			total:      15,
-			wantLimit:  10,
-			wantOffset: 10,
-			wantTotal:  15,
+			name:   "second page",
+			data:   []string{"d", "e"},
+			limit:  10,
+			offset: 10,
+			total:  100,
 		},
 		{
-			name:       "empty page",
-			data:       []string{},
-			limit:      10,
-			offset:     100,
-			total:      50,
-			wantLimit:  10,
-			wantOffset: 100,
-			wantTotal:  50,
+			name:   "empty result",
+			data:   []string{},
+			limit:  10,
+			offset: 0,
+			total:  0,
 		},
 	}
 
@@ -239,27 +166,30 @@ func TestPaginated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 
-			Paginated(w, logger, tt.data, tt.limit, tt.offset, tt.total)
+			err := Paginated(w, tt.data, tt.limit, tt.offset, tt.total)
 
+			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, w.Code)
 
-			var got PaginatedResponse
-			err := json.NewDecoder(w.Body).Decode(&got)
+			var resp PaginatedResponse
+			err = json.NewDecoder(w.Body).Decode(&resp)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantLimit, got.Limit)
-			assert.Equal(t, tt.wantOffset, got.Offset)
-			assert.Equal(t, tt.wantTotal, got.Total)
+			assert.Equal(t, tt.limit, resp.Limit)
+			assert.Equal(t, tt.offset, resp.Offset)
+			assert.Equal(t, tt.total, resp.Total)
 		})
 	}
 }
 
-func TestPaginatedWithStatus(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+func TestCreated(t *testing.T) {
 	w := httptest.NewRecorder()
+	data := map[string]string{"id": "new-123"}
 
-	PaginatedWithStatus(w, logger, http.StatusCreated, []string{"a"}, 10, 0, 1)
+	err := Created(w, data)
 
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.JSONEq(t, `{"id":"new-123"}`, w.Body.String())
 }
 
 func TestNoContent(t *testing.T) {
@@ -271,158 +201,188 @@ func TestNoContent(t *testing.T) {
 	assert.Empty(t, w.Body.String())
 }
 
-func TestConvenienceErrors(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+func TestBadRequest(t *testing.T) {
+	w := httptest.NewRecorder()
 
+	err := BadRequest(w, "invalid input")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "invalid input", resp.Error)
+	assert.Equal(t, "bad_request", resp.Code)
+}
+
+func TestUnauthorized(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := Unauthorized(w, "authentication required")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "authentication required", resp.Error)
+	assert.Equal(t, "unauthorized", resp.Code)
+}
+
+func TestForbidden(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := Forbidden(w, "access denied")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "access denied", resp.Error)
+	assert.Equal(t, "forbidden", resp.Code)
+}
+
+func TestNotFound(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := NotFound(w, "resource not found")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "resource not found", resp.Error)
+	assert.Equal(t, "not_found", resp.Code)
+}
+
+func TestConflict(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := Conflict(w, "resource already exists")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "resource already exists", resp.Error)
+	assert.Equal(t, "conflict", resp.Code)
+}
+
+func TestUnprocessableEntity(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := UnprocessableEntity(w, "validation failed")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "validation failed", resp.Error)
+	assert.Equal(t, "unprocessable_entity", resp.Code)
+}
+
+func TestValidationError(t *testing.T) {
+	w := httptest.NewRecorder()
+	details := map[string]string{
+		"email": "invalid format",
+	}
+
+	err := ValidationError(w, "validation failed", details)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "validation failed", resp.Error)
+	assert.Equal(t, "validation_error", resp.Code)
+	assert.Equal(t, details, resp.Details)
+}
+
+func TestInternalError(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := InternalError(w, "something went wrong")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "something went wrong", resp.Error)
+	assert.Equal(t, "internal_error", resp.Code)
+}
+
+func TestServiceUnavailable(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	err := ServiceUnavailable(w, "service is down")
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	var resp ErrorResponse
+	err = json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "service is down", resp.Error)
+	assert.Equal(t, "service_unavailable", resp.Code)
+}
+
+// TestJSONWithUnencodableData tests error handling for data that cannot be encoded.
+func TestJSONWithUnencodableData(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	// Channels cannot be JSON encoded
+	ch := make(chan int)
+	err := JSON(w, http.StatusOK, ch)
+
+	// Should return an error
+	assert.Error(t, err)
+	// Status is already written before encoding starts
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestContentTypeHeader ensures Content-Type is always set correctly.
+func TestContentTypeHeader(t *testing.T) {
 	tests := []struct {
-		name       string
-		fn         func(http.ResponseWriter, *slog.Logger, string)
-		wantStatus int
-		wantCode   ErrorCode
+		name string
+		fn   func(w http.ResponseWriter) error
 	}{
 		{
-			name:       "BadRequest",
-			fn:         BadRequest,
-			wantStatus: http.StatusBadRequest,
-			wantCode:   ErrCodeBadRequest,
+			name: "JSON",
+			fn:   func(w http.ResponseWriter) error { return JSON(w, 200, nil) },
 		},
 		{
-			name:       "NotFound",
-			fn:         NotFound,
-			wantStatus: http.StatusNotFound,
-			wantCode:   ErrCodeNotFound,
+			name: "Error",
+			fn:   func(w http.ResponseWriter) error { return Error(w, 400, "error", "code") },
 		},
 		{
-			name:       "Unauthorized",
-			fn:         Unauthorized,
-			wantStatus: http.StatusUnauthorized,
-			wantCode:   ErrCodeUnauthorized,
+			name: "Paginated",
+			fn:   func(w http.ResponseWriter) error { return Paginated(w, []string{}, 10, 0, 0) },
 		},
 		{
-			name:       "Forbidden",
-			fn:         Forbidden,
-			wantStatus: http.StatusForbidden,
-			wantCode:   ErrCodeForbidden,
-		},
-		{
-			name:       "InternalError",
-			fn:         InternalError,
-			wantStatus: http.StatusInternalServerError,
-			wantCode:   ErrCodeInternal,
-		},
-		{
-			name:       "Conflict",
-			fn:         Conflict,
-			wantStatus: http.StatusConflict,
-			wantCode:   ErrCodeConflict,
-		},
-		{
-			name:       "TooManyRequests",
-			fn:         TooManyRequests,
-			wantStatus: http.StatusTooManyRequests,
-			wantCode:   ErrCodeRateLimit,
+			name: "Created",
+			fn:   func(w http.ResponseWriter) error { return Created(w, nil) },
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-
-			tt.fn(w, logger, "test message")
-
-			assert.Equal(t, tt.wantStatus, w.Code)
-
-			var got APIError
-			err := json.NewDecoder(w.Body).Decode(&got)
-			require.NoError(t, err)
-			assert.Equal(t, "test message", got.Error)
-			assert.Equal(t, tt.wantCode, got.Code)
+			_ = tt.fn(w)
+			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 		})
 	}
-}
-
-func TestValidationError(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	ValidationError(w, logger, "invalid email format", "email")
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	var got APIError
-	err := json.NewDecoder(w.Body).Decode(&got)
-	require.NoError(t, err)
-	assert.Equal(t, "invalid email format", got.Error)
-	assert.Equal(t, ErrCodeValidation, got.Code)
-	assert.Equal(t, "email", got.Details["field"])
-}
-
-func TestCreated(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	Created(w, logger, map[string]string{"id": "new-id"})
-
-	assert.Equal(t, http.StatusCreated, w.Code)
-
-	var got DataResponse
-	err := json.NewDecoder(w.Body).Decode(&got)
-	require.NoError(t, err)
-	assert.NotNil(t, got.Data)
-}
-
-func TestOK(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	OK(w, logger, map[string]string{"status": "success"})
-
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	var got DataResponse
-	err := json.NewDecoder(w.Body).Decode(&got)
-	require.NoError(t, err)
-	assert.NotNil(t, got.Data)
-}
-
-func TestErrorCodes(t *testing.T) {
-	// Verify error code constants have expected string values
-	assert.Equal(t, ErrorCode("validation_error"), ErrCodeValidation)
-	assert.Equal(t, ErrorCode("not_found"), ErrCodeNotFound)
-	assert.Equal(t, ErrorCode("bad_request"), ErrCodeBadRequest)
-	assert.Equal(t, ErrorCode("unauthorized"), ErrCodeUnauthorized)
-	assert.Equal(t, ErrorCode("forbidden"), ErrCodeForbidden)
-	assert.Equal(t, ErrorCode("internal_error"), ErrCodeInternal)
-	assert.Equal(t, ErrorCode("conflict"), ErrCodeConflict)
-	assert.Equal(t, ErrorCode("rate_limit_exceeded"), ErrCodeRateLimit)
-}
-
-func TestJSON_ContentTypeAlwaysSet(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	JSON(w, logger, http.StatusOK, nil)
-
-	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-}
-
-func TestPaginatedResponse_OmitsZeroTotal(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	// When total is 0, it should still be included (valid count)
-	Paginated(w, logger, []string{}, 10, 0, 0)
-
-	body := w.Body.String()
-	assert.Contains(t, body, `"total":0`)
-}
-
-func TestAPIError_OmitsEmptyDetails(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	w := httptest.NewRecorder()
-
-	Error(w, logger, http.StatusBadRequest, "error", ErrCodeBadRequest)
-
-	body := w.Body.String()
-	assert.NotContains(t, body, "details")
 }
