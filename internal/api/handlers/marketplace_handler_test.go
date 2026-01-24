@@ -351,8 +351,11 @@ func TestGetCategories(t *testing.T) {
 	categoryService := new(MockCategoryService)
 	handler := NewMarketplaceHandler(service, categoryService, logger)
 
-	categories := []string{"security", "automation"}
-	service.On("GetCategories").Return(categories)
+	categories := []marketplace.Category{
+		{ID: "cat-1", Name: "Security", Slug: "security"},
+		{ID: "cat-2", Name: "Automation", Slug: "automation"},
+	}
+	categoryService.On("GetCategoriesWithHierarchy", mock.Anything).Return(categories, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/categories", nil)
 	w := httptest.NewRecorder()
@@ -360,10 +363,13 @@ func TestGetCategories(t *testing.T) {
 	handler.GetCategories(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var response []string
+	var response struct {
+		Data []marketplace.Category `json:"data"`
+	}
 	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
-	assert.Len(t, response, 2)
+	assert.Len(t, response.Data, 2)
+	categoryService.AssertExpectations(t)
 }
 
 // Integration Tests - Full Request/Response Cycle
@@ -812,6 +818,7 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 		service.On("GetReviews",
 			mock.Anything,
 			"tpl-popular",
+			marketplace.ReviewSortRecent,
 			15,
 			10,
 		).Return(reviews, nil)
