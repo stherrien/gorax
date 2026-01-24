@@ -11,6 +11,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/template"
 )
 
@@ -61,11 +62,11 @@ func (h *TemplateHandler) ListTemplates(w http.ResponseWriter, r *http.Request) 
 
 	templates, err := h.service.ListTemplates(r.Context(), tenantID, filter)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list templates")
+		_ = response.InternalError(w, "failed to list templates")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, templates)
+	_ = response.OK(w, templates)
 }
 
 // GetTemplate retrieves a single template
@@ -76,14 +77,14 @@ func (h *TemplateHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := h.service.GetTemplate(r.Context(), tenantID, templateID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get template")
+		_ = response.InternalError(w, "failed to get template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, tmpl)
+	_ = response.OK(w, tmpl)
 }
 
 // CreateTemplate creates a new template
@@ -93,30 +94,30 @@ func (h *TemplateHandler) CreateTemplate(w http.ResponseWriter, r *http.Request)
 
 	var input template.CreateTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	tmpl, err := h.service.CreateTemplate(r.Context(), tenantID, userID, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			h.respondError(w, http.StatusConflict, "template with this name already exists")
+			_ = response.Conflict(w, "template with this name already exists")
 			return
 		}
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to create template")
+		_ = response.InternalError(w, "failed to create template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, tmpl)
+	_ = response.Created(w, tmpl)
 }
 
 // UpdateTemplate updates an existing template
@@ -126,24 +127,24 @@ func (h *TemplateHandler) UpdateTemplate(w http.ResponseWriter, r *http.Request)
 
 	var input template.UpdateTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.service.UpdateTemplate(r.Context(), tenantID, templateID, input); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to update template")
+		_ = response.InternalError(w, "failed to update template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]string{"message": "template updated successfully"})
+	_ = response.OK(w, map[string]string{"message": "template updated successfully"})
 }
 
 // DeleteTemplate deletes a template
@@ -153,14 +154,14 @@ func (h *TemplateHandler) DeleteTemplate(w http.ResponseWriter, r *http.Request)
 
 	if err := h.service.DeleteTemplate(r.Context(), tenantID, templateID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to delete template")
+		_ = response.InternalError(w, "failed to delete template")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // CreateFromWorkflow creates a template from an existing workflow
@@ -171,28 +172,28 @@ func (h *TemplateHandler) CreateFromWorkflow(w http.ResponseWriter, r *http.Requ
 
 	var input template.CreateTemplateFromWorkflowInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	input.WorkflowID = workflowID
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	tmpl, err := h.service.CreateFromWorkflow(r.Context(), tenantID, userID, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to create template from workflow")
+		_ = response.InternalError(w, "failed to create template from workflow")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, tmpl)
+	_ = response.Created(w, tmpl)
 }
 
 // InstantiateTemplate creates a workflow definition from a template
@@ -202,36 +203,24 @@ func (h *TemplateHandler) InstantiateTemplate(w http.ResponseWriter, r *http.Req
 
 	var input template.InstantiateTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	result, err := h.service.InstantiateTemplate(r.Context(), tenantID, templateID, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to instantiate template")
+		_ = response.InternalError(w, "failed to instantiate template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
-}
-
-func (h *TemplateHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("failed to encode response", "error", err)
-	}
-}
-
-func (h *TemplateHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{"error": message})
+	_ = response.OK(w, result)
 }

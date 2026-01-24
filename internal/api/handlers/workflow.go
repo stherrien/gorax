@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/validation"
 	"github.com/gorax/gorax/internal/workflow"
 )
@@ -52,11 +53,11 @@ func (h *WorkflowHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	workflows, err := h.service.List(r.Context(), tenantID, limit, offset)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list workflows")
+		_ = response.InternalError(w, "failed to list workflows")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data":   workflows,
 		"limit":  limit,
 		"offset": offset,
@@ -82,21 +83,21 @@ func (h *WorkflowHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var input workflow.CreateWorkflowInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	wf, err := h.service.Create(r.Context(), tenantID, user.ID, input)
 	if err != nil {
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to create workflow")
+		_ = response.InternalError(w, "failed to create workflow")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, map[string]interface{}{
+	_ = response.Created(w, map[string]any{
 		"data": wf,
 	})
 }
@@ -121,14 +122,14 @@ func (h *WorkflowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	wf, err := h.service.GetByID(r.Context(), tenantID, workflowID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get workflow")
+		_ = response.InternalError(w, "failed to get workflow")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": wf,
 	})
 }
@@ -154,25 +155,25 @@ func (h *WorkflowHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var input workflow.UpdateWorkflowInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	wf, err := h.service.Update(r.Context(), tenantID, workflowID, input)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to update workflow")
+		_ = response.InternalError(w, "failed to update workflow")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": wf,
 	})
 }
@@ -197,14 +198,14 @@ func (h *WorkflowHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	err := h.service.Delete(r.Context(), tenantID, workflowID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to delete workflow")
+		_ = response.InternalError(w, "failed to delete workflow")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // Execute triggers a workflow execution
@@ -234,14 +235,14 @@ func (h *WorkflowHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	execution, err := h.service.Execute(r.Context(), tenantID, workflowID, "manual", triggerData)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to execute workflow")
+		_ = response.InternalError(w, "failed to execute workflow")
 		return
 	}
 
-	h.respondJSON(w, http.StatusAccepted, map[string]interface{}{
+	_ = response.JSON(w, http.StatusAccepted, map[string]any{
 		"data": execution,
 	})
 }
@@ -260,11 +261,11 @@ func (h *WorkflowHandler) ListExecutions(w http.ResponseWriter, r *http.Request)
 
 	executions, err := h.service.ListExecutions(r.Context(), tenantID, workflowID, limit, offset)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list executions")
+		_ = response.InternalError(w, "failed to list executions")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data":   executions,
 		"limit":  limit,
 		"offset": offset,
@@ -279,14 +280,14 @@ func (h *WorkflowHandler) GetExecution(w http.ResponseWriter, r *http.Request) {
 	execution, err := h.service.GetExecution(r.Context(), tenantID, executionID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "execution not found")
+			_ = response.NotFound(w, "execution not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get execution")
+		_ = response.InternalError(w, "failed to get execution")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": execution,
 	})
 }
@@ -312,40 +313,26 @@ func (h *WorkflowHandler) DryRun(w http.ResponseWriter, r *http.Request) {
 
 	var input workflow.DryRunInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	result, err := h.service.DryRun(r.Context(), tenantID, workflowID, input.TestData)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to perform dry-run")
+		_ = response.InternalError(w, "failed to perform dry-run")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": result,
-	})
-}
-
-// Helper methods
-
-func (h *WorkflowHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WorkflowHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
 	})
 }
 
@@ -358,20 +345,20 @@ func (h *WorkflowHandler) ListVersions(w http.ResponseWriter, r *http.Request) {
 	_, err := h.service.GetByID(r.Context(), tenantID, workflowID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get workflow")
+		_ = response.InternalError(w, "failed to get workflow")
 		return
 	}
 
 	versions, err := h.service.ListWorkflowVersions(r.Context(), workflowID)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list workflow versions")
+		_ = response.InternalError(w, "failed to list workflow versions")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": versions,
 	})
 }
@@ -384,7 +371,7 @@ func (h *WorkflowHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid version number")
+		_ = response.BadRequest(w, "invalid version number")
 		return
 	}
 
@@ -392,24 +379,24 @@ func (h *WorkflowHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 	_, err = h.service.GetByID(r.Context(), tenantID, workflowID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get workflow")
+		_ = response.InternalError(w, "failed to get workflow")
 		return
 	}
 
 	versionData, err := h.service.GetWorkflowVersion(r.Context(), workflowID, version)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "version not found")
+			_ = response.NotFound(w, "version not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get workflow version")
+		_ = response.InternalError(w, "failed to get workflow version")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": versionData,
 	})
 }
@@ -422,21 +409,21 @@ func (h *WorkflowHandler) RestoreVersion(w http.ResponseWriter, r *http.Request)
 
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid version number")
+		_ = response.BadRequest(w, "invalid version number")
 		return
 	}
 
 	restoredWorkflow, err := h.service.RestoreWorkflowVersion(r.Context(), tenantID, workflowID, version)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow or version not found")
+			_ = response.NotFound(w, "workflow or version not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to restore workflow version")
+		_ = response.InternalError(w, "failed to restore workflow version")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": restoredWorkflow,
 	})
 }

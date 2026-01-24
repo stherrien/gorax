@@ -12,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/marketplace"
 )
 
@@ -116,11 +117,11 @@ func (h *MarketplaceHandler) ListTemplates(w http.ResponseWriter, r *http.Reques
 
 	templates, err := h.service.SearchTemplates(r.Context(), filter)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list templates")
+		_ = response.InternalError(w, "failed to list templates")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, templates)
+	_ = response.OK(w, templates)
 }
 
 // GetTemplate retrieves a single marketplace template
@@ -142,14 +143,14 @@ func (h *MarketplaceHandler) GetTemplate(w http.ResponseWriter, r *http.Request)
 	template, err := h.service.GetTemplate(r.Context(), templateID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get template")
+		_ = response.InternalError(w, "failed to get template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, template)
+	_ = response.OK(w, template)
 }
 
 // PublishTemplate publishes a new template to the marketplace
@@ -172,30 +173,30 @@ func (h *MarketplaceHandler) PublishTemplate(w http.ResponseWriter, r *http.Requ
 
 	var input marketplace.PublishTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	template, err := h.service.PublishTemplate(r.Context(), userID, userName, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			h.respondError(w, http.StatusConflict, "template with this name already exists")
+			_ = response.Conflict(w, "template with this name already exists")
 			return
 		}
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to publish template")
+		_ = response.InternalError(w, "failed to publish template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, template)
+	_ = response.Created(w, template)
 }
 
 // InstallTemplate installs a template as a workflow
@@ -221,30 +222,30 @@ func (h *MarketplaceHandler) InstallTemplate(w http.ResponseWriter, r *http.Requ
 
 	var input marketplace.InstallTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	result, err := h.service.InstallTemplate(r.Context(), tenantID, userID, templateID, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "template not found")
+			_ = response.NotFound(w, "template not found")
 			return
 		}
 		if strings.Contains(err.Error(), "already installed") {
-			h.respondError(w, http.StatusConflict, "template already installed")
+			_ = response.Conflict(w, "template already installed")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to install template")
+		_ = response.InternalError(w, "failed to install template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // RateTemplate adds or updates a rating for a template
@@ -269,26 +270,26 @@ func (h *MarketplaceHandler) RateTemplate(w http.ResponseWriter, r *http.Request
 
 	var input marketplace.RateTemplateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	review, err := h.service.RateTemplate(r.Context(), tenantID, userID, userName, templateID, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to rate template")
+		_ = response.InternalError(w, "failed to rate template")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, review)
+	_ = response.OK(w, review)
 }
 
 // GetReviews retrieves reviews for a template
@@ -330,11 +331,11 @@ func (h *MarketplaceHandler) GetReviews(w http.ResponseWriter, r *http.Request) 
 
 	reviews, err := h.service.GetReviews(r.Context(), templateID, sortBy, limit, offset)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get reviews")
+		_ = response.InternalError(w, "failed to get reviews")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, reviews)
+	_ = response.OK(w, reviews)
 }
 
 // DeleteReview deletes a review
@@ -358,14 +359,14 @@ func (h *MarketplaceHandler) DeleteReview(w http.ResponseWriter, r *http.Request
 
 	if err := h.service.DeleteReview(r.Context(), tenantID, templateID, reviewID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "review not found")
+			_ = response.NotFound(w, "review not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to delete review")
+		_ = response.InternalError(w, "failed to delete review")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // GetTrending retrieves trending templates
@@ -390,11 +391,11 @@ func (h *MarketplaceHandler) GetTrending(w http.ResponseWriter, r *http.Request)
 
 	templates, err := h.service.GetTrending(r.Context(), limit)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get trending templates")
+		_ = response.InternalError(w, "failed to get trending templates")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, templates)
+	_ = response.OK(w, templates)
 }
 
 // GetPopular retrieves popular templates
@@ -419,11 +420,11 @@ func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) 
 
 	templates, err := h.service.GetPopular(r.Context(), limit)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get popular templates")
+		_ = response.InternalError(w, "failed to get popular templates")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, templates)
+	_ = response.OK(w, templates)
 }
 
 // GetCategories retrieves all available template categories
@@ -438,10 +439,10 @@ func (h *MarketplaceHandler) GetPopular(w http.ResponseWriter, r *http.Request) 
 func (h *MarketplaceHandler) GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.categoryService.GetCategoriesWithHierarchy(r.Context())
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list categories")
+		_ = response.InternalError(w, "failed to list categories")
 		return
 	}
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": categories,
 	})
 }
@@ -463,14 +464,14 @@ func (h *MarketplaceHandler) GetCategory(w http.ResponseWriter, r *http.Request)
 	category, err := h.categoryService.GetCategory(r.Context(), categoryID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "category not found")
+			_ = response.NotFound(w, "category not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get category")
+		_ = response.InternalError(w, "failed to get category")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, category)
+	_ = response.OK(w, category)
 }
 
 // CreateCategory creates a new category (admin only)
@@ -488,30 +489,30 @@ func (h *MarketplaceHandler) GetCategory(w http.ResponseWriter, r *http.Request)
 func (h *MarketplaceHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	var input marketplace.CreateCategoryInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	category, err := h.categoryService.CreateCategory(r.Context(), input)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			h.respondError(w, http.StatusConflict, "category with this slug already exists")
+			_ = response.Conflict(w, "category with this slug already exists")
 			return
 		}
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to create category")
+		_ = response.InternalError(w, "failed to create category")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, category)
+	_ = response.Created(w, category)
 }
 
 // VoteReviewHelpful marks a review as helpful
@@ -534,14 +535,14 @@ func (h *MarketplaceHandler) VoteReviewHelpful(w http.ResponseWriter, r *http.Re
 
 	if err := h.service.VoteReviewHelpful(r.Context(), tenantID, userID, reviewID); err != nil {
 		if strings.Contains(err.Error(), "already voted") {
-			h.respondError(w, http.StatusConflict, "already voted helpful")
+			_ = response.Conflict(w, "already voted helpful")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to vote review helpful")
+		_ = response.InternalError(w, "failed to vote review helpful")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // UnvoteReviewHelpful removes a helpful vote from a review
@@ -564,14 +565,14 @@ func (h *MarketplaceHandler) UnvoteReviewHelpful(w http.ResponseWriter, r *http.
 
 	if err := h.service.UnvoteReviewHelpful(r.Context(), tenantID, userID, reviewID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "vote not found")
+			_ = response.NotFound(w, "vote not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to unvote review helpful")
+		_ = response.InternalError(w, "failed to unvote review helpful")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // ReportReview reports a review for moderation
@@ -595,25 +596,25 @@ func (h *MarketplaceHandler) ReportReview(w http.ResponseWriter, r *http.Request
 
 	var input marketplace.ReportReviewInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	if err := h.service.ReportReview(r.Context(), tenantID, userID, reviewID, input); err != nil {
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to report review")
+		_ = response.InternalError(w, "failed to report review")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // GetRatingDistribution retrieves the rating distribution for a template
@@ -631,11 +632,11 @@ func (h *MarketplaceHandler) GetRatingDistribution(w http.ResponseWriter, r *htt
 
 	distribution, err := h.service.GetRatingDistribution(r.Context(), templateID)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get rating distribution")
+		_ = response.InternalError(w, "failed to get rating distribution")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, distribution)
+	_ = response.OK(w, distribution)
 }
 
 // GetReviewReports retrieves review reports for admin moderation
@@ -671,11 +672,11 @@ func (h *MarketplaceHandler) GetReviewReports(w http.ResponseWriter, r *http.Req
 
 	reports, err := h.service.GetReviewReports(r.Context(), status, limit, offset)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get review reports")
+		_ = response.InternalError(w, "failed to get review reports")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, reports)
+	_ = response.OK(w, reports)
 }
 
 // ResolveReviewReportInput represents input for resolving a review report
@@ -704,25 +705,25 @@ func (h *MarketplaceHandler) ResolveReviewReport(w http.ResponseWriter, r *http.
 
 	var input ResolveReviewReportInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	if err := h.service.ResolveReviewReport(r.Context(), reportID, input.Status, userID, input.Notes); err != nil {
 		if strings.Contains(err.Error(), "invalid") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to resolve review report")
+		_ = response.InternalError(w, "failed to resolve review report")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // HideReviewInput represents input for hiding a review
@@ -750,25 +751,25 @@ func (h *MarketplaceHandler) HideReview(w http.ResponseWriter, r *http.Request) 
 
 	var input HideReviewInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	if err := h.service.HideReview(r.Context(), reviewID, input.Reason, userID); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "review not found")
+			_ = response.NotFound(w, "review not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to hide review")
+		_ = response.InternalError(w, "failed to hide review")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 func (h *MarketplaceHandler) getUserName(r *http.Request) string {
@@ -776,16 +777,4 @@ func (h *MarketplaceHandler) getUserName(r *http.Request) string {
 		return userName
 	}
 	return "Unknown User"
-}
-
-func (h *MarketplaceHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("failed to encode response", "error", err)
-	}
-}
-
-func (h *MarketplaceHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{"error": message})
 }

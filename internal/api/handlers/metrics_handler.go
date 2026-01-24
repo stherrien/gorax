@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -28,7 +28,7 @@ func NewMetricsHandler(repo *workflow.Repository) *MetricsHandler {
 func (h *MetricsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusUnauthorized, "tenant_id required")
+		_ = response.Unauthorized(w, "tenant_id required")
 		return
 	}
 
@@ -37,23 +37,23 @@ func (h *MetricsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Reque
 		groupBy = "day"
 	}
 	if groupBy != "hour" && groupBy != "day" {
-		h.respondError(w, http.StatusBadRequest, "groupBy must be 'hour' or 'day'")
+		_ = response.BadRequest(w, "groupBy must be 'hour' or 'day'")
 		return
 	}
 
 	startDate, endDate, err := h.parseDateRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	trends, err := h.repo.GetExecutionTrends(r.Context(), tenantID, startDate, endDate, groupBy)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get execution trends")
+		_ = response.InternalError(w, "failed to get execution trends")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"trends":    trends,
 		"startDate": startDate.Format(time.RFC3339),
 		"endDate":   endDate.Format(time.RFC3339),
@@ -66,23 +66,23 @@ func (h *MetricsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Reque
 func (h *MetricsHandler) GetDurationStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusUnauthorized, "tenant_id required")
+		_ = response.Unauthorized(w, "tenant_id required")
 		return
 	}
 
 	startDate, endDate, err := h.parseDateRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	stats, err := h.repo.GetDurationStats(r.Context(), tenantID, startDate, endDate)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get duration stats")
+		_ = response.InternalError(w, "failed to get duration stats")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"stats":     stats,
 		"startDate": startDate.Format(time.RFC3339),
 		"endDate":   endDate.Format(time.RFC3339),
@@ -95,7 +95,7 @@ func (h *MetricsHandler) GetDurationStats(w http.ResponseWriter, r *http.Request
 func (h *MetricsHandler) GetTopFailures(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusUnauthorized, "tenant_id required")
+		_ = response.Unauthorized(w, "tenant_id required")
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *MetricsHandler) GetTopFailures(w http.ResponseWriter, r *http.Request) 
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		parsedLimit, err := strconv.Atoi(limitStr)
 		if err != nil || parsedLimit <= 0 || parsedLimit > 100 {
-			h.respondError(w, http.StatusBadRequest, "limit must be between 1 and 100")
+			_ = response.BadRequest(w, "limit must be between 1 and 100")
 			return
 		}
 		limit = parsedLimit
@@ -111,17 +111,17 @@ func (h *MetricsHandler) GetTopFailures(w http.ResponseWriter, r *http.Request) 
 
 	startDate, endDate, err := h.parseDateRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	failures, err := h.repo.GetTopFailuresOptimized(r.Context(), tenantID, startDate, endDate, limit)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get top failures")
+		_ = response.InternalError(w, "failed to get top failures")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"failures":  failures,
 		"startDate": startDate.Format(time.RFC3339),
 		"endDate":   endDate.Format(time.RFC3339),
@@ -134,23 +134,23 @@ func (h *MetricsHandler) GetTopFailures(w http.ResponseWriter, r *http.Request) 
 func (h *MetricsHandler) GetTriggerBreakdown(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusUnauthorized, "tenant_id required")
+		_ = response.Unauthorized(w, "tenant_id required")
 		return
 	}
 
 	startDate, endDate, err := h.parseDateRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	breakdown, err := h.repo.GetTriggerTypeBreakdown(r.Context(), tenantID, startDate, endDate)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to get trigger breakdown")
+		_ = response.InternalError(w, "failed to get trigger breakdown")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"breakdown": breakdown,
 		"startDate": startDate.Format(time.RFC3339),
 		"endDate":   endDate.Format(time.RFC3339),
@@ -212,20 +212,4 @@ func parseDate(dateStr string) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("invalid date format: %s", dateStr)
-}
-
-// Helper methods
-func (h *MetricsHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		// Log error but can't change response at this point
-		_ = err
-	}
-}
-
-func (h *MetricsHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
 }

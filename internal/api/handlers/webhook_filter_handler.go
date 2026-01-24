@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/webhook"
 )
 
@@ -27,7 +28,7 @@ type WebhookFilterService interface {
 	CreateFilter(ctx context.Context, tenantID, webhookID string, filter *webhook.WebhookFilter) (*webhook.WebhookFilter, error)
 	UpdateFilter(ctx context.Context, tenantID, webhookID, filterID string, filter *webhook.WebhookFilter) (*webhook.WebhookFilter, error)
 	DeleteFilter(ctx context.Context, tenantID, webhookID, filterID string) error
-	TestFilters(ctx context.Context, tenantID, webhookID string, payload map[string]interface{}) (*webhook.FilterResult, error)
+	TestFilters(ctx context.Context, tenantID, webhookID string, payload map[string]any) (*webhook.FilterResult, error)
 }
 
 // NewWebhookFilterHandler creates a new webhook filter handler
@@ -41,25 +42,25 @@ func NewWebhookFilterHandler(service WebhookFilterService, logger *slog.Logger) 
 
 // CreateFilterRequest represents the request to create a filter
 type CreateFilterRequest struct {
-	FieldPath  string      `json:"fieldPath" validate:"required"`
-	Operator   string      `json:"operator" validate:"required,oneof=equals not_equals contains not_contains starts_with ends_with regex gt lt in not_in exists not_exists"`
-	Value      interface{} `json:"value"`
-	LogicGroup int         `json:"logicGroup" validate:"min=0"`
-	Enabled    bool        `json:"enabled"`
+	FieldPath  string `json:"fieldPath" validate:"required"`
+	Operator   string `json:"operator" validate:"required,oneof=equals not_equals contains not_contains starts_with ends_with regex gt lt in not_in exists not_exists"`
+	Value      any    `json:"value"`
+	LogicGroup int    `json:"logicGroup" validate:"min=0"`
+	Enabled    bool   `json:"enabled"`
 }
 
 // UpdateFilterRequest represents the request to update a filter
 type UpdateFilterRequest struct {
-	FieldPath  string      `json:"fieldPath" validate:"required"`
-	Operator   string      `json:"operator" validate:"required,oneof=equals not_equals contains not_contains starts_with ends_with regex gt lt in not_in exists not_exists"`
-	Value      interface{} `json:"value"`
-	LogicGroup int         `json:"logicGroup" validate:"min=0"`
-	Enabled    bool        `json:"enabled"`
+	FieldPath  string `json:"fieldPath" validate:"required"`
+	Operator   string `json:"operator" validate:"required,oneof=equals not_equals contains not_contains starts_with ends_with regex gt lt in not_in exists not_exists"`
+	Value      any    `json:"value"`
+	LogicGroup int    `json:"logicGroup" validate:"min=0"`
+	Enabled    bool   `json:"enabled"`
 }
 
 // TestFiltersRequest represents the request to test filters
 type TestFiltersRequest struct {
-	Payload map[string]interface{} `json:"payload" validate:"required"`
+	Payload map[string]any `json:"payload" validate:"required"`
 }
 
 // List returns all filters for a webhook
@@ -70,14 +71,14 @@ func (h *WebhookFilterHandler) List(w http.ResponseWriter, r *http.Request) {
 	filters, err := h.service.ListFilters(r.Context(), tenantID, webhookID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to list filters")
+		_ = response.InternalError(w, "failed to list filters")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": filters,
 	})
 }
@@ -91,14 +92,14 @@ func (h *WebhookFilterHandler) Get(w http.ResponseWriter, r *http.Request) {
 	filter, err := h.service.GetFilter(r.Context(), tenantID, webhookID, filterID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "filter not found")
+			_ = response.NotFound(w, "filter not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get filter")
+		_ = response.InternalError(w, "failed to get filter")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": filter,
 	})
 }
@@ -110,12 +111,12 @@ func (h *WebhookFilterHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var input CreateFilterRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -130,15 +131,15 @@ func (h *WebhookFilterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	created, err := h.service.CreateFilter(r.Context(), tenantID, webhookID, filter)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
 		h.logger.Error("failed to create filter", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to create filter")
+		_ = response.InternalError(w, "failed to create filter")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, map[string]interface{}{
+	_ = response.Created(w, map[string]any{
 		"data": created,
 	})
 }
@@ -151,12 +152,12 @@ func (h *WebhookFilterHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var input UpdateFilterRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -171,15 +172,15 @@ func (h *WebhookFilterHandler) Update(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.service.UpdateFilter(r.Context(), tenantID, webhookID, filterID, filter)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "filter not found")
+			_ = response.NotFound(w, "filter not found")
 			return
 		}
 		h.logger.Error("failed to update filter", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to update filter")
+		_ = response.InternalError(w, "failed to update filter")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": updated,
 	})
 }
@@ -193,14 +194,14 @@ func (h *WebhookFilterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	err := h.service.DeleteFilter(r.Context(), tenantID, webhookID, filterID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "filter not found")
+			_ = response.NotFound(w, "filter not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to delete filter")
+		_ = response.InternalError(w, "failed to delete filter")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // Test tests filters against a sample payload
@@ -210,39 +211,25 @@ func (h *WebhookFilterHandler) Test(w http.ResponseWriter, r *http.Request) {
 
 	var input TestFiltersRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
 	result, err := h.service.TestFilters(r.Context(), tenantID, webhookID, input.Payload)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
 		h.logger.Error("failed to test filters", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to test filters")
+		_ = response.InternalError(w, "failed to test filters")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
-}
-
-// Helper methods
-
-func (h *WebhookFilterHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WebhookFilterHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
+	_ = response.OK(w, result)
 }
