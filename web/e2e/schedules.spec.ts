@@ -95,3 +95,84 @@ test.describe('Schedules Management', () => {
     }
   })
 })
+
+test.describe('Schedule Form Validation', () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await navigateTo(authenticatedPage, 'Schedules')
+    await waitForLoading(authenticatedPage)
+    await clickButton(authenticatedPage, 'Create Schedule')
+  })
+
+  test('should show error when name is empty', async ({ authenticatedPage: page }) => {
+    // Leave name empty, fill cron expression
+    await fillFormField(page, 'Cron Expression', '0 0 * * *')
+
+    await clickButton(page, 'Create')
+
+    // Should show validation error for name
+    const errorMessage = page.locator('text=/name.*required|required.*name/i')
+    await expect(errorMessage).toBeVisible({ timeout: 5000 })
+  })
+
+  test('should show error for invalid cron expression', async ({ authenticatedPage: page }) => {
+    await fillFormField(page, 'Name', 'Test Schedule')
+
+    // Enter invalid cron expression
+    await fillFormField(page, 'Cron Expression', 'invalid cron')
+
+    await clickButton(page, 'Create')
+
+    // Should show validation error for cron
+    const errorMessage = page.locator('text=/invalid.*cron|cron.*invalid/i')
+    await expect(errorMessage).toBeVisible({ timeout: 5000 })
+  })
+
+  test('should display cron preview for valid expression', async ({ authenticatedPage: page }) => {
+    await fillFormField(page, 'Name', 'Test Schedule')
+    await fillFormField(page, 'Cron Expression', '0 9 * * 1-5')
+
+    // Should show schedule preview
+    const preview = page.locator('text=/next.*run|weekday|monday.*friday/i')
+    await expect(preview).toBeVisible({ timeout: 5000 })
+  })
+
+  test('should allow timezone selection', async ({ authenticatedPage: page }) => {
+    await fillFormField(page, 'Name', 'Test Schedule')
+    await fillFormField(page, 'Cron Expression', '0 0 * * *')
+
+    // Find and change timezone
+    const timezoneSelect = page.locator('select[name*="timezone" i], [data-testid="timezone-select"]')
+    if (await timezoneSelect.isVisible()) {
+      await timezoneSelect.selectOption('America/New_York')
+      await expect(timezoneSelect).toHaveValue('America/New_York')
+    }
+  })
+
+  test('should toggle enabled state', async ({ authenticatedPage: page }) => {
+    await fillFormField(page, 'Name', 'Test Schedule')
+    await fillFormField(page, 'Cron Expression', '0 0 * * *')
+
+    // Find and toggle enabled checkbox
+    const enabledCheckbox = page.locator('input[name*="enabled" i], [data-testid="enabled-checkbox"]')
+    if (await enabledCheckbox.isVisible()) {
+      const initialChecked = await enabledCheckbox.isChecked()
+      await enabledCheckbox.click()
+      const newChecked = await enabledCheckbox.isChecked()
+      expect(newChecked).not.toBe(initialChecked)
+    }
+  })
+
+  test('should display form error summary for multiple errors', async ({ authenticatedPage: page }) => {
+    // Submit empty form
+    await clickButton(page, 'Create')
+
+    // Should show error summary or multiple field errors
+    const errorSummary = page.locator('[data-testid="error-summary"], .error-summary')
+    const fieldErrors = page.locator('.field-error, [role="alert"]')
+
+    const hasErrorSummary = await errorSummary.isVisible()
+    const hasFieldErrors = await fieldErrors.count() > 0
+
+    expect(hasErrorSummary || hasFieldErrors).toBeTruthy()
+  })
+})
