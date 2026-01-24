@@ -72,6 +72,11 @@ func Paginated(w http.ResponseWriter, data any, limit, offset, total int) error 
 	return JSON(w, http.StatusOK, resp)
 }
 
+// OK sends a 200 OK response with the given data.
+func OK(w http.ResponseWriter, data any) error {
+	return JSON(w, http.StatusOK, data)
+}
+
 // Created sends a 201 Created response with the given data.
 func Created(w http.ResponseWriter, data any) error {
 	return JSON(w, http.StatusCreated, data)

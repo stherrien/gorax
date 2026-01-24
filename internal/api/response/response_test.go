@@ -26,9 +26,11 @@ func TestJSON(t *testing.T) {
 			wantBody:   `{"message":"hello"}`,
 		},
 		{
-			name:       "created with struct",
-			status:     http.StatusCreated,
-			data:       struct{ ID string `json:"id"` }{ID: "123"},
+			name:   "created with struct",
+			status: http.StatusCreated,
+			data: struct {
+				ID string `json:"id"`
+			}{ID: "123"},
 			wantStatus: http.StatusCreated,
 			wantBody:   `{"id":"123"}`,
 		},
@@ -179,6 +181,17 @@ func TestPaginated(t *testing.T) {
 			assert.Equal(t, tt.total, resp.Total)
 		})
 	}
+}
+
+func TestOK(t *testing.T) {
+	w := httptest.NewRecorder()
+	data := map[string]string{"status": "success"}
+
+	err := OK(w, data)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `{"status":"success"}`, w.Body.String())
 }
 
 func TestCreated(t *testing.T) {
@@ -371,6 +384,10 @@ func TestContentTypeHeader(t *testing.T) {
 		{
 			name: "Paginated",
 			fn:   func(w http.ResponseWriter) error { return Paginated(w, []string{}, 10, 0, 0) },
+		},
+		{
+			name: "OK",
+			fn:   func(w http.ResponseWriter) error { return OK(w, nil) },
 		},
 		{
 			name: "Created",

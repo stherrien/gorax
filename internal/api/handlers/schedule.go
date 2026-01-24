@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/schedule"
 	"github.com/gorax/gorax/internal/validation"
 )
@@ -34,24 +35,22 @@ func (h *ScheduleHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var input schedule.CreateScheduleInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	sched, err := h.service.Create(r.Context(), tenantID, workflowID, user.ID, input)
 	if err != nil {
 		if _, ok := err.(*schedule.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		h.logger.Error("failed to create schedule", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to create schedule")
+		_ = response.InternalError(w, "failed to create schedule")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, map[string]interface{}{
-		"data": sched,
-	})
+	_ = response.Created(w, sched)
 }
 
 // List returns all schedules for a workflow
@@ -69,15 +68,11 @@ func (h *ScheduleHandler) List(w http.ResponseWriter, r *http.Request) {
 	schedules, err := h.service.List(r.Context(), tenantID, workflowID, limit, offset)
 	if err != nil {
 		h.logger.Error("failed to list schedules", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to list schedules")
+		_ = response.InternalError(w, "failed to list schedules")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":   schedules,
-		"limit":  limit,
-		"offset": offset,
-	})
+	_ = response.Paginated(w, schedules, limit, offset, 0)
 }
 
 // ListAll returns all schedules for the tenant
@@ -94,15 +89,11 @@ func (h *ScheduleHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	schedules, err := h.service.ListAll(r.Context(), tenantID, limit, offset)
 	if err != nil {
 		h.logger.Error("failed to list all schedules", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to list schedules")
+		_ = response.InternalError(w, "failed to list schedules")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":   schedules,
-		"limit":  limit,
-		"offset": offset,
-	})
+	_ = response.Paginated(w, schedules, limit, offset, 0)
 }
 
 // Get retrieves a single schedule
@@ -113,17 +104,15 @@ func (h *ScheduleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sched, err := h.service.GetByID(r.Context(), tenantID, scheduleID)
 	if err != nil {
 		if err == schedule.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "schedule not found")
+			_ = response.NotFound(w, "schedule not found")
 			return
 		}
 		h.logger.Error("failed to get schedule", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to get schedule")
+		_ = response.InternalError(w, "failed to get schedule")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"data": sched,
-	})
+	_ = response.OK(w, sched)
 }
 
 // Update updates a schedule
@@ -133,28 +122,26 @@ func (h *ScheduleHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var input schedule.UpdateScheduleInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	sched, err := h.service.Update(r.Context(), tenantID, scheduleID, input)
 	if err != nil {
 		if err == schedule.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "schedule not found")
+			_ = response.NotFound(w, "schedule not found")
 			return
 		}
 		if _, ok := err.(*schedule.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		h.logger.Error("failed to update schedule", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to update schedule")
+		_ = response.InternalError(w, "failed to update schedule")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"data": sched,
-	})
+	_ = response.OK(w, sched)
 }
 
 // Delete deletes a schedule
@@ -165,15 +152,15 @@ func (h *ScheduleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	err := h.service.Delete(r.Context(), tenantID, scheduleID)
 	if err != nil {
 		if err == schedule.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "schedule not found")
+			_ = response.NotFound(w, "schedule not found")
 			return
 		}
 		h.logger.Error("failed to delete schedule", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to delete schedule")
+		_ = response.InternalError(w, "failed to delete schedule")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // ParseCron validates a cron expression and returns next run times
@@ -184,7 +171,7 @@ func (h *ScheduleHandler) ParseCron(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
@@ -196,11 +183,11 @@ func (h *ScheduleHandler) ParseCron(w http.ResponseWriter, r *http.Request) {
 	// Calculate next 5 run times
 	nextRun, err := h.service.ParseNextRunTime(input.CronExpression, input.Timezone)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid cron expression: "+err.Error())
+		_ = response.BadRequest(w, "invalid cron expression: "+err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.JSON(w, http.StatusOK, map[string]interface{}{
 		"valid":    true,
 		"next_run": nextRun,
 	})
@@ -215,7 +202,7 @@ func (h *ScheduleHandler) PreviewSchedule(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
@@ -235,11 +222,11 @@ func (h *ScheduleHandler) PreviewSchedule(w http.ResponseWriter, r *http.Request
 	// Get next N run times
 	nextRuns, err := h.service.GetNextRunTimes(input.CronExpression, input.Timezone, input.Count)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid cron expression: "+err.Error())
+		_ = response.BadRequest(w, "invalid cron expression: "+err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.JSON(w, http.StatusOK, map[string]interface{}{
 		"valid":     true,
 		"next_runs": nextRuns,
 		"count":     len(nextRuns),
@@ -247,16 +234,55 @@ func (h *ScheduleHandler) PreviewSchedule(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// Helper methods
+// ListExecutionHistory returns execution history for a schedule
+func (h *ScheduleHandler) ListExecutionHistory(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	scheduleID := chi.URLParam(r, "scheduleID")
 
-func (h *ScheduleHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	limit, _ := validation.ParsePaginationLimit(
+		r.URL.Query().Get("limit"),
+		validation.DefaultPaginationLimit,
+		validation.MaxPaginationLimit,
+	)
+	offset, _ := validation.ParsePaginationOffset(r.URL.Query().Get("offset"))
+
+	logs, err := h.service.ListExecutionLogs(r.Context(), tenantID, scheduleID, limit, offset)
+	if err != nil {
+		if err == schedule.ErrNotFound {
+			_ = response.NotFound(w, "schedule not found")
+			return
+		}
+		h.logger.Error("failed to list execution history", "error", err)
+		_ = response.InternalError(w, "failed to list execution history")
+		return
+	}
+
+	// Get total count
+	total, err := h.service.CountExecutionLogs(r.Context(), tenantID, scheduleID)
+	if err != nil {
+		h.logger.Error("failed to count execution logs", "error", err)
+		// Don't fail the request, just set total to 0
+		total = 0
+	}
+
+	_ = response.Paginated(w, logs, limit, offset, total)
 }
 
-func (h *ScheduleHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
+// GetExecutionLog retrieves a specific execution log
+func (h *ScheduleHandler) GetExecutionLog(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.GetTenantID(r)
+	logID := chi.URLParam(r, "logID")
+
+	log, err := h.service.GetExecutionLog(r.Context(), tenantID, logID)
+	if err != nil {
+		if err == schedule.ErrNotFound {
+			_ = response.NotFound(w, "execution log not found")
+			return
+		}
+		h.logger.Error("failed to get execution log", "error", err)
+		_ = response.InternalError(w, "failed to get execution log")
+		return
+	}
+
+	_ = response.OK(w, log)
 }
