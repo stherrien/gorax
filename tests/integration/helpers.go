@@ -12,7 +12,7 @@ import (
 )
 
 // MakeHTTPRequest is a helper to make HTTP requests in tests
-func MakeHTTPRequest(t *testing.T, client *http.Client, baseURL, method, path string, body interface{}, headers map[string]string) *http.Response {
+func MakeHTTPRequest(t *testing.T, client *http.Client, baseURL, method, path string, body any, headers map[string]string) *http.Response {
 	t.Helper()
 
 	var bodyReader io.Reader
@@ -42,8 +42,32 @@ func MakeHTTPRequest(t *testing.T, client *http.Client, baseURL, method, path st
 	return resp
 }
 
+// MakeRawRequest makes an HTTP request with a raw body (not JSON-encoded)
+func MakeRawRequest(t *testing.T, client *http.Client, baseURL, method, path string, body []byte, headers map[string]string) *http.Response {
+	t.Helper()
+
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+
+	url := baseURL + path
+	req, err := http.NewRequest(method, url, bodyReader)
+	require.NoError(t, err, "failed to create request")
+
+	// Set custom headers
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
+	require.NoError(t, err, "failed to execute request")
+
+	return resp
+}
+
 // ParseJSONResponse parses a JSON response into a struct
-func ParseJSONResponse(t *testing.T, resp *http.Response, v interface{}) {
+func ParseJSONResponse(t *testing.T, resp *http.Response, v any) {
 	t.Helper()
 
 	defer resp.Body.Close()

@@ -327,7 +327,7 @@ func (ts *TestServer) CreateTestUser(t *testing.T, tenantID, email, role string)
 }
 
 // ExecuteSQL executes a SQL statement for test setup
-func (ts *TestServer) ExecuteSQL(t *testing.T, query string, args ...interface{}) sql.Result {
+func (ts *TestServer) ExecuteSQL(t *testing.T, query string, args ...any) sql.Result {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(ts.ctx, 5*time.Second)
@@ -367,10 +367,17 @@ func (ts *TestServer) SetInRedis(t *testing.T, key, value string, expiration tim
 }
 
 // MakeRequest makes an HTTP request to the test server
-func (ts *TestServer) MakeRequest(t *testing.T, method, path string, body interface{}, headers map[string]string) *http.Response {
+func (ts *TestServer) MakeRequest(t *testing.T, method, path string, body any, headers map[string]string) *http.Response {
 	t.Helper()
 
 	return MakeHTTPRequest(t, ts.Client, ts.BaseURL, method, path, body, headers)
+}
+
+// MakeRequestWithBody makes an HTTP request with a raw byte body
+func (ts *TestServer) MakeRequestWithBody(t *testing.T, method, path string, body []byte, headers map[string]string) *http.Response {
+	t.Helper()
+
+	return MakeRawRequest(t, ts.Client, ts.BaseURL, method, path, body, headers)
 }
 
 // Helper function to slugify strings
