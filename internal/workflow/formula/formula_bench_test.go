@@ -1,6 +1,7 @@
 package formula
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -429,4 +430,298 @@ func BenchmarkBuildEnvironment(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = buildEnvironment()
 	}
+}
+
+// ============================================================================
+// CACHED EVALUATOR BENCHMARKS
+// ============================================================================
+
+// BenchmarkSimpleExpressionCached benchmarks cached evaluation of simple expressions
+func BenchmarkSimpleExpressionCached(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+	context := map[string]interface{}{
+		"value": 42,
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = evaluator.Evaluate("value * 2", context)
+	}
+}
+
+// BenchmarkComplexExpressionCached benchmarks cached evaluation of complex expressions
+func BenchmarkComplexExpressionCached(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+	context := map[string]interface{}{
+		"value":  42,
+		"factor": 2.5,
+		"offset": 10,
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = evaluator.Evaluate("(value * factor + offset) / 2", context)
+	}
+}
+
+// BenchmarkCachedVsUncached compares cached vs uncached performance
+func BenchmarkCachedVsUncached(b *testing.B) {
+	context := map[string]interface{}{
+		"value": 42,
+	}
+	expr := "value * 2 + 10"
+
+	b.Run("uncached", func(b *testing.B) {
+		evaluator := NewEvaluator()
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(expr, context)
+		}
+	})
+
+	b.Run("cached", func(b *testing.B) {
+		evaluator := NewCachedEvaluator(1000)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(expr, context)
+		}
+	})
+}
+
+// BenchmarkCachedStringOperations benchmarks cached string operations
+func BenchmarkCachedStringOperations(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+	context := map[string]interface{}{
+		"text": "Hello World",
+	}
+
+	b.Run("upper", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("upper(text)", context)
+		}
+	})
+
+	b.Run("lower", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("lower(text)", context)
+		}
+	})
+
+	b.Run("concat", func(b *testing.B) {
+		ctx := map[string]interface{}{
+			"a": "hello",
+			"b": "world",
+		}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(`concat(a, " ", b)`, ctx)
+		}
+	})
+}
+
+// BenchmarkCachedMathOperations benchmarks cached math operations
+func BenchmarkCachedMathOperations(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+
+	b.Run("round", func(b *testing.B) {
+		context := map[string]interface{}{"value": 4.7}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("round(value)", context)
+		}
+	})
+
+	b.Run("abs", func(b *testing.B) {
+		context := map[string]interface{}{"value": -42.5}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("abs(value)", context)
+		}
+	})
+
+	b.Run("min", func(b *testing.B) {
+		context := map[string]interface{}{
+			"a": 5,
+			"b": 3,
+			"c": 7,
+		}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("min(a, b, c)", context)
+		}
+	})
+}
+
+// BenchmarkCachedDateOperations benchmarks cached date operations
+func BenchmarkCachedDateOperations(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+
+	b.Run("now", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("now()", map[string]interface{}{})
+		}
+	})
+
+	b.Run("dateFormat", func(b *testing.B) {
+		context := map[string]interface{}{"date": time.Now()}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(`dateFormat(date, "2006-01-02")`, context)
+		}
+	})
+
+	b.Run("addDays", func(b *testing.B) {
+		context := map[string]interface{}{"date": time.Now()}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("addDays(date, 7)", context)
+		}
+	})
+}
+
+// BenchmarkCachedComplexWorkflowContext benchmarks cached realistic workflow context
+func BenchmarkCachedComplexWorkflowContext(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+	context := map[string]interface{}{
+		"trigger": map[string]interface{}{
+			"type": "webhook",
+			"body": map[string]interface{}{
+				"user_id": 12345,
+				"action":  "purchase",
+				"amount":  99.99,
+			},
+		},
+		"step1": map[string]interface{}{
+			"result":    "success",
+			"processed": true,
+		},
+		"step2": map[string]interface{}{
+			"validation": "passed",
+			"score":      95,
+		},
+	}
+
+	b.Run("access_nested_data", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("trigger.body.amount", context)
+		}
+	})
+
+	b.Run("calculate_from_nested", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate("trigger.body.amount * 1.1", context)
+		}
+	})
+
+	b.Run("complex_calculation", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(
+				"round((trigger.body.amount * 1.1) + (step2.score / 10))",
+				context,
+			)
+		}
+	})
+}
+
+// BenchmarkCachedMultipleEvaluations benchmarks sequential cached evaluations
+func BenchmarkCachedMultipleEvaluations(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+	context := map[string]interface{}{
+		"value": 42,
+	}
+
+	expressions := []string{
+		"value * 2",
+		"value + 10",
+		"value / 2",
+		"value - 5",
+		"round(value * 1.5)",
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, expr := range expressions {
+			_, _ = evaluator.Evaluate(expr, context)
+		}
+	}
+}
+
+// BenchmarkCachedConcurrentEvaluations benchmarks concurrent cached evaluations
+func BenchmarkCachedConcurrentEvaluations(b *testing.B) {
+	evaluator := NewCachedEvaluator(1000)
+
+	b.RunParallel(func(pb *testing.PB) {
+		context := map[string]interface{}{
+			"value": 42,
+		}
+		for pb.Next() {
+			_, _ = evaluator.Evaluate("value * 2", context)
+		}
+	})
+}
+
+// BenchmarkCacheSizes benchmarks different cache sizes
+func BenchmarkCacheSizes(b *testing.B) {
+	context := map[string]interface{}{"value": 42}
+	expr := "value * 2 + 10"
+
+	sizes := []int{10, 100, 1000, 10000}
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("size_%d", size), func(b *testing.B) {
+			evaluator := NewCachedEvaluator(size)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, _ = evaluator.Evaluate(expr, context)
+			}
+		})
+	}
+}
+
+// BenchmarkCacheHitRate benchmarks with different hit rates
+func BenchmarkCacheHitRate(b *testing.B) {
+	context := map[string]interface{}{"value": 42}
+
+	b.Run("100%_hit_rate", func(b *testing.B) {
+		evaluator := NewCachedEvaluator(1000)
+		expr := "value * 2"
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(expr, context)
+		}
+	})
+
+	b.Run("50%_hit_rate", func(b *testing.B) {
+		evaluator := NewCachedEvaluator(1000)
+		exprs := []string{"value * 2", "value * 3"}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _ = evaluator.Evaluate(exprs[i%2], context)
+		}
+	})
+
+	b.Run("0%_hit_rate", func(b *testing.B) {
+		evaluator := NewCachedEvaluator(1000)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			// Different expression each time
+			expr := fmt.Sprintf("value * %d", i)
+			_, _ = evaluator.Evaluate(expr, context)
+		}
+	})
 }

@@ -14,10 +14,24 @@ import (
 	"github.com/gorax/gorax/internal/tenant"
 )
 
+// QuotaTenantService defines the interface for tenant service operations used by quota checker
+type QuotaTenantService interface {
+	GetWorkflowCount(ctx context.Context, tenantID string) (int, error)
+	GetConcurrentExecutions(ctx context.Context, tenantID string) (int, error)
+}
+
+// QuotaRedisClient defines the interface for Redis operations used by quota checker
+type QuotaRedisClient interface {
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Incr(ctx context.Context, key string) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+	Pipeline() redis.Pipeliner
+}
+
 // QuotaChecker handles tenant quota validation
 type QuotaChecker struct {
-	tenantService *tenant.Service
-	redis         *redis.Client
+	tenantService QuotaTenantService
+	redis         QuotaRedisClient
 	logger        *slog.Logger
 }
 

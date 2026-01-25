@@ -124,8 +124,8 @@ func (i *Injector) getCredentialValue(ctx context.Context, tenantID, name string
 	// Validate and get credential
 	cred, err := i.repo.ValidateAndGet(ctx, tenantID, name)
 	if err != nil {
-		// Log failed access
-		_ = i.repo.LogAccess(ctx, &AccessLog{
+		// Log failed access (best effort - don't fail on logging error)
+		_ = i.repo.LogAccess(ctx, &AccessLog{ //nolint:errcheck
 			TenantID:     tenantID,
 			CredentialID: name,
 			AccessedBy:   injCtx.AccessedBy,
@@ -140,8 +140,8 @@ func (i *Injector) getCredentialValue(ctx context.Context, tenantID, name string
 	// The Ciphertext field contains the encrypted data (nonce + ciphertext + tag combined)
 	credData, err := i.encryption.Decrypt(ctx, cred.Ciphertext, cred.EncryptedDEK)
 	if err != nil {
-		// Log failed decryption
-		_ = i.repo.LogAccess(ctx, &AccessLog{
+		// Log failed decryption (best effort - don't fail on logging error)
+		_ = i.repo.LogAccess(ctx, &AccessLog{ //nolint:errcheck
 			TenantID:     tenantID,
 			CredentialID: cred.ID,
 			AccessedBy:   injCtx.AccessedBy,
@@ -157,11 +157,11 @@ func (i *Injector) getCredentialValue(ctx context.Context, tenantID, name string
 	// The credData.Value map might have a "key" or "token" field depending on the credential type
 	value := i.extractCredentialValue(credData.Value)
 
-	// Update access time
-	_ = i.repo.UpdateAccessTime(ctx, tenantID, cred.ID)
+	// Update access time (best effort)
+	_ = i.repo.UpdateAccessTime(ctx, tenantID, cred.ID) //nolint:errcheck
 
-	// Log successful access
-	_ = i.repo.LogAccess(ctx, &AccessLog{
+	// Log successful access (best effort - don't fail on logging error)
+	_ = i.repo.LogAccess(ctx, &AccessLog{ //nolint:errcheck
 		TenantID:     tenantID,
 		CredentialID: cred.ID,
 		AccessedBy:   injCtx.AccessedBy,

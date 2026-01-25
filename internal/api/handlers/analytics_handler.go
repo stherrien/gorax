@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/gorax/gorax/internal/analytics"
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 )
 
 // AnalyticsService defines the interface for analytics operations
@@ -40,17 +40,29 @@ func NewAnalyticsHandler(service AnalyticsService, logger *slog.Logger) *Analyti
 }
 
 // GetTenantOverview retrieves overall analytics for a tenant
-// GET /api/v1/analytics/overview
+// @Summary Get tenant analytics overview
+// @Description Returns aggregated analytics data for the tenant including total executions, success rates, and trends
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.TenantOverview "Tenant analytics overview"
+// @Failure 400 {object} map[string]string "Invalid time range"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/overview [get]
 func (h *AnalyticsHandler) GetTenantOverview(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	timeRange, err := h.parseTimeRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid time range: "+err.Error())
+		_ = response.BadRequest(w, "invalid time range: "+err.Error())
 		return
 	}
 
@@ -60,38 +72,52 @@ func (h *AnalyticsHandler) GetTenantOverview(w http.ResponseWriter, r *http.Requ
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get tenant overview")
+		_ = response.InternalError(w, "failed to get tenant overview")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, overview)
+	_ = response.OK(w, overview)
 }
 
 // GetWorkflowStats retrieves analytics for a specific workflow
-// GET /api/v1/analytics/workflows/:workflowID
+// @Summary Get workflow-specific analytics
+// @Description Returns detailed analytics for a specific workflow including execution counts, success rate, and average duration
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param workflowID path string true "Workflow ID"
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.WorkflowStats "Workflow analytics"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 404 {object} map[string]string "Workflow not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/workflows/{workflowID} [get]
 func (h *AnalyticsHandler) GetWorkflowStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	workflowID := chi.URLParam(r, "workflowID")
 	if workflowID == "" {
-		h.respondError(w, http.StatusBadRequest, "workflow ID is required")
+		_ = response.BadRequest(w, "workflow ID is required")
 		return
 	}
 
 	timeRange, err := h.parseTimeRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid time range: "+err.Error())
+		_ = response.BadRequest(w, "invalid time range: "+err.Error())
 		return
 	}
 
 	stats, err := h.service.GetWorkflowStats(r.Context(), tenantID, workflowID, timeRange)
 	if err != nil {
 		if err == analytics.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		h.logger.Error("failed to get workflow stats",
@@ -99,25 +125,38 @@ func (h *AnalyticsHandler) GetWorkflowStats(w http.ResponseWriter, r *http.Reque
 			"tenant_id", tenantID,
 			"workflow_id", workflowID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get workflow stats")
+		_ = response.InternalError(w, "failed to get workflow stats")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, stats)
+	_ = response.OK(w, stats)
 }
 
 // GetExecutionTrends retrieves execution trends over time
-// GET /api/v1/analytics/trends
+// @Summary Get execution trends
+// @Description Returns time-series data showing execution trends with configurable granularity (hour, day, week, month)
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Param granularity query string false "Time granularity (hour, day, week, month)" default(day) Enums(hour, day, week, month)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.ExecutionTrends "Execution trends data"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/trends [get]
 func (h *AnalyticsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	timeRange, err := h.parseTimeRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid time range: "+err.Error())
+		_ = response.BadRequest(w, "invalid time range: "+err.Error())
 		return
 	}
 
@@ -127,7 +166,7 @@ func (h *AnalyticsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Req
 	}
 
 	if !isValidGranularity(granularity) {
-		h.respondError(w, http.StatusBadRequest, "invalid granularity: must be hour, day, week, or month")
+		_ = response.BadRequest(w, "invalid granularity: must be hour, day, week, or month")
 		return
 	}
 
@@ -137,25 +176,38 @@ func (h *AnalyticsHandler) GetExecutionTrends(w http.ResponseWriter, r *http.Req
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get execution trends")
+		_ = response.InternalError(w, "failed to get execution trends")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, trends)
+	_ = response.OK(w, trends)
 }
 
 // GetTopWorkflows retrieves the most frequently executed workflows
-// GET /api/v1/analytics/top-workflows
+// @Summary Get top workflows by execution count
+// @Description Returns the most frequently executed workflows ordered by execution count
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Param limit query int false "Maximum number of workflows to return" default(10)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.TopWorkflows "Top workflows"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/top-workflows [get]
 func (h *AnalyticsHandler) GetTopWorkflows(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	timeRange, err := h.parseTimeRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid time range: "+err.Error())
+		_ = response.BadRequest(w, "invalid time range: "+err.Error())
 		return
 	}
 
@@ -173,25 +225,37 @@ func (h *AnalyticsHandler) GetTopWorkflows(w http.ResponseWriter, r *http.Reques
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get top workflows")
+		_ = response.InternalError(w, "failed to get top workflows")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, workflows)
+	_ = response.OK(w, workflows)
 }
 
 // GetErrorBreakdown retrieves error analysis
-// GET /api/v1/analytics/errors
+// @Summary Get error breakdown and analysis
+// @Description Returns categorized error data including error types, frequencies, and affected workflows
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (RFC3339 format)" example(2024-01-01T00:00:00Z)
+// @Param end_date query string true "End date (RFC3339 format)" example(2024-01-31T23:59:59Z)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.ErrorBreakdown "Error breakdown data"
+// @Failure 400 {object} map[string]string "Invalid parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/errors [get]
 func (h *AnalyticsHandler) GetErrorBreakdown(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	timeRange, err := h.parseTimeRange(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid time range: "+err.Error())
+		_ = response.BadRequest(w, "invalid time range: "+err.Error())
 		return
 	}
 
@@ -201,32 +265,44 @@ func (h *AnalyticsHandler) GetErrorBreakdown(w http.ResponseWriter, r *http.Requ
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get error breakdown")
+		_ = response.InternalError(w, "failed to get error breakdown")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, breakdown)
+	_ = response.OK(w, breakdown)
 }
 
 // GetNodePerformance retrieves node-level performance statistics
-// GET /api/v1/analytics/workflows/:workflowID/nodes
+// @Summary Get node performance metrics
+// @Description Returns performance statistics for individual nodes within a workflow including execution time and success rate
+// @Tags Analytics
+// @Accept json
+// @Produce json
+// @Param workflowID path string true "Workflow ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} analytics.NodePerformance "Node performance metrics"
+// @Failure 400 {object} map[string]string "Invalid workflow ID"
+// @Failure 404 {object} map[string]string "Workflow not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/analytics/workflows/{workflowID}/nodes [get]
 func (h *AnalyticsHandler) GetNodePerformance(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	workflowID := chi.URLParam(r, "workflowID")
 	if workflowID == "" {
-		h.respondError(w, http.StatusBadRequest, "workflow ID is required")
+		_ = response.BadRequest(w, "workflow ID is required")
 		return
 	}
 
 	performance, err := h.service.GetNodePerformance(r.Context(), tenantID, workflowID)
 	if err != nil {
 		if err == analytics.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		h.logger.Error("failed to get node performance",
@@ -234,11 +310,11 @@ func (h *AnalyticsHandler) GetNodePerformance(w http.ResponseWriter, r *http.Req
 			"tenant_id", tenantID,
 			"workflow_id", workflowID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get node performance")
+		_ = response.InternalError(w, "failed to get node performance")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, performance)
+	_ = response.OK(w, performance)
 }
 
 // parseTimeRange parses start_date and end_date from query parameters
@@ -274,18 +350,4 @@ func isValidGranularity(granularity analytics.Granularity) bool {
 	default:
 		return false
 	}
-}
-
-// respondJSON sends a JSON response
-func (h *AnalyticsHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("failed to encode JSON response", "error", err)
-	}
-}
-
-// respondError sends an error response
-func (h *AnalyticsHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{"error": message})
 }

@@ -298,6 +298,48 @@ func BuildTaskOverdueMessage(taskTitle string, dueDate time.Time, taskURL string
 	}
 }
 
+// BuildTaskEscalatedMessage builds a Slack message for task escalation
+func BuildTaskEscalatedMessage(taskTitle string, level int, dueDate, taskURL string) SlackMessage {
+	return SlackMessage{
+		Text: fmt.Sprintf("⚠️ Task Escalated (Level %d): %s", level, taskTitle),
+		Blocks: []SlackBlock{
+			{
+				Type: "header",
+				Text: &SlackText{
+					Type: "plain_text",
+					Text: "⚠️ Task Escalated",
+				},
+			},
+			{
+				Type: "section",
+				Text: &SlackText{
+					Type: "mrkdwn",
+					Text: fmt.Sprintf("*Task:* %s\n*Escalation Level:* %d\n*New Due Date:* %s", taskTitle, level, dueDate),
+				},
+			},
+			{
+				Type: "context",
+				Elements: []SlackElement{
+					{
+						Type: "mrkdwn",
+						Text: "Previous assignees did not respond in time. Task has been escalated to backup approvers.",
+					},
+				},
+			},
+			{
+				Type: "actions",
+				Elements: []SlackElement{
+					{
+						Type: "button",
+						Text: "View Task",
+						URL:  taskURL,
+					},
+				},
+			},
+		},
+	}
+}
+
 // BuildWorkflowExecutionMessage builds a Slack message for workflow execution
 func BuildWorkflowExecutionMessage(workflowName, status, errorMsg, executionURL string) SlackMessage {
 	emoji := "✅"

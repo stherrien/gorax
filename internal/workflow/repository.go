@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/gorax/gorax/internal/metrics"
 )
 
 var (
@@ -18,12 +20,36 @@ var (
 
 // Repository handles workflow database operations
 type Repository struct {
-	db *sqlx.DB
+	db      *sqlx.DB
+	metrics *metrics.Metrics
 }
 
 // NewRepository creates a new workflow repository
 func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{db: db}
+	return &Repository{
+		db:      db,
+		metrics: nil, // Metrics optional for backwards compatibility
+	}
+}
+
+// NewRepositoryWithMetrics creates a new workflow repository with metrics
+func NewRepositoryWithMetrics(db *sqlx.DB, m *metrics.Metrics) *Repository {
+	return &Repository{
+		db:      db,
+		metrics: m,
+	}
+}
+
+// recordQuery records database query metrics
+func (r *Repository) recordQuery(operation, table string, start time.Time, err error) {
+	if r.metrics != nil {
+		duration := time.Since(start).Seconds()
+		status := "success"
+		if err != nil {
+			status = "error"
+		}
+		r.metrics.RecordDBQuery(operation, table, status, duration)
+	}
 }
 
 // setTenantContext sets the tenant ID in the PostgreSQL session for RLS
@@ -36,6 +62,7 @@ func (r *Repository) setTenantContext(ctx context.Context, tenantID string) erro
 
 // Create inserts a new workflow
 func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, input CreateWorkflowInput) (*Workflow, error) {
+	start := time.Now()
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -51,6 +78,8 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, inp
 		id, tenantID, input.Name, input.Description, input.Definition, "draft", 1, createdBy, now, now,
 	).StructScan(&workflow)
 
+	r.recordQuery("insert", "workflows", start, err)
+
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +89,14 @@ func (r *Repository) Create(ctx context.Context, tenantID, createdBy string, inp
 
 // GetByID retrieves a workflow by ID (tenant-scoped)
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Workflow, error) {
+	start := time.Now()
 	query := `SELECT * FROM workflows WHERE id = $1 AND tenant_id = $2`
 
 	var workflow Workflow
 	err := r.db.GetContext(ctx, &workflow, query, id, tenantID)
+
+	r.recordQuery("select", "workflows", start, err)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -76,6 +109,8 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Workflo
 
 // Update updates a workflow
 func (r *Repository) Update(ctx context.Context, tenantID, id string, input UpdateWorkflowInput) (*Workflow, error) {
+	start := time.Now()
+
 	// First get the current workflow to increment version if definition changed
 	current, err := r.GetByID(ctx, tenantID, id)
 	if err != nil {
@@ -105,6 +140,8 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input Upda
 		id, tenantID, input.Name, input.Description, input.Definition, input.Status, newVersion, time.Now(),
 	).StructScan(&workflow)
 
+	r.recordQuery("update", "workflows", start, err)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -117,9 +154,13 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input Upda
 
 // Delete deletes a workflow (soft delete by setting status to 'archived')
 func (r *Repository) Delete(ctx context.Context, tenantID, id string) error {
+	start := time.Now()
 	query := `UPDATE workflows SET status = 'archived', updated_at = $3 WHERE id = $1 AND tenant_id = $2`
 
 	result, err := r.db.ExecContext(ctx, query, id, tenantID, time.Now())
+
+	r.recordQuery("delete", "workflows", start, err)
+
 	if err != nil {
 		return err
 	}
@@ -169,6 +210,7 @@ func (r *Repository) Count(ctx context.Context, tenantID string) (int, error) {
 
 // CreateExecution creates a new execution record
 func (r *Repository) CreateExecution(ctx context.Context, tenantID, workflowID string, workflowVersion int, triggerType string, triggerData []byte) (*Execution, error) {
+	start := time.Now()
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -192,6 +234,8 @@ func (r *Repository) CreateExecution(ctx context.Context, tenantID, workflowID s
 		id, tenantID, workflowID, workflowVersion, "pending", triggerType, triggerDataParam, now,
 	).StructScan(&execution)
 
+	r.recordQuery("insert", "executions", start, err)
+
 	if err != nil {
 		return nil, err
 	}
@@ -201,10 +245,14 @@ func (r *Repository) CreateExecution(ctx context.Context, tenantID, workflowID s
 
 // GetExecutionByID retrieves an execution by ID
 func (r *Repository) GetExecutionByID(ctx context.Context, tenantID, id string) (*Execution, error) {
+	start := time.Now()
 	query := `SELECT * FROM executions WHERE id = $1 AND tenant_id = $2`
 
 	var execution Execution
 	err := r.db.GetContext(ctx, &execution, query, id, tenantID)
+
+	r.recordQuery("select", "executions", start, err)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -217,6 +265,7 @@ func (r *Repository) GetExecutionByID(ctx context.Context, tenantID, id string) 
 
 // UpdateExecutionStatus updates an execution's status
 func (r *Repository) UpdateExecutionStatus(ctx context.Context, id string, status ExecutionStatus, outputData []byte, errorMessage *string) error {
+	start := time.Now()
 	now := time.Now()
 
 	var startedAt, completedAt *time.Time
@@ -246,6 +295,9 @@ func (r *Repository) UpdateExecutionStatus(ctx context.Context, id string, statu
 	`
 
 	_, err := r.db.ExecContext(ctx, query, id, status, outputDataParam, errorMessage, startedAt, completedAt)
+
+	r.recordQuery("update", "executions", start, err)
+
 	return err
 }
 
@@ -283,6 +335,7 @@ func (r *Repository) ListExecutions(ctx context.Context, tenantID string, workfl
 
 // CreateStepExecution creates a new step execution record
 func (r *Repository) CreateStepExecution(ctx context.Context, executionID, nodeID, nodeType string, inputData []byte) (*StepExecution, error) {
+	start := time.Now()
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -306,6 +359,8 @@ func (r *Repository) CreateStepExecution(ctx context.Context, executionID, nodeI
 		id, executionID, nodeID, nodeType, "running", inputDataParam, now,
 	).StructScan(&stepExecution)
 
+	r.recordQuery("insert", "step_executions", start, err)
+
 	if err != nil {
 		return nil, err
 	}
@@ -315,6 +370,7 @@ func (r *Repository) CreateStepExecution(ctx context.Context, executionID, nodeI
 
 // UpdateStepExecution updates a step execution with results
 func (r *Repository) UpdateStepExecution(ctx context.Context, id, status string, outputData []byte, errorMessage *string) error {
+	start := time.Now()
 	now := time.Now()
 
 	// Handle nil or empty output data
@@ -336,6 +392,9 @@ func (r *Repository) UpdateStepExecution(ctx context.Context, id, status string,
 	`
 
 	_, err := r.db.ExecContext(ctx, query, id, status, outputDataParam, errorMessage, now)
+
+	r.recordQuery("update", "step_executions", start, err)
+
 	return err
 }
 

@@ -4,41 +4,86 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"sync"
 	"time"
 
-	"github.com/dop251/goja"
+	"github.com/gorax/gorax/internal/executor/javascript"
 )
 
 // ScriptAction implements the Action interface for sandboxed JavaScript execution
 //
 // Security Considerations:
-// - Uses goja runtime which is completely sandboxed (no file system, network, or goroutines)
+// - Uses the secure JavaScript sandbox engine with comprehensive security restrictions
+// - Blocks dangerous APIs: require, process, eval, Function, file system, network
 // - Enforces execution timeout to prevent infinite loops
-// - Memory limits can be configured (future enhancement with goja runtime options)
-// - No access to Go stdlib or external modules unless explicitly provided
+// - Enforces memory limits to prevent memory exhaustion attacks
+// - Enforces call stack limits to prevent stack overflow attacks
 // - Scripts run in isolated VM instances (no shared state between executions)
-type ScriptAction struct{}
+// - VM pooling for efficient resource management
+// - Comprehensive audit logging for security events
+type ScriptAction struct {
+	engine     *javascript.Engine
+	engineOnce sync.Once
+	engineErr  error
+	logger     *slog.Logger
+}
 
 // ScriptActionConfig represents the configuration for a script action
 type ScriptActionConfig struct {
 	Script      string `json:"script"`                 // JavaScript code to execute
 	Timeout     int    `json:"timeout,omitempty"`      // Max execution time in seconds (default: 30)
-	MemoryLimit int    `json:"memory_limit,omitempty"` // Max memory in MB (future enhancement)
+	MemoryLimit int64  `json:"memory_limit,omitempty"` // Max memory in MB (default: 128)
 }
 
 // ScriptActionResult represents the result of a script execution
 type ScriptActionResult struct {
-	Result interface{} `json:"result"` // The value returned by the script
+	Result      any                       `json:"result"`                 // The value returned by the script
+	ConsoleLogs []javascript.ConsoleEntry `json:"console_logs,omitempty"` // Captured console output
+	Duration    time.Duration             `json:"duration"`               // Execution duration
+	MemoryDelta int64                     `json:"memory_delta,omitempty"` // Memory change during execution
 }
 
 const (
-	defaultScriptTimeout = 30 // seconds
+	defaultScriptTimeout  = 30 // seconds
+	maxScriptTimeout      = 60 // seconds
+	defaultEnginePoolSize = 10
 )
+
+// NewScriptAction creates a new ScriptAction with default configuration
+func NewScriptAction() *ScriptAction {
+	return &ScriptAction{
+		logger: slog.Default(),
+	}
+}
+
+// NewScriptActionWithLogger creates a new ScriptAction with a custom logger
+func NewScriptActionWithLogger(logger *slog.Logger) *ScriptAction {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &ScriptAction{
+		logger: logger,
+	}
+}
+
+// getEngine returns the shared JavaScript engine, creating it if necessary
+func (a *ScriptAction) getEngine() (*javascript.Engine, error) {
+	a.engineOnce.Do(func() {
+		config := &javascript.EngineConfig{
+			Limits:               javascript.DefaultLimits(),
+			SandboxConfig:        javascript.DefaultSandboxConfig(),
+			PoolSize:             defaultEnginePoolSize,
+			Logger:               a.logger,
+			EnableConsoleCapture: true,
+		}
+		a.engine, a.engineErr = javascript.NewEngine(config)
+	})
+	return a.engine, a.engineErr
+}
 
 // Execute implements the Action interface
 func (a *ScriptAction) Execute(ctx context.Context, input *ActionInput) (*ActionOutput, error) {
-	startTime := time.Now()
-
 	// Parse config
 	configBytes, err := json.Marshal(input.Config)
 	if err != nil {
@@ -55,139 +100,97 @@ func (a *ScriptAction) Execute(ctx context.Context, input *ActionInput) (*Action
 		return nil, fmt.Errorf("script is required")
 	}
 
+	// Get the JavaScript engine
+	engine, err := a.getEngine()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize JavaScript engine: %w", err)
+	}
+
 	// Determine timeout
 	timeout := time.Duration(config.Timeout) * time.Second
 	if timeout <= 0 {
 		timeout = defaultScriptTimeout * time.Second
 	}
+	if timeout > maxScriptTimeout*time.Second {
+		timeout = maxScriptTimeout * time.Second
+	}
 
-	// Execute script with timeout
-	result, err := a.executeScript(ctx, config.Script, input.Context, timeout)
+	// Build execution context
+	execCtx := javascript.FromWorkflowContext(input.Context)
+
+	// Extract metadata for tracing
+	tenantID, _ := extractString(input.Context, "env", "tenant_id")
+	workflowID, _ := extractString(input.Context, "env", "workflow_id")
+	nodeID, _ := extractString(input.Context, "env", "node_id")
+	executionID, _ := extractString(input.Context, "env", "execution_id")
+
+	// Configure execution
+	executeConfig := &javascript.ExecuteConfig{
+		Script:      config.Script,
+		Context:     execCtx,
+		Timeout:     timeout,
+		ExecutionID: executionID,
+		TenantID:    tenantID,
+		WorkflowID:  workflowID,
+		NodeID:      nodeID,
+	}
+
+	// Execute the script in the sandboxed environment
+	result, err := engine.Execute(ctx, executeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate execution time
-	executionTime := time.Since(startTime).Milliseconds()
-
 	// Create output
 	output := NewActionOutput(&ScriptActionResult{
-		Result: result,
+		Result:      result.Result,
+		ConsoleLogs: result.ConsoleLogs,
+		Duration:    result.Duration,
+		MemoryDelta: result.MemoryDelta,
 	})
-	output.WithMetadata("execution_time_ms", executionTime)
+	output.WithMetadata("execution_time_ms", result.Duration.Milliseconds())
+	output.WithMetadata("execution_id", result.ExecutionID)
+	output.WithMetadata("memory_delta_bytes", result.MemoryDelta)
+	output.WithMetadata("console_log_count", len(result.ConsoleLogs))
 
 	return output, nil
 }
 
-// executeScript executes JavaScript code in a sandboxed environment
-func (a *ScriptAction) executeScript(ctx context.Context, script string, execContext map[string]interface{}, timeout time.Duration) (interface{}, error) {
-	// Create new goja runtime (isolated sandbox)
-	vm := goja.New()
-
-	// Set up timeout mechanism
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	// Channel to receive result or error
-	type result struct {
-		value interface{}
-		err   error
+// Close releases resources held by the ScriptAction
+func (a *ScriptAction) Close() error {
+	if a.engine != nil {
+		return a.engine.Close()
 	}
-	resultChan := make(chan result, 1)
-
-	// Execute script in goroutine to support timeout
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				resultChan <- result{
-					err: fmt.Errorf("script panic: %v", r),
-				}
-			}
-		}()
-
-		// Inject context into the VM
-		if err := a.injectContext(vm, execContext); err != nil {
-			resultChan <- result{err: err}
-			return
-		}
-
-		// Enable interrupts for timeout support
-		vm.SetMaxCallStackSize(1000) // Prevent stack overflow attacks
-
-		// Wrap script in an IIFE (Immediately Invoked Function Expression)
-		// This allows 'return' statements to work properly
-		wrappedScript := "(function() {\n" + script + "\n})();"
-
-		// Run the script
-		val, err := vm.RunString(wrappedScript)
-		if err != nil {
-			resultChan <- result{err: fmt.Errorf("script execution failed: %w", err)}
-			return
-		}
-
-		// Export result to Go value
-		exported := a.exportValue(val)
-		resultChan <- result{value: exported}
-	}()
-
-	// Wait for result or timeout
-	select {
-	case res := <-resultChan:
-		return res.value, res.err
-	case <-timeoutCtx.Done():
-		// Attempt to interrupt the VM
-		vm.Interrupt("execution timeout")
-		return nil, fmt.Errorf("script execution timeout after %v", timeout)
-	}
-}
-
-// injectContext injects the execution context into the JavaScript VM
-func (a *ScriptAction) injectContext(vm *goja.Runtime, execContext map[string]interface{}) error {
-	// Create context object in JavaScript
-	contextObj := vm.NewObject()
-
-	// Convert execContext map to goja values
-	for key, value := range execContext {
-		gojaValue := vm.ToValue(value)
-		if err := contextObj.Set(key, gojaValue); err != nil {
-			return fmt.Errorf("failed to set context.%s: %w", key, err)
-		}
-	}
-
-	// Set context as global variable
-	if err := vm.Set("context", contextObj); err != nil {
-		return fmt.Errorf("failed to set context global: %w", err)
-	}
-
 	return nil
 }
 
-// exportValue converts a goja.Value to a Go interface{} value
-func (a *ScriptAction) exportValue(val goja.Value) interface{} {
-	if val == nil || goja.IsUndefined(val) || goja.IsNull(val) {
-		return nil
+// extractString extracts a string value from a nested map
+func extractString(m map[string]any, keys ...string) (string, bool) {
+	if m == nil || len(keys) == 0 {
+		return "", false
 	}
 
-	exported := val.Export()
+	current := any(m)
+	for i, key := range keys {
+		currentMap, ok := current.(map[string]any)
+		if !ok {
+			return "", false
+		}
 
-	// Handle special cases for better JSON serialization
-	switch v := exported.(type) {
-	case map[string]interface{}:
-		// Already correct type
-		return v
-	case []interface{}:
-		// Already correct type
-		return v
-	case string, int, int32, int64, float32, float64, bool:
-		// Primitive types
-		return v
-	default:
-		// For other types, try to convert to primitive
-		return exported
+		val, exists := currentMap[key]
+		if !exists {
+			return "", false
+		}
+
+		if i == len(keys)-1 {
+			if str, ok := val.(string); ok {
+				return str, true
+			}
+			return "", false
+		}
+
+		current = val
 	}
-}
 
-// Helper function for creating script actions (for testing)
-func NewScriptAction() *ScriptAction {
-	return &ScriptAction{}
+	return "", false
 }

@@ -14,9 +14,13 @@ type ServiceRepositoryInterface interface {
 	Update(ctx context.Context, tenantID, id string, input *UpdateCredentialInput) (*Credential, error)
 	Delete(ctx context.Context, tenantID, id string) error
 	List(ctx context.Context, tenantID string, filter CredentialListFilter) ([]*Credential, error)
+	ListWithPagination(ctx context.Context, tenantID string, filter CredentialListFilter, limit, offset int) ([]*Credential, int, error)
 	UpdateLastUsedAt(ctx context.Context, tenantID, id string) error
 	LogAccess(ctx context.Context, log *AccessLog) error
 	GetAccessLogs(ctx context.Context, credentialID string, limit, offset int) ([]*AccessLog, error)
+	RotateCredential(ctx context.Context, tenantID, credentialID, userID string, newCred *Credential, reason string) (*Credential, error)
+	GetVersions(ctx context.Context, tenantID, credentialID string) ([]*CredentialVersion, error)
+	GetExpiredCredentials(ctx context.Context, tenantID string, withinDuration time.Duration) ([]*Credential, error)
 }
 
 // ServiceImpl implements the Service interface
@@ -94,6 +98,11 @@ func (s *ServiceImpl) GetValue(ctx context.Context, tenantID, credentialID, user
 func (s *ServiceImpl) Create(ctx context.Context, tenantID, userID string, input CreateCredentialInput) (*Credential, error) {
 	// Validate input
 	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Validate credential value based on type
+	if err := ValidateCredentialValue(input.Type, input.Value); err != nil {
 		return nil, err
 	}
 
@@ -220,16 +229,21 @@ func (s *ServiceImpl) Delete(ctx context.Context, tenantID, credentialID, userID
 	return nil
 }
 
-// Rotate creates a new version of the credential value
+// Rotate creates a new version of the credential value with proper version tracking
 func (s *ServiceImpl) Rotate(ctx context.Context, tenantID, credentialID, userID string, input RotateCredentialInput) (*Credential, error) {
 	// Validate input
 	if err := input.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Get existing credential to verify it exists
+	// Get existing credential to verify it exists and get its type for validation
 	existing, err := s.repo.GetByID(ctx, tenantID, credentialID)
 	if err != nil {
+		return nil, err
+	}
+
+	// Validate new credential value based on existing credential type
+	if err := ValidateCredentialValue(existing.Type, input.Value); err != nil {
 		return nil, err
 	}
 
@@ -240,39 +254,8 @@ func (s *ServiceImpl) Rotate(ctx context.Context, tenantID, credentialID, userID
 		return nil, fmt.Errorf("failed to encrypt credential: %w", err)
 	}
 
-	// Update the credential with new encrypted data
-	// We need to update the credential directly in the database
-	existing.EncryptedDEK = encrypted.EncryptedDEK
-	existing.Ciphertext = encrypted.Ciphertext
-	existing.Nonce = encrypted.Nonce
-	existing.AuthTag = encrypted.AuthTag
-	existing.KMSKeyID = encrypted.KMSKeyID
-	existing.UpdatedAt = time.Now().UTC()
-
-	// For rotation, we update via a special method that updates encrypted fields
-	// Since the standard Update doesn't touch encrypted fields, we'll update via Create
-	// Actually, we need to update the existing record. Let me use a workaround.
-	// We'll delete and recreate with the same ID, or update the encrypted fields directly.
-	// For simplicity, we'll update the status to trigger an update, then manually update encrypted fields.
-
-	// For now, let's update via repository Update with the encrypted data attached
-	// This requires the repository to handle encrypted field updates during rotation
-	// Since our Update doesn't support this, we'll need to implement it differently
-
-	// Workaround: Delete and recreate with same properties
-	if err := s.repo.Delete(ctx, tenantID, credentialID); err != nil {
-		return nil, fmt.Errorf("failed to rotate credential: %w", err)
-	}
-
-	// Recreate with new encrypted data
-	rotatedCred := &Credential{
-		ID:           credentialID, // Keep the same ID
-		Name:         existing.Name,
-		Description:  existing.Description,
-		Type:         existing.Type,
-		Status:       existing.Status,
-		ExpiresAt:    existing.ExpiresAt,
-		Metadata:     existing.Metadata,
+	// Create new credential struct with encrypted data for rotation
+	newCred := &Credential{
 		EncryptedDEK: encrypted.EncryptedDEK,
 		Ciphertext:   encrypted.Ciphertext,
 		Nonce:        encrypted.Nonce,
@@ -280,9 +263,16 @@ func (s *ServiceImpl) Rotate(ctx context.Context, tenantID, credentialID, userID
 		KMSKeyID:     encrypted.KMSKeyID,
 	}
 
-	created, err := s.repo.Create(ctx, tenantID, userID, rotatedCred)
+	// Use the repository's RotateCredential method which handles version tracking
+	rotated, err := s.repo.RotateCredential(ctx, tenantID, credentialID, userID, newCred, "manual rotation")
 	if err != nil {
-		return nil, fmt.Errorf("failed to recreate credential during rotation: %w", err)
+		s.logger.Error("credential rotation failed",
+			"error", err,
+			"tenant_id", tenantID,
+			"credential_id", credentialID,
+			"user_id", userID,
+		)
+		return nil, fmt.Errorf("failed to rotate credential: %w", err)
 	}
 
 	// Log access
@@ -296,12 +286,16 @@ func (s *ServiceImpl) Rotate(ctx context.Context, tenantID, credentialID, userID
 	}
 	_ = s.repo.LogAccess(ctx, accessLog)
 
-	return created, nil
+	s.logger.Info("credential rotated",
+		"credential_id", credentialID,
+		"tenant_id", tenantID,
+		"user_id", userID,
+	)
+
+	return rotated, nil
 }
 
 // ListVersions returns all versions of a credential
-// Note: Current implementation doesn't track versions separately
-// This would require a credential_versions table for full support
 func (s *ServiceImpl) ListVersions(ctx context.Context, tenantID, credentialID string) ([]*CredentialValue, error) {
 	// Verify credential exists
 	_, err := s.repo.GetByID(ctx, tenantID, credentialID)
@@ -309,9 +303,30 @@ func (s *ServiceImpl) ListVersions(ctx context.Context, tenantID, credentialID s
 		return nil, err
 	}
 
-	// For now, return empty list as we don't track versions separately
-	// Full version tracking would require additional database schema
-	return []*CredentialValue{}, nil
+	// Get versions from repository
+	versions, err := s.repo.GetVersions(ctx, tenantID, credentialID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get versions: %w", err)
+	}
+
+	// Convert CredentialVersion to CredentialValue for API compatibility
+	var values []*CredentialValue
+	for _, v := range versions {
+		values = append(values, &CredentialValue{
+			ID:           v.ID,
+			CredentialID: v.CredentialID,
+			Version:      v.Version,
+			CreatedAt:    v.CreatedAt,
+			CreatedBy:    v.CreatedBy,
+			IsActive:     v.IsActive,
+		})
+	}
+
+	if values == nil {
+		values = []*CredentialValue{}
+	}
+
+	return values, nil
 }
 
 // GetAccessLog returns access log entries for a credential

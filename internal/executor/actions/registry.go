@@ -18,10 +18,14 @@ func NewRegistry() *Registry {
 	}
 
 	// Register built-in actions
-	r.Register("action:http", func() Action { return &HTTPAction{} })
+	r.Register("action:http", func() Action { return NewHTTPAction() })
 	r.Register("action:transform", func() Action { return &TransformAction{} })
 	r.Register("action:formula", func() Action { return &FormulaAction{} })
 	r.Register("action:code", func() Action { return &ScriptAction{} })
+
+	// Register error handling actions
+	// Note: Try and Retry actions require special initialization with executor callbacks
+	// They will be registered separately during executor initialization
 
 	return r
 }

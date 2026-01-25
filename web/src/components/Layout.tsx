@@ -2,21 +2,34 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useThemeContext } from '../contexts/ThemeContext'
 
 const navigation = [
-  { name: 'Dashboard', href: '/' },
-  { name: 'Workflows', href: '/workflows' },
-  { name: 'Marketplace', href: '/marketplace' },
-  { name: 'AI Builder', href: '/ai/builder' },
-  { name: 'Webhooks', href: '/webhooks' },
-  { name: 'Schedules', href: '/schedules' },
-  { name: 'Executions', href: '/executions' },
-  { name: 'Analytics', href: '/analytics' },
-  { name: 'Credentials', href: '/credentials' },
-  { name: 'Docs', href: '/docs' },
+  { name: 'Dashboard', href: '/', adminOnly: false },
+  { name: 'Workflows', href: '/workflows', adminOnly: false },
+  { name: 'Monitoring', href: '/monitoring', adminOnly: false },
+  { name: 'Marketplace', href: '/marketplace', adminOnly: false },
+  { name: 'AI Builder', href: '/ai/builder', adminOnly: false },
+  { name: 'Webhooks', href: '/webhooks', adminOnly: false },
+  { name: 'Schedules', href: '/schedules', adminOnly: false },
+  { name: 'Executions', href: '/executions', adminOnly: false },
+  { name: 'Analytics', href: '/analytics', adminOnly: false },
+  { name: 'Credentials', href: '/credentials', adminOnly: false },
+  { name: 'OAuth', href: '/oauth/connections', adminOnly: false },
+  { name: 'Docs', href: '/docs', adminOnly: false },
+]
+
+const adminNavigation = [
+  { name: 'Users', href: '/admin/users' },
+  { name: 'Tenants', href: '/admin/tenants' },
+  { name: 'SSO Settings', href: '/admin/sso' },
+  { name: 'Audit Logs', href: '/admin/audit-logs' },
 ]
 
 export default function Layout() {
   const location = useLocation()
   const { theme, isDark, toggleTheme } = useThemeContext()
+
+  // TODO: Replace with actual user role from auth context
+  // For now, check localStorage for dev mode
+  const isAdmin = localStorage.getItem('user_role') === 'admin' || true // Enable for dev
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
@@ -50,6 +63,36 @@ export default function Layout() {
               </Link>
             )
           })}
+
+          {/* Admin Section */}
+          {isAdmin && (
+            <>
+              <div className={`mt-6 mb-2 px-4 text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Admin
+              </div>
+              {adminNavigation.map((item) => {
+                const isActive = location.pathname === item.href ||
+                  location.pathname.startsWith(item.href)
+
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`
+                      flex items-center px-4 py-3 mb-1 rounded-lg text-sm font-medium transition-colors
+                      ${isActive
+                        ? 'bg-primary-600 text-white'
+                        : isDark
+                          ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
+                    `}
+                  >
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </>
+          )}
         </nav>
       </div>
 

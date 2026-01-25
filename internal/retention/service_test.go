@@ -33,6 +33,14 @@ func (m *MockRepository) DeleteOldExecutions(ctx context.Context, tenantID strin
 	return args.Get(0).(*CleanupResult), args.Error(1)
 }
 
+func (m *MockRepository) ArchiveAndDeleteOldExecutions(ctx context.Context, tenantID string, cutoffDate time.Time, batchSize int) (*CleanupResult, error) {
+	args := m.Called(ctx, tenantID, cutoffDate, batchSize)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*CleanupResult), args.Error(1)
+}
+
 func (m *MockRepository) GetTenantsWithRetention(ctx context.Context) ([]string, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -237,6 +245,8 @@ func TestService_CleanupOldExecutions(t *testing.T) {
 
 			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 			config := DefaultConfig()
+			// Disable archival for these tests to use DeleteOldExecutions
+			config.ArchiveBeforeDelete = false
 			service := NewService(repo, logger, config)
 
 			got, err := service.CleanupOldExecutions(context.Background(), tt.tenantID)
@@ -333,6 +343,8 @@ func TestService_CleanupAllTenants(t *testing.T) {
 
 			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 			config := DefaultConfig()
+			// Disable archival for these tests to use DeleteOldExecutions
+			config.ArchiveBeforeDelete = false
 			service := NewService(repo, logger, config)
 
 			got, err := service.CleanupAllTenants(context.Background())
@@ -396,4 +408,87 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 90, config.DefaultRetentionDays)
 	assert.Equal(t, 1000, config.BatchSize)
 	assert.True(t, config.EnableAuditLog)
+	assert.True(t, config.ArchiveBeforeDelete)
+}
+
+func TestService_CleanupOldExecutions_WithArchival(t *testing.T) {
+	tests := []struct {
+		name      string
+		tenantID  string
+		mockSetup func(*MockRepository)
+		want      *CleanupResult
+		wantErr   bool
+	}{
+		{
+			name:     "successful archival and cleanup",
+			tenantID: "tenant-1",
+			mockSetup: func(m *MockRepository) {
+				policy := &RetentionPolicy{
+					TenantID:      "tenant-1",
+					RetentionDays: 30,
+					Enabled:       true,
+				}
+				m.On("GetRetentionPolicy", mock.Anything, "tenant-1").Return(policy, nil)
+
+				result := &CleanupResult{
+					ExecutionsDeleted:     150,
+					ExecutionsArchived:    150,
+					StepExecutionsDeleted: 450,
+					BatchesProcessed:      2,
+				}
+				m.On("ArchiveAndDeleteOldExecutions", mock.Anything, "tenant-1", mock.AnythingOfType("time.Time"), 1000).Return(result, nil)
+				m.On("LogCleanup", mock.Anything, mock.MatchedBy(func(log *CleanupLog) bool {
+					return log.TenantID == "tenant-1" && log.ExecutionsArchived == 150
+				})).Return(nil)
+			},
+			want: &CleanupResult{
+				ExecutionsDeleted:     150,
+				ExecutionsArchived:    150,
+				StepExecutionsDeleted: 450,
+				BatchesProcessed:      2,
+			},
+			wantErr: false,
+		},
+		{
+			name:     "archival error",
+			tenantID: "tenant-2",
+			mockSetup: func(m *MockRepository) {
+				policy := &RetentionPolicy{
+					TenantID:      "tenant-2",
+					RetentionDays: 30,
+					Enabled:       true,
+				}
+				m.On("GetRetentionPolicy", mock.Anything, "tenant-2").Return(policy, nil)
+				m.On("ArchiveAndDeleteOldExecutions", mock.Anything, "tenant-2", mock.AnythingOfType("time.Time"), 1000).Return(nil, errors.New("archival error"))
+				m.On("LogCleanup", mock.Anything, mock.AnythingOfType("*retention.CleanupLog")).Return(nil)
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := new(MockRepository)
+			tt.mockSetup(repo)
+
+			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			config := DefaultConfig()
+			// Enable archival (default behavior)
+			config.ArchiveBeforeDelete = true
+			service := NewService(repo, logger, config)
+
+			got, err := service.CleanupOldExecutions(context.Background(), tt.tenantID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+
+			repo.AssertExpectations(t)
+		})
+	}
 }

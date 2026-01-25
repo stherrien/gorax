@@ -7,7 +7,17 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/gorax/gorax/internal/security"
 )
+
+// newTestHTTPAction creates an HTTP action with SSRF protection disabled for testing
+func newTestHTTPAction() *HTTPAction {
+	validator := security.NewURLValidatorWithConfig(&security.URLValidatorConfig{
+		Enabled: false, // Disable for test servers on localhost
+	})
+	return NewHTTPActionWithValidator(validator)
+}
 
 func TestHTTPAction_Execute_GET(t *testing.T) {
 	// Create test server
@@ -25,7 +35,7 @@ func TestHTTPAction_Execute_GET(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -85,7 +95,7 @@ func TestHTTPAction_Execute_POST(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "POST",
 		URL:    server.URL,
@@ -124,7 +134,7 @@ func TestHTTPAction_Execute_WithHeaders(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -160,7 +170,7 @@ func TestHTTPAction_Execute_WithInterpolation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "POST",
 		URL:    server.URL + "/users",
@@ -212,7 +222,7 @@ func TestHTTPAction_Execute_BasicAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -251,7 +261,7 @@ func TestHTTPAction_Execute_BearerAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -288,7 +298,7 @@ func TestHTTPAction_Execute_APIKeyAuth(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -326,7 +336,7 @@ func TestHTTPAction_Execute_CustomAPIKeyHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -357,7 +367,7 @@ func TestHTTPAction_Execute_Timeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method:  "GET",
 		URL:     server.URL,
@@ -385,7 +395,7 @@ func TestHTTPAction_Execute_Timeout(t *testing.T) {
 }
 
 func TestHTTPAction_Execute_InvalidMethod(t *testing.T) {
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "INVALID",
 		URL:    "http://example.com",
@@ -400,7 +410,7 @@ func TestHTTPAction_Execute_InvalidMethod(t *testing.T) {
 }
 
 func TestHTTPAction_Execute_MissingURL(t *testing.T) {
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    "",
@@ -422,7 +432,7 @@ func TestHTTPAction_Execute_NonJSONResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	action := &HTTPAction{}
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
@@ -474,28 +484,207 @@ func TestIsValidHTTPMethod(t *testing.T) {
 }
 
 func TestExecuteHTTP_LegacyFunction(t *testing.T) {
+	// Note: The legacy function ExecuteHTTP uses the default validator with SSRF enabled.
+	// This test uses a non-loopback URL pattern to test the function works.
+	// In real usage, SSRF protection would block loopback addresses.
+
+	// Test that the function validates URLs properly
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "http://127.0.0.1/test", // This should be blocked by SSRF
+	}
+
+	_, err := ExecuteHTTP(context.Background(), config, nil)
+
+	// Should get SSRF protection error
+	if err == nil {
+		t.Error("Expected SSRF protection error for loopback address")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+// SSRF Protection Tests
+
+func TestHTTPAction_SSRFProtection_BlocksLoopback(t *testing.T) {
+	action := NewHTTPAction()
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "http://127.0.0.1:8080/admin",
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected SSRF protection to block loopback address")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+func TestHTTPAction_SSRFProtection_BlocksLocalhost(t *testing.T) {
+	action := NewHTTPAction()
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "http://localhost/api",
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected SSRF protection to block localhost")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+func TestHTTPAction_SSRFProtection_BlocksPrivateIP(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"10.x.x.x", "http://10.0.0.1/api"},
+		{"172.16.x.x", "http://172.16.0.1/api"},
+		{"192.168.x.x", "http://192.168.1.1/api"},
+	}
+
+	action := NewHTTPAction()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := HTTPActionConfig{
+				Method: "GET",
+				URL:    tt.url,
+			}
+
+			input := NewActionInput(config, nil)
+			_, err := action.Execute(context.Background(), input)
+
+			if err == nil {
+				t.Errorf("Expected SSRF protection to block private IP: %s", tt.url)
+			}
+
+			if err != nil && !contains(err.Error(), "SSRF protection") {
+				t.Errorf("Expected SSRF protection error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestHTTPAction_SSRFProtection_BlocksAWSMetadata(t *testing.T) {
+	action := NewHTTPAction()
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "http://169.254.169.254/latest/meta-data/",
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected SSRF protection to block AWS metadata service")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+func TestHTTPAction_SSRFProtection_BlocksFileScheme(t *testing.T) {
+	action := NewHTTPAction()
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "file:///etc/passwd",
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected SSRF protection to block file:// scheme")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+func TestHTTPAction_SSRFProtection_AllowsPublicURL(t *testing.T) {
+	// This test verifies that when SSRF protection is disabled,
+	// local test servers work. In production with SSRF enabled,
+	// only real public IPs would be allowed.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok"})
+		w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
+	// Use test action with SSRF disabled since httptest uses 127.0.0.1
+	action := newTestHTTPAction()
 	config := HTTPActionConfig{
 		Method: "GET",
 		URL:    server.URL,
 	}
 
-	result, err := ExecuteHTTP(context.Background(), config, nil)
+	input := NewActionInput(config, nil)
+	output, err := action.Execute(context.Background(), input)
 
 	if err != nil {
-		t.Fatalf("ExecuteHTTP() error = %v", err)
+		t.Fatalf("Should allow URLs when SSRF protection is disabled, got error: %v", err)
 	}
 
-	if result == nil {
-		t.Fatal("ExecuteHTTP() returned nil result")
+	if output == nil {
+		t.Fatal("Expected output, got nil")
 	}
 
+	result := output.Data.(*HTTPActionResult)
 	if result.StatusCode != http.StatusOK {
 		t.Errorf("StatusCode = %d, want %d", result.StatusCode, http.StatusOK)
 	}
+}
+
+func TestHTTPAction_SSRFProtection_WithInterpolation(t *testing.T) {
+	action := NewHTTPAction()
+	config := HTTPActionConfig{
+		Method: "GET",
+		URL:    "http://{{host}}/api",
+	}
+
+	// Test with blocked host via interpolation
+	execContext := map[string]interface{}{
+		"host": "127.0.0.1",
+	}
+
+	input := NewActionInput(config, execContext)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected SSRF protection to block interpolated loopback address")
+	}
+
+	if err != nil && !contains(err.Error(), "SSRF protection") {
+		t.Errorf("Expected SSRF protection error, got: %v", err)
+	}
+}
+
+// Helper function for string containment
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexOf(s, substr) >= 0)
+}
+
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

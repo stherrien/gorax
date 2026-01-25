@@ -1,22 +1,24 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { ScheduleForm, ScheduleFormData } from '../components/schedule/ScheduleForm'
 import { useSchedule, useScheduleMutations } from '../hooks/useSchedules'
+import { isValidResourceId } from '../utils/routing'
 
 export default function EditSchedule() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { schedule, loading, error } = useSchedule(id || null)
-  const { updateSchedule } = useScheduleMutations()
 
+  // Hooks must be called unconditionally before any early returns
+  const { schedule, loading, error } = useSchedule(id || '')
+  const { updateSchedule } = useScheduleMutations()
   const [updateError, setUpdateError] = useState<string | null>(null)
 
-  const handleSubmit = async (data: ScheduleFormData) => {
-    if (!id) {
-      setUpdateError('Schedule ID is required')
-      return
-    }
+  // Guard against invalid IDs (after all hooks are called)
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/schedules" replace />
+  }
 
+  const handleSubmit = async (data: ScheduleFormData) => {
     try {
       setUpdateError(null)
       await updateSchedule(id, {

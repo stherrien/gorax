@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorax/gorax/internal/aibuilder"
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 )
 
 // Context key types for test fallback
@@ -42,20 +43,6 @@ func NewAIBuilderHandler(service AIBuilderServiceInterface) *AIBuilderHandler {
 	}
 }
 
-// respondJSON writes a JSON response
-func (h *AIBuilderHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-// respondError writes an error response
-func (h *AIBuilderHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
-}
-
 // Generate handles POST /api/v1/ai/workflows/generate
 // @Summary Generate a workflow from description
 // @Description Generates a new workflow from a natural language description
@@ -73,17 +60,17 @@ func (h *AIBuilderHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	var request aibuilder.BuildRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	result, err := h.service.Generate(r.Context(), tenantID, userID, &request)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // Refine handles POST /api/v1/ai/workflows/refine
@@ -103,17 +90,17 @@ func (h *AIBuilderHandler) Refine(w http.ResponseWriter, r *http.Request) {
 
 	var request aibuilder.RefineRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	result, err := h.service.Refine(r.Context(), tenantID, &request)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // GetConversation handles GET /api/v1/ai/workflows/conversations/{id}
@@ -132,14 +119,14 @@ func (h *AIBuilderHandler) GetConversation(w http.ResponseWriter, r *http.Reques
 	conv, err := h.service.GetConversation(r.Context(), tenantID, conversationID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, "conversation not found")
+			_ = response.NotFound(w, "conversation not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, conv)
+	_ = response.OK(w, conv)
 }
 
 // ListConversations handles GET /api/v1/ai/workflows/conversations
@@ -147,7 +134,7 @@ func (h *AIBuilderHandler) GetConversation(w http.ResponseWriter, r *http.Reques
 // @Description Lists all conversations for the current user
 // @Tags ai-builder
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/ai/workflows/conversations [get]
 func (h *AIBuilderHandler) ListConversations(w http.ResponseWriter, r *http.Request) {
@@ -156,11 +143,11 @@ func (h *AIBuilderHandler) ListConversations(w http.ResponseWriter, r *http.Requ
 
 	convs, err := h.service.ListConversations(r.Context(), tenantID, userID)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": convs,
 	})
 }
@@ -195,18 +182,18 @@ func (h *AIBuilderHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	workflowID, err := h.service.Apply(r.Context(), tenantID, userID, request)
 	if err != nil {
 		if strings.Contains(err.Error(), "no workflow") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, err.Error())
+			_ = response.NotFound(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]string{
+	_ = response.OK(w, map[string]string{
 		"workflow_id": workflowID,
 	})
 }
@@ -227,18 +214,18 @@ func (h *AIBuilderHandler) Abandon(w http.ResponseWriter, r *http.Request) {
 	err := h.service.AbandonConversation(r.Context(), tenantID, conversationID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not active") {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		if strings.Contains(err.Error(), "not found") {
-			h.respondError(w, http.StatusNotFound, err.Error())
+			_ = response.NotFound(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, err.Error())
+		_ = response.InternalError(w, err.Error())
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // getAIBuilderTenantID extracts tenant ID from request context

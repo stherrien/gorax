@@ -1211,6 +1211,781 @@ Returns execution duration statistics by workflow.
 
 ---
 
+### Analytics
+
+#### Get Tenant Overview
+```http
+GET /api/v1/analytics/overview
+```
+
+Returns aggregated analytics data for the tenant.
+
+**Query Parameters:**
+- `start_date` (string, required): Start date (RFC3339 format)
+- `end_date` (string, required): End date (RFC3339 format)
+
+**Response 200:**
+```json
+{
+  "total_executions": 1250,
+  "successful_executions": 1100,
+  "failed_executions": 125,
+  "running_executions": 25,
+  "success_rate": 0.88,
+  "average_duration_ms": 8500,
+  "total_workflows": 45
+}
+```
+
+**Example:**
+```bash
+curl -X GET 'http://localhost:8080/api/v1/analytics/overview?start_date=2024-01-01T00:00:00Z&end_date=2024-01-31T23:59:59Z' \
+  -H "X-User-ID: user_123" \
+  -H "X-Tenant-ID: tenant_xyz"
+```
+
+---
+
+#### Get Workflow Analytics
+```http
+GET /api/v1/analytics/workflows/{workflowID}
+```
+
+Returns detailed analytics for a specific workflow.
+
+**Path Parameters:**
+- `workflowID` (string, required): Workflow identifier
+
+**Query Parameters:**
+- `start_date` (string, required): Start date (RFC3339 format)
+- `end_date` (string, required): End date (RFC3339 format)
+
+**Response 200:**
+```json
+{
+  "workflow_id": "wf_abc123",
+  "workflow_name": "Order Processing",
+  "total_executions": 450,
+  "successful_executions": 420,
+  "failed_executions": 30,
+  "success_rate": 0.93,
+  "average_duration_ms": 5200,
+  "min_duration_ms": 1200,
+  "max_duration_ms": 25000
+}
+```
+
+---
+
+#### Get Execution Trends
+```http
+GET /api/v1/analytics/trends
+```
+
+Returns time-series data showing execution trends.
+
+**Query Parameters:**
+- `start_date` (string, required): Start date (RFC3339 format)
+- `end_date` (string, required): End date (RFC3339 format)
+- `granularity` (string, optional): hour, day, week, or month (default: day)
+
+**Response 200:**
+```json
+{
+  "data": [
+    {
+      "timestamp": "2024-01-20T00:00:00Z",
+      "total": 150,
+      "completed": 135,
+      "failed": 15,
+      "running": 0
+    },
+    {
+      "timestamp": "2024-01-21T00:00:00Z",
+      "total": 165,
+      "completed": 152,
+      "failed": 13,
+      "running": 0
+    }
+  ]
+}
+```
+
+---
+
+#### Get Top Workflows
+```http
+GET /api/v1/analytics/top-workflows
+```
+
+Returns the most frequently executed workflows.
+
+**Query Parameters:**
+- `start_date` (string, required): Start date (RFC3339 format)
+- `end_date` (string, required): End date (RFC3339 format)
+- `limit` (integer, optional): Maximum results (default: 10)
+
+**Response 200:**
+```json
+{
+  "workflows": [
+    {
+      "workflow_id": "wf_abc123",
+      "workflow_name": "Order Processing",
+      "execution_count": 450,
+      "success_rate": 0.93
+    },
+    {
+      "workflow_id": "wf_def456",
+      "workflow_name": "Customer Onboarding",
+      "execution_count": 320,
+      "success_rate": 0.97
+    }
+  ]
+}
+```
+
+---
+
+#### Get Error Breakdown
+```http
+GET /api/v1/analytics/errors
+```
+
+Returns categorized error data.
+
+**Query Parameters:**
+- `start_date` (string, required): Start date (RFC3339 format)
+- `end_date` (string, required): End date (RFC3339 format)
+
+**Response 200:**
+```json
+{
+  "total_errors": 125,
+  "errors_by_type": [
+    {
+      "error_type": "HTTP_TIMEOUT",
+      "count": 45,
+      "percentage": 0.36
+    },
+    {
+      "error_type": "VALIDATION_ERROR",
+      "count": 32,
+      "percentage": 0.26
+    }
+  ],
+  "errors_by_workflow": [
+    {
+      "workflow_id": "wf_abc123",
+      "workflow_name": "Order Processing",
+      "error_count": 30
+    }
+  ]
+}
+```
+
+---
+
+#### Get Node Performance
+```http
+GET /api/v1/analytics/workflows/{workflowID}/nodes
+```
+
+Returns performance statistics for individual nodes within a workflow.
+
+**Path Parameters:**
+- `workflowID` (string, required): Workflow identifier
+
+**Response 200:**
+```json
+{
+  "nodes": [
+    {
+      "node_id": "node_1",
+      "node_name": "Validate Order",
+      "execution_count": 450,
+      "success_rate": 0.98,
+      "average_duration_ms": 250,
+      "p95_duration_ms": 450
+    }
+  ]
+}
+```
+
+---
+
+### Marketplace
+
+#### List Templates
+```http
+GET /api/v1/marketplace/templates
+```
+
+Search and filter marketplace templates.
+
+**Query Parameters:**
+- `category` (string, optional): Filter by category
+- `search` (string, optional): Search query
+- `tags` (string, optional): Comma-separated list of tags
+- `min_rating` (number, optional): Minimum rating (0-5)
+- `is_verified` (boolean, optional): Filter verified templates
+- `sort_by` (string, optional): Sort field (created_at, updated_at, rating, installs)
+- `page` (integer, optional): Page number (default: 1)
+- `limit` (integer, optional): Results per page (default: 20)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "tmpl_abc123",
+    "name": "E-commerce Order Processing",
+    "description": "Complete order processing workflow with payment integration",
+    "category": "E-commerce",
+    "tags": ["orders", "payments", "shipping"],
+    "author": "user_456",
+    "author_name": "John Doe",
+    "version": "1.2.0",
+    "installs": 1250,
+    "rating": 4.8,
+    "is_verified": true,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-20T15:30:00Z"
+  }
+]
+```
+
+---
+
+#### Get Template
+```http
+GET /api/v1/marketplace/templates/{id}
+```
+
+Retrieves detailed information about a specific template.
+
+**Path Parameters:**
+- `id` (string, required): Template identifier
+
+**Response 200:**
+```json
+{
+  "id": "tmpl_abc123",
+  "name": "E-commerce Order Processing",
+  "description": "Complete order processing workflow with payment integration",
+  "category": "E-commerce",
+  "tags": ["orders", "payments", "shipping"],
+  "author": "user_456",
+  "author_name": "John Doe",
+  "version": "1.2.0",
+  "installs": 1250,
+  "rating": 4.8,
+  "is_verified": true,
+  "workflow_definition": {...},
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-20T15:30:00Z"
+}
+```
+
+---
+
+#### Publish Template
+```http
+POST /api/v1/marketplace/templates
+```
+
+Publishes a workflow as a reusable template.
+
+**Request Body:**
+```json
+{
+  "name": "Customer Feedback Loop",
+  "description": "Automated customer feedback collection and analysis",
+  "category": "Customer Service",
+  "tags": ["feedback", "surveys", "analytics"],
+  "workflow_id": "wf_xyz789",
+  "version": "1.0.0"
+}
+```
+
+**Response 201:**
+```json
+{
+  "id": "tmpl_new123",
+  "name": "Customer Feedback Loop",
+  "created_at": "2024-01-20T16:00:00Z"
+}
+```
+
+---
+
+#### Install Template
+```http
+POST /api/v1/marketplace/templates/{id}/install
+```
+
+Installs a marketplace template as a workflow.
+
+**Path Parameters:**
+- `id` (string, required): Template identifier
+
+**Request Body:**
+```json
+{
+  "workflow_name": "My Customer Feedback Workflow",
+  "enabled": true
+}
+```
+
+**Response 200:**
+```json
+{
+  "workflow_id": "wf_installed123",
+  "template_id": "tmpl_abc123",
+  "installed_at": "2024-01-20T16:30:00Z"
+}
+```
+
+---
+
+#### Rate Template
+```http
+POST /api/v1/marketplace/templates/{id}/rate
+```
+
+Submits or updates a rating and review.
+
+**Path Parameters:**
+- `id` (string, required): Template identifier
+
+**Request Body:**
+```json
+{
+  "rating": 5,
+  "comment": "Excellent template! Saved us hours of development time."
+}
+```
+
+**Response 200:**
+```json
+{
+  "id": "review_abc123",
+  "template_id": "tmpl_abc123",
+  "user_id": "user_123",
+  "rating": 5,
+  "comment": "Excellent template! Saved us hours of development time.",
+  "created_at": "2024-01-20T17:00:00Z"
+}
+```
+
+---
+
+#### Get Template Reviews
+```http
+GET /api/v1/marketplace/templates/{id}/reviews
+```
+
+Retrieves reviews for a template.
+
+**Path Parameters:**
+- `id` (string, required): Template identifier
+
+**Query Parameters:**
+- `limit` (integer, optional): Maximum results (default: 10)
+- `offset` (integer, optional): Pagination offset (default: 0)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "review_abc123",
+    "user_name": "Jane Smith",
+    "rating": 5,
+    "comment": "Excellent template!",
+    "created_at": "2024-01-20T17:00:00Z"
+  }
+]
+```
+
+---
+
+#### Get Trending Templates
+```http
+GET /api/v1/marketplace/trending
+```
+
+Returns templates that are currently trending.
+
+**Query Parameters:**
+- `limit` (integer, optional): Maximum results (default: 10)
+
+---
+
+#### Get Popular Templates
+```http
+GET /api/v1/marketplace/popular
+```
+
+Returns the most popular templates based on installs and ratings.
+
+**Query Parameters:**
+- `limit` (integer, optional): Maximum results (default: 10)
+
+---
+
+#### Get Categories
+```http
+GET /api/v1/marketplace/categories
+```
+
+Returns all available template categories.
+
+**Response 200:**
+```json
+[
+  "E-commerce",
+  "Customer Service",
+  "Marketing",
+  "Data Processing",
+  "DevOps",
+  "Finance"
+]
+```
+
+---
+
+### RBAC (Role-Based Access Control)
+
+#### List Roles
+```http
+GET /api/v1/roles
+```
+
+Returns all roles configured for the tenant.
+
+**Response 200:**
+```json
+[
+  {
+    "id": "role_admin",
+    "name": "Admin",
+    "description": "Full system access",
+    "is_system_role": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "role_editor",
+    "name": "Editor",
+    "description": "Can create and edit workflows",
+    "is_system_role": false,
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+---
+
+#### Create Role
+```http
+POST /api/v1/roles
+```
+
+Creates a new custom role.
+
+**Request Body:**
+```json
+{
+  "name": "Workflow Designer",
+  "description": "Can design and test workflows but not publish them",
+  "permission_ids": ["perm_workflow_create", "perm_workflow_read", "perm_workflow_update"]
+}
+```
+
+**Response 201:**
+```json
+{
+  "id": "role_new123",
+  "name": "Workflow Designer",
+  "created_at": "2024-01-20T16:00:00Z"
+}
+```
+
+---
+
+#### Get Role
+```http
+GET /api/v1/roles/{id}
+```
+
+Retrieves details of a specific role.
+
+**Path Parameters:**
+- `id` (string, required): Role identifier
+
+**Response 200:**
+```json
+{
+  "id": "role_editor",
+  "name": "Editor",
+  "description": "Can create and edit workflows",
+  "is_system_role": false,
+  "permissions": [
+    {"id": "perm_workflow_create", "name": "Create Workflows"},
+    {"id": "perm_workflow_read", "name": "Read Workflows"},
+    {"id": "perm_workflow_update", "name": "Update Workflows"}
+  ],
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+---
+
+#### Update Role
+```http
+PUT /api/v1/roles/{id}
+```
+
+Updates a role's name and description (system roles cannot be modified).
+
+**Path Parameters:**
+- `id` (string, required): Role identifier
+
+**Request Body:**
+```json
+{
+  "name": "Workflow Designer",
+  "description": "Updated description"
+}
+```
+
+**Response 204:** No content
+
+---
+
+#### Delete Role
+```http
+DELETE /api/v1/roles/{id}
+```
+
+Deletes a custom role (system roles cannot be deleted).
+
+**Path Parameters:**
+- `id` (string, required): Role identifier
+
+**Response 204:** No content
+
+---
+
+#### Assign Roles to User
+```http
+PUT /api/v1/users/{id}/roles
+```
+
+Assigns one or more roles to a user.
+
+**Path Parameters:**
+- `id` (string, required): User identifier
+
+**Request Body:**
+```json
+{
+  "role_ids": ["role_editor", "role_viewer"]
+}
+```
+
+**Response 204:** No content
+
+---
+
+#### List Permissions
+```http
+GET /api/v1/permissions
+```
+
+Returns all available permissions in the system.
+
+**Response 200:**
+```json
+[
+  {
+    "id": "perm_workflow_create",
+    "name": "Create Workflows",
+    "description": "Permission to create new workflows",
+    "resource": "workflows",
+    "action": "create"
+  },
+  {
+    "id": "perm_workflow_delete",
+    "name": "Delete Workflows",
+    "description": "Permission to delete workflows",
+    "resource": "workflows",
+    "action": "delete"
+  }
+]
+```
+
+---
+
+#### Get Audit Logs
+```http
+GET /api/v1/audit-logs
+```
+
+Returns paginated audit logs of role and permission changes.
+
+**Query Parameters:**
+- `limit` (integer, optional): Maximum results (max 100, default: 50)
+- `offset` (integer, optional): Pagination offset (default: 0)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "audit_abc123",
+    "action": "role_assigned",
+    "user_id": "user_123",
+    "target_user_id": "user_456",
+    "role_id": "role_editor",
+    "timestamp": "2024-01-20T16:30:00Z",
+    "details": {
+      "role_name": "Editor",
+      "granted_by": "user_123"
+    }
+  }
+]
+```
+
+---
+
+### Bulk Operations
+
+#### Bulk Delete Workflows
+```http
+POST /api/v1/workflows/bulk/delete
+```
+
+Deletes multiple workflows in a single operation.
+
+**Request Body:**
+```json
+{
+  "workflow_ids": ["wf_1", "wf_2", "wf_3"]
+}
+```
+
+**Response 200:**
+```json
+{
+  "successful": 2,
+  "failed": 1,
+  "results": [
+    {"workflow_id": "wf_1", "success": true},
+    {"workflow_id": "wf_2", "success": true},
+    {"workflow_id": "wf_3", "success": false, "error": "workflow not found"}
+  ]
+}
+```
+
+---
+
+#### Bulk Enable/Disable Workflows
+```http
+POST /api/v1/workflows/bulk/enable
+POST /api/v1/workflows/bulk/disable
+```
+
+Enables or disables multiple workflows.
+
+**Request Body:**
+```json
+{
+  "workflow_ids": ["wf_1", "wf_2", "wf_3"]
+}
+```
+
+**Response 200:**
+```json
+{
+  "successful": 3,
+  "failed": 0,
+  "results": [
+    {"workflow_id": "wf_1", "success": true},
+    {"workflow_id": "wf_2", "success": true},
+    {"workflow_id": "wf_3", "success": true}
+  ]
+}
+```
+
+---
+
+#### Bulk Export Workflows
+```http
+POST /api/v1/workflows/bulk/export
+```
+
+Exports multiple workflows as JSON.
+
+**Request Body:**
+```json
+{
+  "workflow_ids": ["wf_1", "wf_2"]
+}
+```
+
+**Response 200:**
+```json
+{
+  "export": {
+    "version": "1.0",
+    "exported_at": "2024-01-20T17:00:00Z",
+    "workflows": [...]
+  },
+  "result": {
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+---
+
+#### Bulk Clone Workflows
+```http
+POST /api/v1/workflows/bulk/clone
+```
+
+Clones multiple workflows.
+
+**Request Body:**
+```json
+{
+  "workflow_ids": ["wf_1", "wf_2"]
+}
+```
+
+**Response 200:**
+```json
+{
+  "clones": [
+    {
+      "id": "wf_clone1",
+      "name": "Order Processing (Copy)",
+      "original_id": "wf_1"
+    },
+    {
+      "id": "wf_clone2",
+      "name": "Customer Onboarding (Copy)",
+      "original_id": "wf_2"
+    }
+  ],
+  "result": {
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+---
+
 ### Admin (Tenant Management)
 
 These endpoints require admin role and do not use tenant context.

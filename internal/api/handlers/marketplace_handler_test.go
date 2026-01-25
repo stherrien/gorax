@@ -13,16 +13,22 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorax/gorax/internal/api/middleware"
-	"github.com/gorax/gorax/internal/marketplace"
-	"github.com/gorax/gorax/internal/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/marketplace"
+	"github.com/gorax/gorax/internal/tenant"
 )
 
 // MockMarketplaceService is a mock implementation of MarketplaceService
 type MockMarketplaceService struct {
+	mock.Mock
+}
+
+// MockCategoryService is a mock implementation of CategoryService
+type MockCategoryService struct {
 	mock.Mock
 }
 
@@ -73,8 +79,8 @@ func (m *MockMarketplaceService) RateTemplate(ctx context.Context, tenantID, use
 	return args.Get(0).(*marketplace.TemplateReview), args.Error(1)
 }
 
-func (m *MockMarketplaceService) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*marketplace.TemplateReview, error) {
-	args := m.Called(ctx, templateID, limit, offset)
+func (m *MockMarketplaceService) GetReviews(ctx context.Context, templateID string, sortBy marketplace.ReviewSortOption, limit, offset int) ([]*marketplace.TemplateReview, error) {
+	args := m.Called(ctx, templateID, sortBy, limit, offset)
 	return args.Get(0).([]*marketplace.TemplateReview), args.Error(1)
 }
 
@@ -88,10 +94,76 @@ func (m *MockMarketplaceService) GetCategories() []string {
 	return args.Get(0).([]string)
 }
 
+func (m *MockMarketplaceService) VoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	args := m.Called(ctx, tenantID, userID, reviewID)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) ReportReview(ctx context.Context, tenantID, userID, reviewID string, input marketplace.ReportReviewInput) error {
+	args := m.Called(ctx, tenantID, userID, reviewID, input)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*marketplace.ReviewReport, error) {
+	args := m.Called(ctx, status, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*marketplace.ReviewReport), args.Error(1)
+}
+
+func (m *MockMarketplaceService) ResolveReviewReport(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	args := m.Called(ctx, reportID, status, resolvedBy, notes)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	args := m.Called(ctx, reviewID, reason, hiddenBy)
+	return args.Error(0)
+}
+
+func (m *MockMarketplaceService) GetRatingDistribution(ctx context.Context, templateID string) (*marketplace.RatingDistribution, error) {
+	args := m.Called(ctx, templateID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*marketplace.RatingDistribution), args.Error(1)
+}
+
+func (m *MockCategoryService) GetCategoriesWithHierarchy(ctx context.Context) ([]marketplace.Category, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]marketplace.Category), args.Error(1)
+}
+
+func (m *MockCategoryService) GetCategory(ctx context.Context, id string) (*marketplace.Category, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*marketplace.Category), args.Error(1)
+}
+
+func (m *MockCategoryService) CreateCategory(ctx context.Context, input marketplace.CreateCategoryInput) (*marketplace.Category, error) {
+	args := m.Called(ctx, input)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*marketplace.Category), args.Error(1)
+}
+
 func TestMarketplaceHandler_ListTemplates(t *testing.T) {
 	service := new(MockMarketplaceService)
+	categoryService := new(MockCategoryService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	templates := []*marketplace.MarketplaceTemplate{
 		{ID: "1", Name: "Template 1"},
@@ -115,7 +187,8 @@ func TestMarketplaceHandler_ListTemplates(t *testing.T) {
 func TestMarketplaceHandler_GetTemplate(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	template := &marketplace.MarketplaceTemplate{
 		ID:   "template-1",
@@ -143,7 +216,8 @@ func TestMarketplaceHandler_GetTemplate(t *testing.T) {
 func TestPublishTemplate(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 	input := marketplace.PublishTemplateInput{
@@ -182,7 +256,8 @@ func TestPublishTemplate(t *testing.T) {
 func TestInstallTemplate(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	input := marketplace.InstallTemplateInput{
 		WorkflowName: "My Workflow",
@@ -216,7 +291,8 @@ func TestInstallTemplate(t *testing.T) {
 func TestRateTemplate(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	input := marketplace.RateTemplateInput{
 		Rating:  5,
@@ -252,7 +328,8 @@ func TestRateTemplate(t *testing.T) {
 func TestGetTrending(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
 	templates := []*marketplace.MarketplaceTemplate{
 		{ID: "1", Name: "Trending 1"},
@@ -271,10 +348,14 @@ func TestGetTrending(t *testing.T) {
 func TestGetCategories(t *testing.T) {
 	service := new(MockMarketplaceService)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewMarketplaceHandler(service, logger)
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
 
-	categories := []string{"security", "automation"}
-	service.On("GetCategories").Return(categories)
+	categories := []marketplace.Category{
+		{ID: "cat-1", Name: "Security", Slug: "security"},
+		{ID: "cat-2", Name: "Automation", Slug: "automation"},
+	}
+	categoryService.On("GetCategoriesWithHierarchy", mock.Anything).Return(categories, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/categories", nil)
 	w := httptest.NewRecorder()
@@ -282,10 +363,13 @@ func TestGetCategories(t *testing.T) {
 	handler.GetCategories(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var response []string
+	var response struct {
+		Data []marketplace.Category `json:"data"`
+	}
 	err := json.NewDecoder(w.Body).Decode(&response)
 	require.NoError(t, err)
-	assert.Len(t, response, 2)
+	assert.Len(t, response.Data, 2)
+	categoryService.AssertExpectations(t)
 }
 
 // Integration Tests - Full Request/Response Cycle
@@ -294,7 +378,8 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 	t.Run("filters by category and tags", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{
@@ -350,7 +435,8 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 	t.Run("handles pagination parameters", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		service.On("SearchTemplates", mock.Anything, mock.MatchedBy(func(filter marketplace.SearchFilter) bool {
 			return filter.Page == 2 && filter.Limit == 20
@@ -372,7 +458,8 @@ func TestMarketplaceIntegration_ListTemplates_WithComplexFilters(t *testing.T) {
 	t.Run("handles search query", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-1", Name: "Slack Integration", Description: "Send messages to Slack"},
@@ -406,7 +493,8 @@ func TestMarketplaceIntegration_PublishTemplate_ValidationScenarios(t *testing.T
 	t.Run("publishes valid template with all fields", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		definition := json.RawMessage(`{
 			"nodes": [
@@ -476,7 +564,8 @@ func TestMarketplaceIntegration_PublishTemplate_ValidationScenarios(t *testing.T
 	t.Run("rejects duplicate template name", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		definition := json.RawMessage(`{"nodes":[],"edges":[]}`)
 		input := marketplace.PublishTemplateInput{
@@ -520,7 +609,8 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 	t.Run("installs template and creates workflow", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{
 			WorkflowName: "My Custom Workflow",
@@ -572,7 +662,8 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 	t.Run("handles template not found", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{WorkflowName: "Test"}
 
@@ -611,7 +702,8 @@ func TestMarketplaceIntegration_InstallTemplate_FullFlow(t *testing.T) {
 	t.Run("handles already installed template", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.InstallTemplateInput{WorkflowName: "Duplicate"}
 
@@ -652,7 +744,8 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 	t.Run("submits rating with comment", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		input := marketplace.RateTemplateInput{
 			Rating:  5,
@@ -713,7 +806,8 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 	t.Run("retrieves paginated reviews", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		reviews := []*marketplace.TemplateReview{
 			{ID: "rev-1", Rating: 5, Comment: "Great!"},
@@ -724,6 +818,7 @@ func TestMarketplaceIntegration_RateTemplate_ReviewFlow(t *testing.T) {
 		service.On("GetReviews",
 			mock.Anything,
 			"tpl-popular",
+			marketplace.ReviewSortRecent,
 			15,
 			10,
 		).Return(reviews, nil)
@@ -756,7 +851,8 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 	t.Run("retrieves trending templates with custom limit", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-1", Name: "Trending 1", DownloadCount: 500, AverageRating: 4.9},
@@ -788,7 +884,8 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 	t.Run("retrieves popular templates", func(t *testing.T) {
 		service := new(MockMarketplaceService)
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-		handler := NewMarketplaceHandler(service, logger)
+		categoryService := new(MockCategoryService)
+		handler := NewMarketplaceHandler(service, categoryService, logger)
 
 		templates := []*marketplace.MarketplaceTemplate{
 			{ID: "tpl-pop-1", Name: "Popular 1", DownloadCount: 1000, AverageRating: 5.0},
@@ -814,4 +911,387 @@ func TestMarketplaceIntegration_TrendingAndPopular(t *testing.T) {
 		assert.Len(t, response, 2)
 		service.AssertExpectations(t)
 	})
+}
+
+// New handler tests for review features
+
+func TestVoteReviewHelpful_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	service.On("VoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").Return(nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.VoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestVoteReviewHelpful_AlreadyVoted(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	service.On("VoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").
+		Return(errors.New("already voted helpful"))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.VoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestUnvoteReviewHelpful_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	service.On("UnvoteReviewHelpful", mock.Anything, "tenant-1", "user-1", "review-123").Return(nil)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/marketplace/reviews/review-123/helpful", nil)
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.UnvoteReviewHelpful(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestReportReview_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	input := marketplace.ReportReviewInput{
+		Reason:  "spam",
+		Details: "This review is spam and should be removed",
+	}
+
+	service.On("ReportReview", mock.Anything, "tenant-1", "user-1", "review-123", input).Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/report", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ReportReview(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestReportReview_InvalidReason(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	input := marketplace.ReportReviewInput{
+		Reason:  "invalid_reason",
+		Details: "Details",
+	}
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/marketplace/reviews/review-123/report", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	ten := &tenant.Tenant{ID: "tenant-1"}
+	user := &middleware.User{ID: "user-1", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.TenantContextKey, ten)
+	ctx = context.WithValue(ctx, middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ReportReview(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetRatingDistribution_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	distribution := &marketplace.RatingDistribution{
+		Rating1Count:   5,
+		Rating2Count:   10,
+		Rating3Count:   20,
+		Rating4Count:   30,
+		Rating5Count:   50,
+		TotalRatings:   115,
+		AverageRating:  4.2,
+		Rating1Percent: 4.3,
+		Rating2Percent: 8.7,
+		Rating3Percent: 17.4,
+		Rating4Percent: 26.1,
+		Rating5Percent: 43.5,
+	}
+
+	service.On("GetRatingDistribution", mock.Anything, "template-123").Return(distribution, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/templates/template-123/rating-distribution", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "template-123")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	handler.GetRatingDistribution(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response marketplace.RatingDistribution
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Equal(t, 115, response.TotalRatings)
+	assert.Equal(t, 4.2, response.AverageRating)
+	assert.Equal(t, 50, response.Rating5Count)
+	service.AssertExpectations(t)
+}
+
+func TestGetReviewReports_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	reports := []*marketplace.ReviewReport{
+		{
+			ID:               "report-1",
+			ReviewID:         "review-1",
+			ReporterTenantID: "tenant-1",
+			ReporterUserID:   "user-1",
+			Reason:           "spam",
+			Details:          "This is spam",
+			Status:           "pending",
+		},
+		{
+			ID:               "report-2",
+			ReviewID:         "review-2",
+			ReporterTenantID: "tenant-2",
+			ReporterUserID:   "user-2",
+			Reason:           "inappropriate",
+			Details:          "Inappropriate content",
+			Status:           "pending",
+		},
+	}
+
+	service.On("GetReviewReports", mock.Anything, "pending", 20, 0).Return(reports, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/marketplace/admin/review-reports?status=pending", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetReviewReports(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response []*marketplace.ReviewReport
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Equal(t, "spam", response[0].Reason)
+	service.AssertExpectations(t)
+}
+
+func TestResolveReviewReport_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	notes := "Reviewed and actioned"
+	input := ResolveReviewReportInput{
+		Status: "actioned",
+		Notes:  &notes,
+	}
+
+	service.On("ResolveReviewReport", mock.Anything, "report-123", "actioned", "admin-user", &notes).Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/review-reports/report-123", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reportId", "report-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ResolveReviewReport(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestResolveReviewReport_InvalidStatus(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	input := ResolveReviewReportInput{
+		Status: "invalid_status",
+	}
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/review-reports/report-123", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reportId", "report-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.ResolveReviewReport(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHideReview_Success(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	input := HideReviewInput{
+		Reason: "Violates community guidelines",
+	}
+
+	service.On("HideReview", mock.Anything, "review-123", input.Reason, "admin-user").Return(nil)
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/reviews/review-123/hide", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-123")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.HideReview(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestHideReview_NotFound(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	input := HideReviewInput{
+		Reason: "Test reason",
+	}
+
+	service.On("HideReview", mock.Anything, "review-nonexistent", input.Reason, "admin-user").
+		Return(errors.New("review not found"))
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/marketplace/admin/reviews/review-nonexistent/hide", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	user := &middleware.User{ID: "admin-user", TenantID: "tenant-1"}
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("reviewId", "review-nonexistent")
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	handler.HideReview(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestGetReviews_WithSorting(t *testing.T) {
+	service := new(MockMarketplaceService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	categoryService := new(MockCategoryService)
+	handler := NewMarketplaceHandler(service, categoryService, logger)
+
+	reviews := []*marketplace.TemplateReview{
+		{ID: "rev-1", Rating: 5, HelpfulCount: 100},
+		{ID: "rev-2", Rating: 5, HelpfulCount: 80},
+		{ID: "rev-3", Rating: 4, HelpfulCount: 60},
+	}
+
+	service.On("GetReviews", mock.Anything, "template-123", marketplace.ReviewSortHelpful, 10, 0).
+		Return(reviews, nil)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/marketplace/templates/template-123/reviews?sort=helpful",
+		nil,
+	)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "template-123")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	handler.GetReviews(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response []*marketplace.TemplateReview
+	err := json.NewDecoder(w.Body).Decode(&response)
+	require.NoError(t, err)
+	assert.Len(t, response, 3)
+	assert.Equal(t, 100, response[0].HelpfulCount)
+	service.AssertExpectations(t)
 }

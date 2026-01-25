@@ -194,7 +194,8 @@ func TestLogExporter_ExportCSV(t *testing.T) {
 	}
 
 	t.Run("generates valid CSV format", func(t *testing.T) {
-		result := exporter.ExportCSV(execution, steps)
+		result, err := exporter.ExportCSV(execution, steps)
+		require.NoError(t, err)
 		output := string(result)
 
 		reader := csv.NewReader(strings.NewReader(output))
@@ -227,7 +228,8 @@ func TestLogExporter_ExportCSV(t *testing.T) {
 	})
 
 	t.Run("handles empty steps", func(t *testing.T) {
-		result := exporter.ExportCSV(execution, []*StepExecution{})
+		result, err := exporter.ExportCSV(execution, []*StepExecution{})
+		require.NoError(t, err)
 		output := string(result)
 
 		reader := csv.NewReader(strings.NewReader(output))
@@ -247,7 +249,8 @@ func TestLogExporter_ExportCSV(t *testing.T) {
 			},
 		}
 
-		result := exporter.ExportCSV(execution, stepsWithSpecialChars)
+		result, err := exporter.ExportCSV(execution, stepsWithSpecialChars)
+		require.NoError(t, err)
 		output := string(result)
 
 		reader := csv.NewReader(strings.NewReader(output))
@@ -301,7 +304,8 @@ func TestLogExporter_FormatSizes(t *testing.T) {
 	})
 
 	t.Run("CSV format handles large datasets", func(t *testing.T) {
-		result := exporter.ExportCSV(execution, steps)
+		result, err := exporter.ExportCSV(execution, steps)
+		require.NoError(t, err)
 		assert.Greater(t, len(result), 1000)
 
 		reader := csv.NewReader(strings.NewReader(string(result)))

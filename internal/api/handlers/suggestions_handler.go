@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/suggestions"
 )
 
@@ -46,15 +47,15 @@ func NewSuggestionsHandler(service SuggestionService, logger *slog.Logger) *Sugg
 
 // AnalyzeRequest is the request body for error analysis
 type AnalyzeRequest struct {
-	WorkflowID   string                 `json:"workflow_id"`
-	NodeID       string                 `json:"node_id"`
-	NodeType     string                 `json:"node_type"`
-	ErrorMessage string                 `json:"error_message"`
-	ErrorCode    string                 `json:"error_code,omitempty"`
-	HTTPStatus   int                    `json:"http_status,omitempty"`
-	RetryCount   int                    `json:"retry_count,omitempty"`
-	InputData    map[string]interface{} `json:"input_data,omitempty"`
-	NodeConfig   map[string]interface{} `json:"node_config,omitempty"`
+	WorkflowID   string         `json:"workflow_id"`
+	NodeID       string         `json:"node_id"`
+	NodeType     string         `json:"node_type"`
+	ErrorMessage string         `json:"error_message"`
+	ErrorCode    string         `json:"error_code,omitempty"`
+	HTTPStatus   int            `json:"http_status,omitempty"`
+	RetryCount   int            `json:"retry_count,omitempty"`
+	InputData    map[string]any `json:"input_data,omitempty"`
+	NodeConfig   map[string]any `json:"node_config,omitempty"`
 }
 
 // List returns all suggestions for an execution
@@ -65,7 +66,7 @@ type AnalyzeRequest struct {
 // @Produce json
 // @Param executionID path string true "Execution ID"
 // @Security TenantID
-// @Success 200 {object} map[string]interface{} "List of suggestions"
+// @Success 200 {object} map[string]any "List of suggestions"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /executions/{executionID}/suggestions [get]
 func (h *SuggestionsHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -75,11 +76,11 @@ func (h *SuggestionsHandler) List(w http.ResponseWriter, r *http.Request) {
 	suggs, err := h.service.GetSuggestions(r.Context(), tenantID, executionID)
 	if err != nil {
 		h.logger.Error("failed to list suggestions", "error", err, "execution_id", executionID)
-		h.respondError(w, http.StatusInternalServerError, "failed to list suggestions")
+		_ = response.InternalError(w, "failed to list suggestions")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": suggs,
 	})
 }
@@ -92,7 +93,7 @@ func (h *SuggestionsHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param suggestionID path string true "Suggestion ID"
 // @Security TenantID
-// @Success 200 {object} map[string]interface{} "Suggestion details"
+// @Success 200 {object} map[string]any "Suggestion details"
 // @Failure 404 {object} map[string]string "Suggestion not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /suggestions/{suggestionID} [get]
@@ -103,15 +104,15 @@ func (h *SuggestionsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sugg, err := h.service.GetSuggestionByID(r.Context(), tenantID, suggestionID)
 	if err != nil {
 		if errors.Is(err, suggestions.ErrSuggestionNotFound) {
-			h.respondError(w, http.StatusNotFound, "suggestion not found")
+			_ = response.NotFound(w, "suggestion not found")
 			return
 		}
 		h.logger.Error("failed to get suggestion", "error", err, "suggestion_id", suggestionID)
-		h.respondError(w, http.StatusInternalServerError, "failed to get suggestion")
+		_ = response.InternalError(w, "failed to get suggestion")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": sugg,
 	})
 }
@@ -125,7 +126,7 @@ func (h *SuggestionsHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param executionID path string true "Execution ID"
 // @Param request body AnalyzeRequest true "Error context for analysis"
 // @Security TenantID
-// @Success 200 {object} map[string]interface{} "Generated suggestions"
+// @Success 200 {object} map[string]any "Generated suggestions"
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /executions/{executionID}/analyze [post]
@@ -135,7 +136,7 @@ func (h *SuggestionsHandler) Analyze(w http.ResponseWriter, r *http.Request) {
 
 	var req AnalyzeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
@@ -155,11 +156,11 @@ func (h *SuggestionsHandler) Analyze(w http.ResponseWriter, r *http.Request) {
 	suggs, err := h.service.AnalyzeError(r.Context(), tenantID, errCtx)
 	if err != nil {
 		h.logger.Error("failed to analyze error", "error", err, "execution_id", executionID)
-		h.respondError(w, http.StatusInternalServerError, "failed to analyze error")
+		_ = response.InternalError(w, "failed to analyze error")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": suggs,
 	})
 }
@@ -172,7 +173,7 @@ func (h *SuggestionsHandler) Analyze(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param suggestionID path string true "Suggestion ID"
 // @Security TenantID
-// @Success 200 {object} map[string]interface{} "Success message"
+// @Success 200 {object} map[string]any "Success message"
 // @Failure 404 {object} map[string]string "Suggestion not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /suggestions/{suggestionID}/apply [post]
@@ -183,15 +184,15 @@ func (h *SuggestionsHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	err := h.service.ApplySuggestion(r.Context(), tenantID, suggestionID)
 	if err != nil {
 		if errors.Is(err, suggestions.ErrSuggestionNotFound) {
-			h.respondError(w, http.StatusNotFound, "suggestion not found")
+			_ = response.NotFound(w, "suggestion not found")
 			return
 		}
 		h.logger.Error("failed to apply suggestion", "error", err, "suggestion_id", suggestionID)
-		h.respondError(w, http.StatusInternalServerError, "failed to apply suggestion")
+		_ = response.InternalError(w, "failed to apply suggestion")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"message": "suggestion applied",
 	})
 }
@@ -204,7 +205,7 @@ func (h *SuggestionsHandler) Apply(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param suggestionID path string true "Suggestion ID"
 // @Security TenantID
-// @Success 200 {object} map[string]interface{} "Success message"
+// @Success 200 {object} map[string]any "Success message"
 // @Failure 404 {object} map[string]string "Suggestion not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /suggestions/{suggestionID}/dismiss [post]
@@ -215,28 +216,16 @@ func (h *SuggestionsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
 	err := h.service.DismissSuggestion(r.Context(), tenantID, suggestionID)
 	if err != nil {
 		if errors.Is(err, suggestions.ErrSuggestionNotFound) {
-			h.respondError(w, http.StatusNotFound, "suggestion not found")
+			_ = response.NotFound(w, "suggestion not found")
 			return
 		}
 		h.logger.Error("failed to dismiss suggestion", "error", err, "suggestion_id", suggestionID)
-		h.respondError(w, http.StatusInternalServerError, "failed to dismiss suggestion")
+		_ = response.InternalError(w, "failed to dismiss suggestion")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"message": "suggestion dismissed",
-	})
-}
-
-func (h *SuggestionsHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *SuggestionsHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
 	})
 }
 

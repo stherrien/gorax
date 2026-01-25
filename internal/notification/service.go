@@ -350,6 +350,111 @@ func (s *Service) CreateInAppNotification(ctx context.Context, tenantID uuid.UUI
 	return s.inAppService.Create(ctx, notif)
 }
 
+// NotifyTaskEscalated sends a notification when a task is escalated to backup approvers
+func (s *Service) NotifyTaskEscalated(ctx context.Context, task *humantask.HumanTask, escalation *humantask.TaskEscalation) error {
+	newAssignees := escalation.GetToAssignees()
+	previousAssignees := escalation.GetFromAssignees()
+
+	s.logger.Warn("task escalated notification",
+		"task_id", task.ID,
+		"escalation_level", escalation.EscalationLevel,
+		"from_assignees", previousAssignees,
+		"to_assignees", newAssignees,
+	)
+
+	if len(newAssignees) == 0 {
+		return nil
+	}
+
+	var wg sync.WaitGroup
+	errors := make(chan error, 3)
+
+	taskURL := fmt.Sprintf("/tasks/%s", task.ID)
+	dueStr := "Not set"
+	if task.DueDate != nil {
+		dueStr = task.DueDate.Format("2006-01-02 15:04")
+	}
+
+	// In-app notification to new assignees
+	if s.config.EnableInApp && s.inAppService != nil {
+		for _, assignee := range newAssignees {
+			assignee := assignee
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				title := fmt.Sprintf("Task Escalated: %s", task.Title)
+				message := fmt.Sprintf("This task has been escalated to you (Level %d). Previous assignees did not respond.", escalation.EscalationLevel)
+				if err := s.inAppService.Create(ctx, &InAppNotification{
+					TenantID: task.TenantID,
+					UserID:   assignee,
+					Title:    title,
+					Message:  message,
+					Type:     NotificationTypeWarning,
+					Metadata: map[string]any{
+						"task_id":          task.ID.String(),
+						"escalation_level": escalation.EscalationLevel,
+						"task_url":         taskURL,
+					},
+				}); err != nil {
+					s.logger.Error("failed to send in-app notification", "error", err, "assignee", assignee)
+					errors <- err
+				}
+			}()
+		}
+	}
+
+	// Email notification to new assignees
+	if s.config.EnableEmail && s.emailSender != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			email := Email{
+				To:      newAssignees,
+				Subject: fmt.Sprintf("Task Escalated: %s (Level %d)", task.Title, escalation.EscalationLevel),
+				HTMLBody: fmt.Sprintf(`
+					<h2>Task Escalated</h2>
+					<p>A task has been escalated to you because the previous assignees did not respond in time.</p>
+					<h3>%s</h3>
+					<p><strong>Escalation Level:</strong> %d</p>
+					<p><strong>Type:</strong> %s</p>
+					<p><strong>New Due Date:</strong> %s</p>
+					<p><a href="%s">View Task</a></p>
+				`, task.Title, escalation.EscalationLevel, task.TaskType, dueStr, taskURL),
+				TextBody: fmt.Sprintf("Task Escalated: %s\nLevel: %d\nType: %s\nDue: %s\nView: %s",
+					task.Title, escalation.EscalationLevel, task.TaskType, dueStr, taskURL),
+			}
+
+			if err := s.emailSender.Send(ctx, email); err != nil {
+				s.logger.Error("failed to send email notification", "error", err)
+				errors <- err
+			}
+		}()
+	}
+
+	// Slack notification
+	if s.config.EnableSlack && s.slackNotifier != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			msg := BuildTaskEscalatedMessage(task.Title, escalation.EscalationLevel, dueStr, taskURL)
+
+			if err := s.slackNotifier.Send(ctx, msg); err != nil {
+				s.logger.Error("failed to send Slack notification", "error", err)
+				errors <- err
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		s.logger.Warn("notification delivery failed", "error", err)
+	}
+
+	return nil
+}
+
 // NotifyWorkflowExecution sends notifications for workflow execution events
 func (s *Service) NotifyWorkflowExecution(ctx context.Context, tenantID uuid.UUID, userID, workflowName, status, errorMsg, executionURL string) error {
 	var wg sync.WaitGroup
@@ -403,6 +508,10 @@ func (n *NoOpNotificationService) NotifyTaskCompleted(ctx context.Context, task 
 }
 
 func (n *NoOpNotificationService) NotifyTaskOverdue(ctx context.Context, task *humantask.HumanTask) error {
+	return nil
+}
+
+func (n *NoOpNotificationService) NotifyTaskEscalated(ctx context.Context, task *humantask.HumanTask, escalation *humantask.TaskEscalation) error {
 	return nil
 }
 

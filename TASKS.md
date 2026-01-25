@@ -607,6 +607,377 @@ Example GitHub Actions workflow provided in documentation.
 
 ---
 
+### GraphQL API Layer (2024-12-30)
+
+**Objective:** Implement comprehensive GraphQL API for flexible querying and real-time subscriptions
+
+**Completed Items:**
+
+1. ✅ **GraphQL Schema**
+   - Created complete schema with types for workflows, templates, executions, schedules, webhooks
+   - Implemented Query resolvers (workflows, templates, schedules, webhooks)
+   - Implemented Mutation resolvers (create, update, delete operations)
+   - Implemented Subscription resolvers (execution updates)
+   - Type-safe schema generation with gqlgen
+
+2. ✅ **Resolver Implementation**
+   - Created `internal/graphql/resolver.go` - Main resolver with service dependencies
+   - Created `internal/graphql/schema.resolvers.go` - All query/mutation/subscription resolvers
+   - Created `internal/graphql/converters.go` - Domain to GraphQL type converters
+   - Created `internal/graphql/context.go` - Context helpers for tenant/user extraction
+
+3. ✅ **Execution Subscription**
+   - Implemented polling-based execution updates (2-second intervals)
+   - Support for filtering by workflow ID
+   - Graceful client disconnection handling
+   - Channel-based streaming architecture
+
+4. ✅ **Schema Generation**
+   - Configured gqlgen.yml for code generation
+   - Generated Go types from schema
+   - Generated resolvers boilerplate
+   - Type-safe API with compile-time checking
+
+**Files Created:**
+- `internal/graphql/schema.graphql` - GraphQL schema definition
+- `internal/graphql/resolver.go` - Root resolver
+- `internal/graphql/schema.resolvers.go` - Query/mutation/subscription implementations
+- `internal/graphql/converters.go` - Type conversion utilities
+- `internal/graphql/context.go` - Context extraction helpers
+- `internal/graphql/generated/generated.go` - Generated GraphQL server code
+- `internal/graphql/generated/models_gen.go` - Generated model types
+- `gqlgen.yml` - GraphQL codegen configuration
+
+**Features:**
+- Complete CRUD operations for all resources
+- Real-time execution updates via subscriptions
+- Flexible querying with GraphQL
+- Type-safe schema with code generation
+- Integration with existing services
+
+---
+
+### Workflow Templates Marketplace (2024-12-30)
+
+**Objective:** Create a public marketplace for sharing and discovering workflow templates
+
+**Completed Items:**
+
+1. ✅ **Backend Implementation**
+   - Created `internal/marketplace/` package with full CRUD
+   - Implemented listing, filtering, and template submission
+   - Added popularity tracking and usage statistics
+   - Template approval workflow for moderation
+   - Search functionality with category and tag filters
+
+2. ✅ **Database Schema**
+   - Migration `020_marketplace.sql` for marketplace tables
+   - Migration `021_template_usage_count.sql` for usage tracking
+   - Indexes for performance on listing/search queries
+
+3. ✅ **Frontend Components**
+   - `web/src/pages/Marketplace.tsx` - Main marketplace page
+   - `web/src/components/templates/TemplateBrowser.tsx` - Template browser
+   - `web/src/components/templates/SaveAsTemplate.tsx` - Publish to marketplace
+   - Integration tests for marketplace functionality
+
+4. ✅ **API Layer**
+   - `internal/api/handlers/marketplace_handler.go` - REST endpoints
+   - Support for listing, search, submission, approval
+   - Rate limiting and moderation endpoints
+
+5. ✅ **Template Usage Tracking**
+   - Modified `internal/template/service.go` to increment usage count on instantiation
+   - Updated `internal/graphql/converters.go` to return actual usage count
+   - Repository method `IncrementUsageCount` implemented
+   - Test coverage for usage tracking
+
+**Files Created:**
+- `internal/marketplace/model.go` - Marketplace domain models
+- `internal/marketplace/service.go` - Business logic
+- `internal/marketplace/repository.go` - Data access
+- `internal/marketplace/repository_test.go` - Unit tests
+- `internal/marketplace/service_test.go` - Service tests
+- `internal/marketplace/integration_test.go` - Integration tests
+- `internal/api/handlers/marketplace_handler.go` - HTTP handlers
+- `internal/api/handlers/marketplace_handler_test.go` - Handler tests
+- `web/src/pages/Marketplace.tsx` - Frontend page
+- `web/src/pages/Marketplace.integration.test.tsx` - Frontend integration tests
+- `web/src/api/marketplace.ts` - API client
+- `web/src/api/marketplace.test.ts` - API tests
+- `web/src/hooks/useMarketplace.ts` - React hooks
+- `web/src/hooks/useMarketplace.test.ts` - Hook tests
+- `web/src/types/marketplace.ts` - TypeScript types
+- `migrations/020_marketplace.sql` - Database migration
+- `migrations/021_template_usage_count.sql` - Usage count migration
+
+**Features:**
+- Public template sharing and discovery
+- Category-based organization
+- Tag-based filtering
+- Usage popularity metrics
+- Template approval workflow
+- Search functionality
+- One-click template instantiation
+
+---
+
+### Real-Time Collaboration (2024-12-30)
+
+**Objective:** Enable multiple users to collaborate on workflows in real-time
+
+**Completed Items:**
+
+1. ✅ **WebSocket Hub**
+   - Created `internal/collaboration/hub.go` - WebSocket connection hub
+   - Room-based broadcasting (workflow, execution, tenant rooms)
+   - Client presence tracking
+   - Event type system for collaboration events
+
+2. ✅ **Collaboration Service**
+   - `internal/collaboration/service.go` - Business logic for collaboration
+   - Node locking mechanism to prevent conflicts
+   - User presence management
+   - Cursor position tracking
+   - Real-time workflow change broadcasting
+
+3. ✅ **Frontend Components**
+   - `web/src/components/collaboration/CollaboratorList.tsx` - Active users display
+   - `web/src/components/collaboration/CollaboratorCursors.tsx` - Real-time cursors
+   - `web/src/components/collaboration/NodeLockIndicator.tsx` - Node edit locks
+   - `web/src/components/collaboration/UserPresenceIndicator.tsx` - User status
+   - `web/src/examples/WorkflowEditorWithCollaboration.tsx` - Full example
+
+4. ✅ **API Layer**
+   - `internal/api/handlers/collaboration_handler.go` - WebSocket endpoints
+   - Connection upgrade and authentication
+   - Event routing and broadcasting
+
+5. ✅ **WebSocket Security**
+   - Created `docs/WEBSOCKET_SECURITY.md` - Security documentation
+   - Authentication via session validation
+   - Authorization checks for room access
+   - Rate limiting per connection
+   - Message validation and sanitization
+
+**Files Created:**
+- `internal/collaboration/hub.go` - WebSocket hub
+- `internal/collaboration/service.go` - Collaboration service
+- `internal/collaboration/service_test.go` - Service tests
+- `internal/collaboration/model.go` - Domain models
+- `internal/collaboration/integration_test.go` - Integration tests
+- `internal/api/handlers/collaboration_handler.go` - HTTP/WebSocket handlers
+- `internal/api/handlers/collaboration_handler_test.go` - Handler tests
+- `web/src/components/collaboration/` - All collaboration UI components
+- `web/src/hooks/useCollaboration.ts` - React hooks for WebSocket
+- `web/src/types/collaboration.ts` - TypeScript types
+- `web/src/examples/WorkflowEditorWithCollaboration.tsx` - Example integration
+- `docs/WEBSOCKET_SECURITY.md` - Security documentation
+- `docs/COLLABORATION_QUICK_START.md` - Quick start guide
+- `docs/COLLABORATION_IMPLEMENTATION.md` - Implementation details
+- `docs/COLLABORATION.md` - Architecture documentation
+
+**Features:**
+- Real-time user presence indicators
+- Live cursor tracking
+- Node-level edit locking
+- Workflow change broadcasting
+- Multi-user workflow editing
+- Conflict prevention mechanisms
+
+---
+
+### Analytics Dashboard (2024-12-30)
+
+**Objective:** Provide comprehensive analytics and insights for workflow execution
+
+**Completed Items:**
+
+1. ✅ **Backend Analytics Service**
+   - Created `internal/analytics/service.go` - Analytics business logic
+   - Execution metrics aggregation (success rate, duration, error breakdown)
+   - Time-series data for trend analysis
+   - Top workflows by execution count
+   - Error categorization and analysis
+
+2. ✅ **Analytics Repository**
+   - `internal/analytics/repository.go` - Database queries for metrics
+   - Optimized queries for aggregation
+   - Time bucketing for trend charts
+   - Filtering by date range and tenant
+
+3. ✅ **Frontend Dashboard**
+   - `web/src/pages/Analytics.tsx` - Main analytics page
+   - `web/src/components/analytics/ExecutionTrendChart.tsx` - Time-series chart
+   - `web/src/components/analytics/SuccessRateGauge.tsx` - Success rate visualization
+   - `web/src/components/analytics/ErrorBreakdownChart.tsx` - Error analysis
+   - `web/src/components/analytics/TopWorkflowsTable.tsx` - Top performers
+
+4. ✅ **API Layer**
+   - `internal/api/handlers/analytics_handler.go` - Analytics endpoints
+   - REST API for metrics retrieval
+   - Support for date range filtering
+   - Aggregated statistics endpoints
+
+5. ✅ **Charts and Visualizations**
+   - Recharts integration for data visualization
+   - Interactive time-series charts
+   - Pie charts for error breakdown
+   - Gauge charts for success rates
+   - Sortable tables for top workflows
+
+**Files Created:**
+- `internal/analytics/model.go` - Analytics domain models
+- `internal/analytics/service.go` - Business logic
+- `internal/analytics/repository.go` - Data access
+- `internal/analytics/repository_test.go` - Unit tests
+- `internal/analytics/service_test.go` - Service tests
+- `internal/analytics/integration_test.go` - Integration tests
+- `internal/api/handlers/analytics_handler.go` - HTTP handlers
+- `internal/api/handlers/analytics_handler_test.go` - Handler tests
+- `web/src/pages/Analytics.tsx` - Analytics dashboard page
+- `web/src/pages/Analytics.integration.test.tsx` - Frontend integration tests
+- `web/src/components/analytics/` - All analytics UI components
+- `web/src/api/analytics.ts` - API client
+- `web/src/api/analytics.test.ts` - API tests
+- `web/src/hooks/useAnalytics.ts` - React hooks
+- `web/src/types/analytics.ts` - TypeScript types
+
+**Features:**
+- Execution success rate tracking
+- Time-series execution trends
+- Error type breakdown analysis
+- Top performing workflows
+- Average execution duration
+- Workflow-specific metrics
+- Date range filtering
+- Real-time metric updates
+
+---
+
+### Bulk Workflow Operations (2024-12-30)
+
+**Objective:** Enable efficient bulk operations on multiple workflows simultaneously
+
+**Completed Items:**
+
+1. ✅ **Backend Bulk Service**
+   - Created `internal/workflow/bulk_service.go` - Bulk operation orchestration
+   - Bulk enable/disable workflows
+   - Bulk delete with cascade
+   - Bulk export and import
+   - Concurrent processing with error handling
+   - Transaction management for data consistency
+
+2. ✅ **API Layer**
+   - `internal/api/handlers/workflow_bulk_handler.go` - Bulk operation endpoints
+   - REST API for bulk operations
+   - Request validation and error reporting
+   - Progress tracking support
+
+3. ✅ **Frontend Components**
+   - `web/src/components/workflows/BulkActionsToolbar.tsx` - Bulk action UI
+   - `web/src/components/workflows/WorkflowSelectionContext.tsx` - Selection state
+   - Multi-select checkbox UI
+   - Bulk action confirmation dialogs
+   - Progress indicators
+
+4. ✅ **Selection Management**
+   - React context for workflow selection state
+   - Select all/none functionality
+   - Individual workflow selection
+   - Selection persistence across page navigation
+
+5. ✅ **Integration Tests**
+   - `internal/workflow/bulk_service_integration_test.go` - Integration tests
+   - `web/src/hooks/useBulkWorkflows.integration.test.tsx` - Frontend integration tests
+   - Full end-to-end test coverage
+
+**Files Created:**
+- `internal/workflow/bulk_service.go` - Bulk operations service
+- `internal/workflow/bulk_service_test.go` - Unit tests
+- `internal/workflow/bulk_service_integration_test.go` - Integration tests
+- `internal/api/handlers/workflow_bulk_handler.go` - HTTP handlers
+- `internal/api/handlers/workflow_bulk_handler_test.go` - Handler tests
+- `web/src/components/workflows/BulkActionsToolbar.tsx` - Toolbar component
+- `web/src/components/workflows/BulkActionsToolbar.test.tsx` - Component tests
+- `web/src/components/workflows/WorkflowSelectionContext.tsx` - Selection state
+- `web/src/components/workflows/WorkflowSelectionContext.test.tsx` - Context tests
+- `web/src/hooks/useBulkWorkflows.ts` - React hooks
+- `web/src/hooks/useBulkWorkflows.integration.test.tsx` - Integration tests
+
+**Features:**
+- Bulk enable/disable workflows
+- Bulk delete with confirmation
+- Bulk export (JSON)
+- Bulk import with validation
+- Multi-select UI with checkboxes
+- Progress tracking for long operations
+- Error reporting per workflow
+- Transaction-based consistency
+
+---
+
+### Error Handling and Code Quality (2024-12-30)
+
+**Objective:** Address all unhandled errors and lint warnings for production readiness
+
+**Completed Items:**
+
+1. ✅ **Error Handling Fixes**
+   - Fixed 26 files with unhandled error warnings
+   - Added proper error checking for all operations
+   - Used `//nolint:errcheck` for intentionally ignored errors
+   - Wrapped errors with context using `fmt.Errorf("context: %w", err)`
+
+2. ✅ **Type Safety Improvements**
+   - Fixed type assertions to use ok pattern: `value, ok := x.(Type)`
+   - Fixed integer parsing (strconv.Atoi vs ParseInt)
+   - Improved type safety across codebase
+
+3. ✅ **TODO Implementations**
+   - Implemented template usage count tracking
+   - Enhanced graph layout algorithm for branching workflows
+   - Implemented execution subscription in GraphQL
+
+4. ✅ **Graph Layout Algorithm**
+   - Replaced simple linear layout with hierarchical BFS-based layout
+   - Implemented topological sort for level assignment
+   - Added horizontal centering for nodes at each level
+   - Proper handling of isolated nodes
+
+5. ✅ **Lint Compliance**
+   - Passed golangci-lint with zero warnings
+   - Addressed all errcheck warnings
+   - Fixed all staticcheck issues
+
+**Files Modified:**
+- 26 files with error handling improvements
+- `internal/template/service.go` - Usage count tracking
+- `internal/template/repository.go` - IncrementUsageCount method
+- `internal/template/model.go` - UsageCount field
+- `internal/graphql/converters.go` - Actual usage count return
+- `internal/graphql/schema.resolvers.go` - Execution subscription
+- `internal/aibuilder/generator.go` - Graph layout algorithm
+- Mock repositories updated for new interface methods
+
+**Files Created:**
+- `migrations/021_template_usage_count.sql` - Usage count migration
+
+**Test Results:**
+- All Go tests passing (100%)
+- All frontend tests passing (2056 passed, 8 skipped)
+- Zero lint warnings
+- Zero unhandled errors in production code
+
+**Code Quality:**
+- Cognitive complexity < 15
+- Proper error wrapping
+- Type-safe operations
+- Comprehensive test coverage
+
+---
+
 ## In Progress
 
 (No current tasks)
@@ -626,15 +997,10 @@ Example GitHub Actions workflow provided in documentation.
 
 - Create developer onboarding documentation
 - Add more workflow templates
-- Implement workflow templates marketplace
-- Add bulk workflow operations
 
 ### Low Priority
 
-- Add GraphQL API
-- Implement workflow visual editor backend
-- Add collaborative editing features
-- Create workflow analytics dashboard
+- Implement workflow visual editor backend (drag-and-drop UI with backend persistence)
 
 ---
 
@@ -782,4 +1148,190 @@ PASS: TestMongoAggregateAction_Execute
 
 ---
 
-Last Updated: 2024-12-20
+### Comprehensive Documentation Suite (2026-01-01)
+
+**Objective:** Create complete documentation for contributors, developers, and operators
+
+**Completed Items:**
+
+**Priority 1 - Critical Documentation:**
+
+1. ✅ **CONTRIBUTING.md** (589 lines)
+   - Code of Conduct and community guidelines
+   - Complete local development setup instructions
+   - Git Flow process (branch naming: `<ticket>-<description>`)
+   - TDD requirements (Red-Green-Refactor mandatory)
+   - Pull request process with template
+   - Coding standards (SOLID, clean code, complexity < 15)
+   - Testing requirements (80%+ business logic coverage)
+   - Documentation guidelines and security reporting
+
+2. ✅ **docs/getting-started.md** (expanded from 198 to 1,054 lines)
+   - Comprehensive onboarding for new developers
+   - Multiple installation methods (Docker, manual, dev mode)
+   - 80+ environment variables documented
+   - Platform-specific instructions (macOS, Linux, Windows/WSL2)
+   - Troubleshooting guide (7 common issues)
+   - Quick start guides for all components
+   - Verification commands and health checks
+
+3. ✅ **docs/architecture.md** (890 lines)
+   - System overview with multi-layer architecture diagrams
+   - Clean Architecture and SOLID principles
+   - Complete component breakdown (Go backend + React frontend)
+   - Data flow documentation (workflow execution, webhooks, collaboration, credentials)
+   - Full technology stack reference
+   - 10 design patterns with code examples (Factory, Repository, Visitor, etc.)
+   - Deployment architectures (dev, production, HA, Kubernetes)
+   - Security architecture (defense in depth, encryption)
+   - Scalability strategies and performance targets
+   - Observability (Prometheus metrics, structured logging, OpenTelemetry tracing)
+
+4. ✅ **docs/DEPLOYMENT.md** (890 lines)
+   - Infrastructure requirements and resource sizing
+   - Docker deployment with production docker-compose.yml
+   - Complete Kubernetes manifests (Deployment, Service, HPA, Ingress)
+   - Database setup (PostgreSQL migrations, backups, replication)
+   - Redis configuration (Sentinel, Cluster modes)
+   - 80+ environment variables documented
+   - Load balancer and ingress configuration
+   - Monitoring stack setup (Prometheus, Grafana, OpenTelemetry, Sentry)
+   - CI/CD pipeline with GitHub Actions
+   - Pre/post deployment checklists
+   - Scaling strategies and troubleshooting
+
+5. ✅ **docs/README.md** (updated)
+   - Fixed all dead links (11 moved to "Planned Documentation")
+   - Corrected file paths (../CONTRIBUTING.md, API_REFERENCE.md)
+   - Added "Collaboration & Real-time Features" section
+   - All 19 working links verified
+   - Better organization reflecting current documentation state
+
+**Priority 2 - Developer & Operations Guides:**
+
+6. ✅ **docs/FRONTEND_GUIDE.md** (1,000+ lines)
+   - Complete React/TypeScript development guide
+   - Frontend stack overview (React 18, Vite, Tailwind, ReactFlow, Zustand, TanStack Query)
+   - Clean architecture principles for frontend
+   - Component development patterns (functional, compound, render props)
+   - State management strategies (when to use Zustand vs TanStack Query)
+   - API integration with custom hooks
+   - Testing strategies (Vitest, Testing Library, 60%+ coverage target)
+   - Performance optimization (code splitting, memoization, virtualization)
+   - Common UI patterns (forms with React Hook Form + Zod, modals, tables, WebSocket)
+   - Build and deployment configuration
+   - Troubleshooting guide for frontend issues
+
+7. ✅ **docs/INTEGRATION_GUIDE.md** (1,100+ lines)
+   - How to extend Gorax with new integrations, actions, and connectors
+   - Action interface implementation and lifecycle
+   - Integration file organization and structure
+   - Common patterns (HTTP/REST, OAuth 2.0, webhooks, polling vs push)
+   - LLM provider integration (Provider interface, request/response mapping, token tracking)
+   - Credential management (template injection `{{credentials.name}}`, encryption, masking)
+   - Expression evaluation (CEL integration, context access)
+   - Real-world step-by-step examples:
+     - Complete Slack SendMessage integration
+     - Custom HTTP action implementation
+     - Adding new LLM provider (Cohere, Gemini)
+   - Testing with mocks and integration tests
+   - Marketplace template publishing process
+
+8. ✅ **docs/DATABASE_SCHEMA.md** (1,200+ lines)
+   - Complete PostgreSQL 15+ schema documentation
+   - 27 core tables with full SQL definitions and column descriptions
+   - Multi-tenancy model with Row-Level Security (RLS) policies
+   - Entity relationship diagrams (5 domains: Workflow, Credential, Webhook, Marketplace, RBAC)
+   - Index strategies (composite, partial, GIN) with examples
+   - Query optimization patterns (N+1 avoidance, cursor pagination)
+   - Migration patterns and zero-downtime migration strategies
+   - Partitioning strategy for high-volume tables (executions, webhook_events)
+   - Backup and recovery procedures (PITR, pg_dump, disaster recovery)
+   - Common queries for all major use cases (analytics, audit, performance)
+   - Performance tuning (connection pooling, query timeouts, EXPLAIN ANALYZE)
+   - Security considerations (RLS, envelope encryption, parameterized queries)
+
+9. ✅ **docs/TROUBLESHOOTING.md** (1,200+ lines)
+   - Operational troubleshooting for production issues
+   - Quick diagnostics (health checks, system status, log locations, error pattern recognition)
+   - 12 application issues (API 500 errors, workflows not executing, queue backlog, memory/CPU, slow responses, connection exhaustion)
+   - 8 database issues (connection pool, slow queries, lock contention, disk space, migrations, replication lag, table bloat, index corruption)
+   - Performance analysis tools (Prometheus queries, Grafana dashboards, Go pprof, Jaeger tracing)
+   - Worker/queue issues (stuck messages, DLQ analysis, crashes, concurrency limits, queue monitoring)
+   - Auth/authz problems (login failures, JWT tokens, RBAC, tenant isolation, sessions)
+   - Integration failures (LLM rate limits, external connectivity, credential expiration, OAuth refresh, webhook delivery)
+   - Monitoring setup (Prometheus alert rules, Grafana dashboards, Loki log aggregation, Sentry, Jaeger)
+   - Log analysis (structured logging, field-based filtering, correlation IDs)
+   - kubectl/Docker command reference (logs, exec, port-forward, scaling, restart strategies)
+   - Emergency procedures (incident response, database failover, rollback, circuit breaker, rate limiting)
+   - Post-mortem template for incident documentation
+
+**Files Created:**
+- `CONTRIBUTING.md` (589 lines)
+- `docs/getting-started.md` (expanded 198 → 1,054 lines)
+- `docs/architecture.md` (890 lines)
+- `docs/DEPLOYMENT.md` (890 lines)
+- `docs/FRONTEND_GUIDE.md` (1,000+ lines)
+- `docs/INTEGRATION_GUIDE.md` (1,100+ lines)
+- `docs/DATABASE_SCHEMA.md` (1,200+ lines)
+- `docs/TROUBLESHOOTING.md` (1,200+ lines)
+
+**Files Modified:**
+- `docs/README.md` (fixed dead links, added sections)
+
+**Documentation Statistics:**
+- Total lines written: ~11,000 lines
+- Total files created: 8 major documentation files
+- Coverage: Contributors, developers, operators, and end-users
+- All documentation follows project style and includes real code examples
+
+**Target Audiences:**
+- **Contributors**: CONTRIBUTING.md, getting-started.md
+- **Frontend Developers**: FRONTEND_GUIDE.md
+- **Backend Developers**: INTEGRATION_GUIDE.md, architecture.md
+- **Database Engineers**: DATABASE_SCHEMA.md
+- **DevOps/SRE**: DEPLOYMENT.md, TROUBLESHOOTING.md
+- **All Developers**: architecture.md, DEVELOPER_GUIDE.md
+
+**Quality Standards:**
+- Real code examples from codebase
+- Copy-paste ready commands and configurations
+- Comprehensive troubleshooting sections
+- Cross-referenced between documents
+- Platform-specific instructions where applicable
+- Security best practices included
+- Performance optimization guidance
+- Tested procedures and verified links
+
+**How to Use:**
+
+1. **New Contributors:**
+   - Start with CONTRIBUTING.md
+   - Follow getting-started.md for setup
+   - Review architecture.md for system overview
+
+2. **Frontend Development:**
+   - Read FRONTEND_GUIDE.md for React patterns
+   - Check existing components for examples
+   - Follow TDD workflow
+
+3. **Backend Development:**
+   - Read architecture.md for system design
+   - Use INTEGRATION_GUIDE.md for new integrations
+   - Refer to DATABASE_SCHEMA.md for data model
+
+4. **Production Operations:**
+   - Use DEPLOYMENT.md for deployment procedures
+   - Reference TROUBLESHOOTING.md for incident response
+   - Follow runbooks for common operations
+
+**Future Enhancements:**
+- Workflow specification documentation (JSON schema, node types, expressions)
+- API client SDK documentation (Go, TypeScript, Python)
+- Performance tuning guide (benchmarking, profiling, optimization)
+- Security audit guide (penetration testing, vulnerability scanning)
+- Disaster recovery runbook (detailed procedures)
+
+---
+
+Last Updated: 2026-01-01

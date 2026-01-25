@@ -1,48 +1,28 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workflowAPI } from '../api/workflows'
 import type {
-  Workflow,
   WorkflowListParams,
   WorkflowCreateInput,
   WorkflowUpdateInput,
-  WorkflowExecutionResponse,
 } from '../api/workflows'
+import { isValidResourceId } from '../utils/routing'
 
 /**
  * Hook to fetch and manage list of workflows
  */
 export function useWorkflows(params?: WorkflowListParams) {
-  const [workflows, setWorkflows] = useState<Workflow[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchWorkflows = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await workflowAPI.list(params)
-      setWorkflows(response.workflows)
-      setTotal(response.total)
-    } catch (err) {
-      setError(err as Error)
-      setWorkflows([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchWorkflows()
-  }, [fetchWorkflows])
+  const query = useQuery({
+    queryKey: ['workflows', params],
+    queryFn: () => workflowAPI.list(params),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    workflows,
-    total,
-    loading,
-    error,
-    refetch: fetchWorkflows,
+    workflows: query.data?.workflows ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -50,38 +30,18 @@ export function useWorkflows(params?: WorkflowListParams) {
  * Hook to fetch a single workflow by ID
  */
 export function useWorkflow(id: string | null) {
-  const [workflow, setWorkflow] = useState<Workflow | null>(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchWorkflow = useCallback(async () => {
-    if (!id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await workflowAPI.get(id)
-      setWorkflow(data)
-    } catch (err) {
-      setError(err as Error)
-      setWorkflow(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchWorkflow()
-  }, [fetchWorkflow])
+  const query = useQuery({
+    queryKey: ['workflow', id],
+    queryFn: () => workflowAPI.get(id!),
+    enabled: isValidResourceId(id),
+    staleTime: 30000, // 30 seconds
+  })
 
   return {
-    workflow,
-    loading,
-    error,
-    refetch: fetchWorkflow,
+    workflow: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   }
 }
 
@@ -89,64 +49,47 @@ export function useWorkflow(id: string | null) {
  * Hook for workflow CRUD mutations
  */
 export function useWorkflowMutations() {
-  const [creating, setCreating] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [executing, setExecuting] = useState(false)
+  const queryClient = useQueryClient()
 
-  const createWorkflow = async (input: WorkflowCreateInput): Promise<Workflow> => {
-    try {
-      setCreating(true)
-      const workflow = await workflowAPI.create(input)
-      return workflow
-    } finally {
-      setCreating(false)
-    }
-  }
+  const createMutation = useMutation({
+    mutationFn: (input: WorkflowCreateInput) => workflowAPI.create(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+    },
+  })
 
-  const updateWorkflow = async (
-    id: string,
-    updates: WorkflowUpdateInput
-  ): Promise<Workflow> => {
-    try {
-      setUpdating(true)
-      const workflow = await workflowAPI.update(id, updates)
-      return workflow
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: WorkflowUpdateInput }) =>
+      workflowAPI.update(id, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+      queryClient.invalidateQueries({ queryKey: ['workflow', variables.id] })
+    },
+  })
 
-  const deleteWorkflow = async (id: string): Promise<void> => {
-    try {
-      setDeleting(true)
-      await workflowAPI.delete(id)
-    } finally {
-      setDeleting(false)
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => workflowAPI.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+      queryClient.invalidateQueries({ queryKey: ['workflow', id] })
+    },
+  })
 
-  const executeWorkflow = async (
-    id: string,
-    input?: Record<string, unknown>
-  ): Promise<WorkflowExecutionResponse> => {
-    try {
-      setExecuting(true)
-      const response = await workflowAPI.execute(id, input)
-      return response
-    } finally {
-      setExecuting(false)
-    }
-  }
+  const executeMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input?: Record<string, unknown> }) =>
+      workflowAPI.execute(id, input),
+  })
 
   return {
-    createWorkflow,
-    updateWorkflow,
-    deleteWorkflow,
-    executeWorkflow,
-    creating,
-    updating,
-    deleting,
-    executing,
+    createWorkflow: createMutation.mutateAsync,
+    updateWorkflow: (id: string, updates: WorkflowUpdateInput) =>
+      updateMutation.mutateAsync({ id, updates }),
+    deleteWorkflow: deleteMutation.mutateAsync,
+    executeWorkflow: (id: string, input?: Record<string, unknown>) =>
+      executeMutation.mutateAsync({ id, input }),
+    creating: createMutation.isPending,
+    updating: updateMutation.isPending,
+    deleting: deleteMutation.isPending,
+    executing: executeMutation.isPending,
   }
 }

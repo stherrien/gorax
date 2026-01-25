@@ -1,0 +1,83 @@
+# GitHub Configuration
+github_owner      = "stherrien"
+github_token      = "ghp_YOUR_TOKEN_HERE"
+repository_name   = "gorax"
+homepage_url      = "https://gorax.dev"
+
+# Environment URLs
+staging_url    = "https://staging.gorax.dev"
+production_url = "https://gorax.dev"
+
+# Production reviewers (GitHub user IDs)
+# Get user ID: gh api users/{username} | jq .id
+production_reviewers = [
+  # 12345678,  # user1
+]
+
+# Optional: Production reviewer teams (GitHub team IDs)
+# Get team ID: gh api orgs/{org}/teams/{team} | jq .id
+# production_reviewer_teams = [
+#   # 87654321,  # platform-team
+# ]
+
+# Enable development environment (optional)
+enable_development_environment = false
+
+# Secret Management
+# WARNING: Setting manage_secrets=true will store secrets in Terraform state
+# Consider using GitHub UI or gh CLI for sensitive secrets instead
+manage_secrets = false
+
+# If manage_secrets=true, provide secret values below
+# codecov_token              = ""
+# staging_db_password        = ""
+# staging_redis_password     = ""
+# production_db_password     = ""
+# production_redis_password  = ""
+# health_check_token         = ""
+
+# Deployment Type
+# Options: "kubernetes", "aws-ecs", "ssh"
+deployment_type = "kubernetes"
+
+# Kubernetes Deployment Secrets (if deployment_type = "kubernetes")
+# kubeconfig       = ""  # Base64-encoded kubeconfig
+# k8s_cluster_url  = "https://kubernetes.example.com"
+# k8s_token        = ""
+# k8s_namespace    = "gorax"
+
+# AWS ECS Deployment Secrets (if deployment_type = "aws-ecs")
+# aws_access_key_id     = ""
+# aws_secret_access_key = ""
+# aws_region            = "us-east-1"
+# ecs_cluster           = "gorax-production"
+# ecs_service           = "gorax-api"
+# ecs_task_definition   = "gorax-api"
+
+# SSH Deployment Secrets (if deployment_type = "ssh")
+# ssh_private_key = ""  # SSH private key
+# ssh_host        = "prod.gorax.dev"
+# ssh_user        = "deploy"
+# ssh_port        = "22"
+
+# Branch Protection
+require_signed_commits          = true
+require_conversation_resolution = false
+
+# Push allowances (format: "/users/{user_id}" or "/teams/{team_id}")
+# Get user ID: gh api users/{username} | jq .id
+# Get team ID: gh api orgs/{org}/teams/{team} | jq .id
+main_branch_push_allowances    = []
+dev_branch_push_allowances     = []
+release_branch_push_allowances = []
+
+# Enable branch protection for release and hotfix branches
+enable_release_branch_protection = false
+enable_hotfix_branch_protection  = false
+
+# Container Registry
+container_registry   = "ghcr.io"
+container_image_name = "stherrien/gorax"
+
+# Webhooks (optional)
+# slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"

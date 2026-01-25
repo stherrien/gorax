@@ -1,9 +1,18 @@
+import {
+  type APIErrorResponse,
+  type DataResponse,
+  type PaginatedResponse,
+  isAPIError,
+  hasDataWrapper,
+  isPaginatedResponse,
+} from './types'
+
 // Custom error classes
 export class APIError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public response?: any
+    public response?: APIErrorResponse | unknown
   ) {
     super(message)
     this.name = 'APIError'
@@ -137,19 +146,42 @@ export class APIClient {
     // Handle error responses
     // Read body as text first, then try to parse as JSON
     // (avoids "body stream already read" error)
-    let errorData: any
+    let errorData: APIErrorResponse | Record<string, unknown>
     const text = await response.text()
     try {
       errorData = JSON.parse(text)
     } catch {
-      errorData = { error: text || response.statusText }
+      errorData = { error: text || response.statusText, code: 'internal_error' }
     }
 
-    const errorMessage = errorData.error || errorData.message || response.statusText
+    // Extract error message using standardized format
+    const errorMessage = isAPIError(errorData)
+      ? errorData.error
+      : (errorData as Record<string, unknown>).error?.toString() ||
+        (errorData as Record<string, unknown>).message?.toString() ||
+        response.statusText
 
     // Categorize errors by status code
     if (response.status === 401 || response.status === 403) {
-      throw new AuthError(errorMessage, response.status, errorData)
+      // Handle authentication/authorization errors
+      const authError = new AuthError(errorMessage, response.status, errorData)
+
+      // If 401, redirect to login (unless already on login page)
+      if (response.status === 401 && !window.location.pathname.includes('/login')) {
+        // Store the current path for redirect after login
+        localStorage.setItem('redirect_after_login', window.location.pathname)
+
+        // In development, just show error
+        // In production, redirect to Kratos login
+        if (import.meta.env.MODE === 'production') {
+          // TODO: Redirect to Kratos login URL
+          console.error('Unauthorized - redirect to login')
+        } else {
+          console.error('Unauthorized (dev mode) - ', errorMessage)
+        }
+      }
+
+      throw authError
     }
 
     if (response.status === 404) {
@@ -244,7 +276,91 @@ export class APIClient {
   async patch(path: string, body: any, options?: RequestOptions): Promise<any> {
     return this.request('PATCH', path, { ...options, body })
   }
+
+  // --- Response Unwrapping Methods ---
+
+  /**
+   * GET request that unwraps {data: T} responses
+   * Use when the backend returns wrapped responses
+   */
+  async getData<T>(path: string, options?: RequestOptions): Promise<T> {
+    const response = await this.get(path, options)
+    if (hasDataWrapper<T>(response)) {
+      return response.data
+    }
+    return response as T
+  }
+
+  /**
+   * GET request for paginated responses
+   * Returns both the data array and pagination metadata
+   */
+  async getPaginated<T>(
+    path: string,
+    options?: RequestOptions
+  ): Promise<PaginatedResponse<T>> {
+    const response = await this.get(path, options)
+    if (isPaginatedResponse<T>(response)) {
+      return response
+    }
+    // If response is a plain array, wrap it
+    if (Array.isArray(response)) {
+      return {
+        data: response,
+        limit: response.length,
+        offset: 0,
+        total: response.length,
+      }
+    }
+    // If response has data array but no pagination metadata
+    if (hasDataWrapper<T[]>(response) && Array.isArray(response.data)) {
+      return {
+        data: response.data,
+        limit: response.data.length,
+        offset: 0,
+        total: response.data.length,
+      }
+    }
+    throw new APIError('Unexpected response format for paginated request')
+  }
+
+  /**
+   * POST request that unwraps {data: T} responses
+   */
+  async postData<T>(path: string, body: any, options?: RequestOptions): Promise<T> {
+    const response = await this.post(path, body, options)
+    if (hasDataWrapper<T>(response)) {
+      return response.data
+    }
+    return response as T
+  }
+
+  /**
+   * PUT request that unwraps {data: T} responses
+   */
+  async putData<T>(path: string, body: any, options?: RequestOptions): Promise<T> {
+    const response = await this.put(path, body, options)
+    if (hasDataWrapper<T>(response)) {
+      return response.data
+    }
+    return response as T
+  }
+
+  /**
+   * PATCH request that unwraps {data: T} responses
+   */
+  async patchData<T>(path: string, body: any, options?: RequestOptions): Promise<T> {
+    const response = await this.patch(path, body, options)
+    if (hasDataWrapper<T>(response)) {
+      return response.data
+    }
+    return response as T
+  }
 }
+
+// Re-export types for convenience
+export type { DataResponse, PaginatedResponse, APIErrorResponse }
+export { isAPIError, hasDataWrapper, isPaginatedResponse }
 
 // Default API client instance
 // In development, use empty base URL so requests go through Vite proxy

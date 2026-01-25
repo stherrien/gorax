@@ -1,0 +1,4 @@
+{"type":"Metric","data":{"name":"data_sent","type":"counter","contains":"data","thresholds":[],"submetrics":null},"metric":"data_sent"}
+{"metric":"data_sent","type":"Point","data":{"time":"2026-01-02T17:38:57.103355-05:00","value":0,"tags":{"environment":"local","group":"::setup","platform":"gorax"}}}
+{"type":"Metric","data":{"name":"data_received","type":"counter","contains":"data","thresholds":[],"submetrics":null},"metric":"data_received"}
+{"metric":"data_received","type":"Point","data":{"time":"2026-01-02T17:38:57.103355-05:00","value":0,"tags":{"environment":"local","group":"::setup","platform":"gorax"}}}

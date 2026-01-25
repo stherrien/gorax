@@ -59,11 +59,28 @@ func (e *ValidationError) Error() string {
 type CredentialType string
 
 const (
-	TypeAPIKey      CredentialType = "api_key"
-	TypeOAuth2      CredentialType = "oauth2"
-	TypeBasicAuth   CredentialType = "basic_auth"
-	TypeBearerToken CredentialType = "bearer_token"
-	TypeCustom      CredentialType = "custom"
+	TypeAPIKey             CredentialType = "api_key"
+	TypeOAuth2             CredentialType = "oauth2"
+	TypeBasicAuth          CredentialType = "basic_auth"
+	TypeBearerToken        CredentialType = "bearer_token"
+	TypeCustom             CredentialType = "custom"
+	TypeDatabasePostgreSQL CredentialType = "database_postgresql"
+	TypeDatabaseMySQL      CredentialType = "database_mysql"
+	TypeDatabaseSQLite     CredentialType = "database_sqlite"
+	TypeDatabaseMongoDB    CredentialType = "database_mongodb"
+	TypeQueueAWSSQS        CredentialType = "queue_aws_sqs"
+	TypeQueueKafka         CredentialType = "queue_kafka"
+	TypeQueueRabbitMQ      CredentialType = "queue_rabbitmq"
+	TypeEmailSendGrid      CredentialType = "email_sendgrid"
+	TypeEmailMailgun       CredentialType = "email_mailgun"
+	TypeEmailAWSSES        CredentialType = "email_aws_ses"
+	TypeEmailSMTP          CredentialType = "email_smtp"
+	TypeSMSTwilio          CredentialType = "sms_twilio"
+	TypeSMSAWSSNS          CredentialType = "sms_aws_sns"
+	TypeSMSMessageBird     CredentialType = "sms_messagebird"
+	TypeStorageAWSS3       CredentialType = "storage_aws_s3"
+	TypeStorageGCS         CredentialType = "storage_gcs"
+	TypeStorageAzureBlob   CredentialType = "storage_azure_blob"
 )
 
 // CredentialStatus represents the status of a credential
@@ -209,7 +226,22 @@ func (c *CreateCredentialInput) Validate() error {
 	if c.Type == "" {
 		return &ValidationError{Message: "type is required"}
 	}
-	if c.Type != TypeAPIKey && c.Type != TypeOAuth2 && c.Type != TypeBasicAuth && c.Type != TypeBearerToken && c.Type != TypeCustom {
+	validTypes := []CredentialType{
+		TypeAPIKey, TypeOAuth2, TypeBasicAuth, TypeBearerToken, TypeCustom,
+		TypeDatabasePostgreSQL, TypeDatabaseMySQL, TypeDatabaseSQLite, TypeDatabaseMongoDB,
+		TypeQueueAWSSQS, TypeQueueKafka, TypeQueueRabbitMQ,
+		TypeEmailSendGrid, TypeEmailMailgun, TypeEmailAWSSES, TypeEmailSMTP,
+		TypeSMSTwilio, TypeSMSAWSSNS, TypeSMSMessageBird,
+		TypeStorageAWSS3, TypeStorageGCS, TypeStorageAzureBlob,
+	}
+	isValid := false
+	for _, validType := range validTypes {
+		if c.Type == validType {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
 		return &ValidationError{Message: "invalid credential type"}
 	}
 	if len(c.Value) == 0 {

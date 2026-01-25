@@ -2350,3 +2350,507 @@ func TestFilterEvaluator_DetailedResults(t *testing.T) {
 		})
 	}
 }
+
+// TestFilterEvaluator_IsEmpty tests the is_empty operator
+func TestFilterEvaluator_IsEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+	}{
+		{
+			name: "empty string",
+			filter: &WebhookFilter{
+				FieldPath: "$.name",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"name": ""},
+			expected: true,
+		},
+		{
+			name: "non-empty string",
+			filter: &WebhookFilter{
+				FieldPath: "$.name",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"name": "test"},
+			expected: false,
+		},
+		{
+			name: "empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.items",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"items": []interface{}{}},
+			expected: true,
+		},
+		{
+			name: "non-empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.items",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"items": []interface{}{1, 2, 3}},
+			expected: false,
+		},
+		{
+			name: "empty map",
+			filter: &WebhookFilter{
+				FieldPath: "$.data",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"data": map[string]interface{}{}},
+			expected: true,
+		},
+		{
+			name: "non-empty map",
+			filter: &WebhookFilter{
+				FieldPath: "$.data",
+				Operator:  OpIsEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"data": map[string]interface{}{"key": "value"}},
+			expected: false,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestFilterEvaluator_IsNotEmpty tests the is_not_empty operator
+func TestFilterEvaluator_IsNotEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+	}{
+		{
+			name: "non-empty string",
+			filter: &WebhookFilter{
+				FieldPath: "$.name",
+				Operator:  OpIsNotEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"name": "test"},
+			expected: true,
+		},
+		{
+			name: "empty string",
+			filter: &WebhookFilter{
+				FieldPath: "$.name",
+				Operator:  OpIsNotEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"name": ""},
+			expected: false,
+		},
+		{
+			name: "non-empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.items",
+				Operator:  OpIsNotEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"items": []interface{}{1, 2}},
+			expected: true,
+		},
+		{
+			name: "empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.items",
+				Operator:  OpIsNotEmpty,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"items": []interface{}{}},
+			expected: false,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestFilterEvaluator_Between tests the between operator
+func TestFilterEvaluator_Between(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+		wantErr  bool
+	}{
+		{
+			name: "value within range",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     map[string]interface{}{"min": 10.0, "max": 100.0},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"amount": 50},
+			expected: true,
+		},
+		{
+			name: "value at lower bound",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     map[string]interface{}{"min": 10.0, "max": 100.0},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"amount": 10},
+			expected: true,
+		},
+		{
+			name: "value at upper bound",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     map[string]interface{}{"min": 10.0, "max": 100.0},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"amount": 100},
+			expected: true,
+		},
+		{
+			name: "value below range",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     map[string]interface{}{"min": 10.0, "max": 100.0},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"amount": 5},
+			expected: false,
+		},
+		{
+			name: "value above range",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     map[string]interface{}{"min": 10.0, "max": 100.0},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"amount": 150},
+			expected: false,
+		},
+		{
+			name: "invalid value format",
+			filter: &WebhookFilter{
+				FieldPath: "$.amount",
+				Operator:  OpBetween,
+				Value:     "not a map",
+				Enabled:   true,
+			},
+			payload: map[string]interface{}{"amount": 50},
+			wantErr: true,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestFilterEvaluator_GreaterThanOrEqual tests the gte operator
+func TestFilterEvaluator_GreaterThanOrEqual(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+	}{
+		{
+			name: "greater than",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpGreaterThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 15},
+			expected: true,
+		},
+		{
+			name: "equal",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpGreaterThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 10},
+			expected: true,
+		},
+		{
+			name: "less than",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpGreaterThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 5},
+			expected: false,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestFilterEvaluator_LessThanOrEqual tests the lte operator
+func TestFilterEvaluator_LessThanOrEqual(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+	}{
+		{
+			name: "less than",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpLessThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 5},
+			expected: true,
+		},
+		{
+			name: "equal",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpLessThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 10},
+			expected: true,
+		},
+		{
+			name: "greater than",
+			filter: &WebhookFilter{
+				FieldPath: "$.count",
+				Operator:  OpLessThanOrEqual,
+				Value:     10.0,
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"count": 15},
+			expected: false,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestFilterEvaluator_MatchesAny tests the matches_any operator
+func TestFilterEvaluator_MatchesAny(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+		wantErr  bool
+	}{
+		{
+			name: "array contains one matching element",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAny,
+				Value:     []interface{}{"urgent", "important"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"normal", "urgent", "review"}},
+			expected: true,
+		},
+		{
+			name: "array contains multiple matching elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAny,
+				Value:     []interface{}{"urgent", "important"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"urgent", "important"}},
+			expected: true,
+		},
+		{
+			name: "array contains no matching elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAny,
+				Value:     []interface{}{"urgent", "important"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"normal", "review"}},
+			expected: false,
+		},
+		{
+			name: "empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAny,
+				Value:     []interface{}{"urgent"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{}},
+			expected: false,
+		},
+		{
+			name: "field is not array",
+			filter: &WebhookFilter{
+				FieldPath: "$.status",
+				Operator:  OpMatchesAny,
+				Value:     []interface{}{"active"},
+				Enabled:   true,
+			},
+			payload: map[string]interface{}{"status": "active"},
+			wantErr: true,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestFilterEvaluator_MatchesAll tests the matches_all operator
+func TestFilterEvaluator_MatchesAll(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *WebhookFilter
+		payload  map[string]interface{}
+		expected bool
+		wantErr  bool
+	}{
+		{
+			name: "array contains all required elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAll,
+				Value:     []interface{}{"urgent", "review"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"urgent", "review", "high-priority"}},
+			expected: true,
+		},
+		{
+			name: "array contains only required elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAll,
+				Value:     []interface{}{"urgent", "review"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"urgent", "review"}},
+			expected: true,
+		},
+		{
+			name: "array missing some required elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAll,
+				Value:     []interface{}{"urgent", "review"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"urgent"}},
+			expected: false,
+		},
+		{
+			name: "array missing all required elements",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAll,
+				Value:     []interface{}{"urgent", "review"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{"normal", "low-priority"}},
+			expected: false,
+		},
+		{
+			name: "empty array",
+			filter: &WebhookFilter{
+				FieldPath: "$.tags",
+				Operator:  OpMatchesAll,
+				Value:     []interface{}{"urgent"},
+				Enabled:   true,
+			},
+			payload:  map[string]interface{}{"tags": []interface{}{}},
+			expected: false,
+		},
+	}
+
+	evaluator := NewFilterEvaluator(nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.EvaluateSingle(tt.filter, tt.payload)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}

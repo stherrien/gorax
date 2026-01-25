@@ -309,10 +309,103 @@ describe('FilterBuilder', () => {
         'not_in',
         'exists',
         'not_exists',
+        'is_empty',
+        'is_not_empty',
+        'between',
+        'matches_any',
+        'matches_all',
       ]
 
       expectedOperators.forEach(op => {
         expect(options.some(option => option.value === op)).toBe(true)
+      })
+    })
+
+    it('displays operator description for selected operator', async () => {
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'between' } })
+
+      await waitFor(() => {
+        expect(screen.getByText(/Number within range/i)).toBeInTheDocument()
+      })
+    })
+
+    it('shows appropriate placeholder for between operator', async () => {
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'between' } })
+
+      await waitFor(() => {
+        const valueInput = screen.getByPlaceholderText(/min.*max/i)
+        expect(valueInput).toBeInTheDocument()
+      })
+    })
+
+    it('disables value input for is_empty operator', async () => {
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'is_empty' } })
+
+      await waitFor(() => {
+        const valueInput = screen.getByPlaceholderText(/no value needed/i)
+        expect(valueInput).toBeDisabled()
+      })
+    })
+
+    it('shows array placeholder for matches_any operator', async () => {
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'matches_any' } })
+
+      await waitFor(() => {
+        const valueInput = screen.getByPlaceholderText(/tag1.*tag2/i)
+        expect(valueInput).toBeInTheDocument()
+        expect(valueInput).not.toBeDisabled()
       })
     })
   })
@@ -541,7 +634,7 @@ describe('FilterBuilder', () => {
       const operatorSelect = screen.getByLabelText(/operator/i)
       fireEvent.change(operatorSelect, { target: { value: 'regex' } })
 
-      const valueInput = screen.getByPlaceholderText(/value/i)
+      const valueInput = screen.getByPlaceholderText(/\^/i)
       fireEvent.change(valueInput, { target: { value: '[invalid(regex' } })
 
       const saveButton = screen.getByRole('button', { name: /save/i })
@@ -549,6 +642,136 @@ describe('FilterBuilder', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Invalid regex pattern')).toBeInTheDocument()
+      })
+    })
+
+    it('validates between operator format', async () => {
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const fieldPathInput = screen.getByPlaceholderText(/\$\.data\.status/i)
+      fireEvent.change(fieldPathInput, { target: { value: '$.amount' } })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'between' } })
+
+      const valueInput = screen.getByPlaceholderText(/min.*max/i)
+      fireEvent.change(valueInput, { target: { value: 'invalid format' } })
+
+      const saveButton = screen.getByRole('button', { name: /save/i })
+      fireEvent.click(saveButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Between requires format/i)).toBeInTheDocument()
+      })
+    })
+
+    it('accepts valid between operator format with JSON', async () => {
+      const newFilter = {
+        id: 'filter-new',
+        webhookId: mockWebhookId,
+        fieldPath: '$.amount',
+        operator: 'between' as const,
+        value: { min: 10, max: 100 },
+        logicGroup: 0,
+        enabled: true,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      }
+
+      vi.mocked(webhookAPI.createFilter).mockResolvedValue(newFilter)
+
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const fieldPathInput = screen.getByPlaceholderText(/\$\.data\.status/i)
+      fireEvent.change(fieldPathInput, { target: { value: '$.amount' } })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'between' } })
+
+      const valueInput = screen.getByPlaceholderText(/min.*max/i)
+      fireEvent.change(valueInput, { target: { value: '{"min": 10, "max": 100}' } })
+
+      const saveButton = screen.getByRole('button', { name: /save/i })
+      fireEvent.click(saveButton)
+
+      await waitFor(() => {
+        expect(webhookAPI.createFilter).toHaveBeenCalledWith(mockWebhookId, {
+          fieldPath: '$.amount',
+          operator: 'between',
+          value: { min: 10, max: 100 },
+          logicGroup: 0,
+          enabled: true,
+        })
+      })
+    })
+
+    it('accepts valid between operator format with comma-separated values', async () => {
+      const newFilter = {
+        id: 'filter-new',
+        webhookId: mockWebhookId,
+        fieldPath: '$.amount',
+        operator: 'between' as const,
+        value: { min: 10, max: 100 },
+        logicGroup: 0,
+        enabled: true,
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+      }
+
+      vi.mocked(webhookAPI.createFilter).mockResolvedValue(newFilter)
+
+      render(<FilterBuilder webhookId={mockWebhookId} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /add filter/i })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /add filter/i }))
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/operator/i)).toBeInTheDocument()
+      })
+
+      const fieldPathInput = screen.getByPlaceholderText(/\$\.data\.status/i)
+      fireEvent.change(fieldPathInput, { target: { value: '$.amount' } })
+
+      const operatorSelect = screen.getByLabelText(/operator/i)
+      fireEvent.change(operatorSelect, { target: { value: 'between' } })
+
+      const valueInput = screen.getByPlaceholderText(/min.*max/i)
+      fireEvent.change(valueInput, { target: { value: '10, 100' } })
+
+      const saveButton = screen.getByRole('button', { name: /save/i })
+      fireEvent.click(saveButton)
+
+      await waitFor(() => {
+        expect(webhookAPI.createFilter).toHaveBeenCalledWith(mockWebhookId, {
+          fieldPath: '$.amount',
+          operator: 'between',
+          value: { min: 10, max: 100 },
+          logicGroup: 0,
+          enabled: true,
+        })
       })
     })
   })

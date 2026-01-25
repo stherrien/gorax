@@ -865,3 +865,598 @@ func TestFindLoopBody_MultipleExitPoints(t *testing.T) {
 	assert.False(t, bodyEdgeMap["e5"], "exit edge node3->node_after should not be in loop body")
 	assert.False(t, bodyEdgeMap["e6"], "explicit loop exit edge should not be in loop body")
 }
+
+// ============================================================================
+// Break Condition Tests
+// ============================================================================
+
+func TestExecuteLoopAction_BreakCondition_Expression(t *testing.T) {
+	// Test that loop exits early when break condition expression is true
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Condition: "item.status == \"error\"",
+			},
+		},
+	}
+
+	// Third item has status "error" - loop should stop after processing it
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "status": "ok"},
+		map[string]interface{}{"id": 2, "status": "ok"},
+		map[string]interface{}{"id": 3, "status": "error"},
+		map[string]interface{}{"id": 4, "status": "ok"},
+		map[string]interface{}{"id": 5, "status": "ok"},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed only 3 items (break on the third due to error status)
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.Len(t, loopResult.Iterations, 3)
+
+	// Verify break was triggered
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+	assert.Equal(t, 2, loopResult.Metadata["break_at_index"])
+}
+
+func TestExecuteLoopAction_BreakCondition_Operator(t *testing.T) {
+	// Test break condition using operator syntax
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Field:    "item.count",
+				Operator: "greater_than",
+				Value:    10,
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "count": 5},
+		map[string]interface{}{"id": 2, "count": 8},
+		map[string]interface{}{"id": 3, "count": 15}, // Should break here
+		map[string]interface{}{"id": 4, "count": 3},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed only 3 items
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+}
+
+func TestExecuteLoopAction_BreakCondition_IndexBased(t *testing.T) {
+	// Test break condition based on index
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Condition: "index >= 2", // Break after 3rd iteration (index 2)
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1},
+		map[string]interface{}{"id": 2},
+		map[string]interface{}{"id": 3},
+		map[string]interface{}{"id": 4},
+		map[string]interface{}{"id": 5},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed 3 items (index 0, 1, 2 - break triggered on index 2)
+	assert.Equal(t, 3, loopResult.IterationCount)
+}
+
+func TestExecuteLoopAction_BreakCondition_MultipleConditions(t *testing.T) {
+	// Test multiple break conditions (any can trigger exit)
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Condition: "item.status == \"fatal\"",
+			},
+			{
+				Field:    "item.errors",
+				Operator: "greater_than",
+				Value:    5,
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "status": "ok", "errors": 0},
+		map[string]interface{}{"id": 2, "status": "ok", "errors": 7}, // Second condition triggers
+		map[string]interface{}{"id": 3, "status": "fatal", "errors": 0},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed only 2 items (second condition triggered on item 2)
+	assert.Equal(t, 2, loopResult.IterationCount)
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+}
+
+func TestExecuteLoopAction_NoBreakConditionMet(t *testing.T) {
+	// Test that loop completes when no break condition is met
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Condition: "item.status == \"error\"",
+			},
+		},
+	}
+
+	// No items have error status
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "status": "ok"},
+		map[string]interface{}{"id": 2, "status": "ok"},
+		map[string]interface{}{"id": 3, "status": "ok"},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// All items should be processed
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.Len(t, loopResult.Iterations, 3)
+
+	// Break should not be triggered
+	breakTriggered, ok := loopResult.Metadata["break_triggered"].(bool)
+	assert.True(t, !ok || !breakTriggered)
+}
+
+// ============================================================================
+// Object Iteration Tests
+// ============================================================================
+
+func TestExecuteLoopAction_ObjectIteration(t *testing.T) {
+	// Test iterating over object key-value pairs
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.config}",
+		ItemVariable:  "value",
+		IndexVariable: "index",
+		KeyVariable:   "key",
+		MaxIterations: 1000,
+		OnError:       "stop",
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"config": map[string]interface{}{
+						"host":    "localhost",
+						"port":    8080,
+						"enabled": true,
+					},
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should iterate over all 3 key-value pairs
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.Len(t, loopResult.Iterations, 3)
+
+	// Verify that keys are captured
+	keys := make(map[string]bool)
+	for _, iteration := range loopResult.Iterations {
+		if key, ok := iteration.Key.(string); ok {
+			keys[key] = true
+		}
+	}
+	assert.True(t, keys["host"], "should include host key")
+	assert.True(t, keys["port"], "should include port key")
+	assert.True(t, keys["enabled"], "should include enabled key")
+}
+
+func TestExecuteLoopAction_ObjectIterationWithBreak(t *testing.T) {
+	// Test object iteration with break condition
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "value",
+		IndexVariable: "index",
+		KeyVariable:   "key",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Condition: "key == \"stop\"",
+			},
+		},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": map[string]interface{}{
+						"a":    1,
+						"b":    2,
+						"stop": 3,
+						"c":    4,
+					},
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Since map iteration order is non-deterministic, just verify that
+	// break was triggered and we didn't process all 4 items
+	// (or we processed all if "stop" happened to be last)
+	assert.LessOrEqual(t, loopResult.IterationCount, 4)
+
+	// If break was triggered before processing all items
+	if loopResult.IterationCount < 4 {
+		assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+	}
+}
+
+// ============================================================================
+// Loop Context Tests (Enhanced Tracking)
+// ============================================================================
+
+func TestExecuteLoopAction_EnhancedContext(t *testing.T) {
+	// Test that loop provides enhanced context variables
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1},
+		map[string]interface{}{"id": 2},
+		map[string]interface{}{"id": 3},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Verify metadata includes total items
+	assert.Equal(t, 3, loopResult.Metadata["total_items"])
+
+	// Verify each iteration has is_first and is_last flags
+	assert.True(t, loopResult.Iterations[0].IsFirst)
+	assert.False(t, loopResult.Iterations[0].IsLast)
+
+	assert.False(t, loopResult.Iterations[1].IsFirst)
+	assert.False(t, loopResult.Iterations[1].IsLast)
+
+	assert.False(t, loopResult.Iterations[2].IsFirst)
+	assert.True(t, loopResult.Iterations[2].IsLast)
+}
+
+func TestExecuteLoopAction_BreakCondition_Contains(t *testing.T) {
+	// Test break condition with contains operator
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Field:    "item.name",
+				Operator: "contains",
+				Value:    "stop",
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "name": "item_one"},
+		map[string]interface{}{"id": 2, "name": "item_two"},
+		map[string]interface{}{"id": 3, "name": "stop_here"}, // Should break here
+		map[string]interface{}{"id": 4, "name": "item_four"},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed 3 items
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+}
+
+func TestExecuteLoopAction_BreakCondition_Equals(t *testing.T) {
+	// Test break condition with equals operator
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Field:    "item.status",
+				Operator: "equals",
+				Value:    "done",
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "status": "pending"},
+		map[string]interface{}{"id": 2, "status": "done"}, // Should break here
+		map[string]interface{}{"id": 3, "status": "pending"},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed 2 items
+	assert.Equal(t, 2, loopResult.IterationCount)
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+}
+
+func TestExecuteLoopAction_BreakCondition_LessThan(t *testing.T) {
+	// Test break condition with less_than operator
+	config := workflow.LoopActionConfig{
+		Source:        "${steps.data_source.output.items}",
+		ItemVariable:  "item",
+		IndexVariable: "index",
+		MaxIterations: 1000,
+		OnError:       "stop",
+		BreakConditions: []workflow.BreakCondition{
+			{
+				Field:    "item.priority",
+				Operator: "less_than",
+				Value:    3,
+			},
+		},
+	}
+
+	items := []interface{}{
+		map[string]interface{}{"id": 1, "priority": 10},
+		map[string]interface{}{"id": 2, "priority": 5},
+		map[string]interface{}{"id": 3, "priority": 2}, // Should break here (2 < 3)
+		map[string]interface{}{"id": 4, "priority": 8},
+	}
+
+	execCtx := &ExecutionContext{
+		TenantID:    "tenant1",
+		ExecutionID: "exec1",
+		WorkflowID:  "workflow1",
+		TriggerData: map[string]interface{}{},
+		StepOutputs: map[string]interface{}{
+			"data_source": map[string]interface{}{
+				"output": map[string]interface{}{
+					"items": items,
+				},
+			},
+		},
+	}
+
+	loopBodyNodes := []workflow.Node{}
+
+	executor := &loopExecutor{}
+	result, err := executor.executeLoop(context.Background(), config, execCtx, loopBodyNodes, []workflow.Edge{})
+
+	require.NoError(t, err)
+	loopResult, ok := result.(*LoopResult)
+	require.True(t, ok)
+
+	// Should have processed 3 items
+	assert.Equal(t, 3, loopResult.IterationCount)
+	assert.True(t, loopResult.Metadata["break_triggered"].(bool))
+}

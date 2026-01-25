@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { workflowAPI, type WorkflowVersion } from '../../api/workflows'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -16,12 +16,7 @@ export default function VersionHistory({ workflowId, currentVersion, onRestore, 
   const [restoring, setRestoring] = useState<number | null>(null)
   const [selectedVersion, setSelectedVersion] = useState<WorkflowVersion | null>(null)
 
-  // Load versions on mount
-  useEffect(() => {
-    loadVersions()
-  }, [workflowId])
-
-  async function loadVersions() {
+  const loadVersions = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -32,7 +27,12 @@ export default function VersionHistory({ workflowId, currentVersion, onRestore, 
     } finally {
       setLoading(false)
     }
-  }
+  }, [workflowId])
+
+  // Load versions on mount
+  useEffect(() => {
+    loadVersions()
+  }, [loadVersions])
 
   async function handleRestore(version: number) {
     if (!confirm(`Are you sure you want to restore to version ${version}? This will create a new version with the old definition.`)) {

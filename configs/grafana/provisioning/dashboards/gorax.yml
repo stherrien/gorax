@@ -1,0 +1,17 @@
+# Grafana Dashboard Provisioning Configuration
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards
+
+apiVersion: 1
+
+providers:
+  # Gorax dashboards provider
+  - name: 'Gorax'
+    orgId: 1
+    folder: 'Gorax'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

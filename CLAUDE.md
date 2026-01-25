@@ -5,6 +5,85 @@
 
 ---
 
+## Claude Workflow (MANDATORY)
+
+**Follow this workflow for EVERY task involving code changes:**
+
+### 1. Before Writing Code
+- [ ] Understand the full scope of the task
+- [ ] Check existing code patterns in the codebase
+- [ ] Plan the approach (use TodoWrite for complex tasks)
+- [ ] Write tests FIRST (TDD)
+
+### 2. While Writing Code
+- [ ] Handle ALL errors explicitly (no ignored errors)
+- [ ] Use meaningful variable/function names
+- [ ] Keep functions small (< 20 lines)
+- [ ] Follow existing code patterns in the codebase
+
+### 3. Before Committing (CRITICAL)
+**ALWAYS run these checks before ANY commit:**
+
+```bash
+# Go: Lint and format
+gofmt -w .
+goimports -w .
+golangci-lint run ./...
+go vet ./...
+
+# Go: Run tests
+go test ./... -race
+
+# Frontend: Lint and type check
+cd web && npm run lint
+cd web && npx tsc --noEmit
+
+# Frontend: Run tests
+cd web && npm test
+```
+
+**Error Handling Checklist:**
+- [ ] All errors are handled (no `_ = someFunc()`)
+- [ ] Errors are wrapped with context: `fmt.Errorf("operation: %w", err)`
+- [ ] No unhandled promise rejections in TypeScript
+- [ ] API errors return appropriate status codes
+
+**Code Quality Checklist:**
+- [ ] No `any` types in TypeScript
+- [ ] No commented-out code
+- [ ] No console.log/fmt.Println debug statements
+- [ ] No hardcoded secrets or credentials
+- [ ] Cognitive complexity < 15
+
+### 4. Commit Process
+1. Stage only related changes
+2. Run ALL lint/test commands above
+3. Fix any issues found
+4. Write descriptive commit message
+5. Verify you're NOT on main/dev branch
+
+### 5. After Committing
+- [ ] Push to remote
+- [ ] Create PR with clear description
+- [ ] Verify CI passes (if configured)
+
+---
+
+## Quick Pre-Commit Commands
+
+```bash
+# One-liner for Go
+gofmt -w . && goimports -w . && golangci-lint run ./... && go test ./...
+
+# One-liner for Frontend
+cd web && npm run lint && npx tsc --noEmit && npm test
+
+# Full check
+make lint test  # if Makefile configured
+```
+
+---
+
 ## Development Principles
 
 ### Test-Driven Development (TDD)

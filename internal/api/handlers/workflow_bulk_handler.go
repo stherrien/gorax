@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -60,18 +61,18 @@ func (h *WorkflowBulkHandler) BulkDelete(w http.ResponseWriter, r *http.Request)
 
 	var input BulkOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "workflow_ids is required and must contain 1-100 workflow IDs")
+		_ = response.BadRequest(w, "workflow_ids is required and must contain 1-100 workflow IDs")
 		return
 	}
 
 	result := h.service.BulkDelete(r.Context(), tenantID, input.WorkflowIDs)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BulkEnable handles bulk enable requests
@@ -92,18 +93,18 @@ func (h *WorkflowBulkHandler) BulkEnable(w http.ResponseWriter, r *http.Request)
 
 	var input BulkOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "workflow_ids is required and must contain 1-100 workflow IDs")
+		_ = response.BadRequest(w, "workflow_ids is required and must contain 1-100 workflow IDs")
 		return
 	}
 
 	result := h.service.BulkEnable(r.Context(), tenantID, input.WorkflowIDs)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BulkDisable handles bulk disable requests
@@ -124,18 +125,18 @@ func (h *WorkflowBulkHandler) BulkDisable(w http.ResponseWriter, r *http.Request
 
 	var input BulkOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "workflow_ids is required and must contain 1-100 workflow IDs")
+		_ = response.BadRequest(w, "workflow_ids is required and must contain 1-100 workflow IDs")
 		return
 	}
 
 	result := h.service.BulkDisable(r.Context(), tenantID, input.WorkflowIDs)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BulkExport handles bulk export requests
@@ -147,7 +148,7 @@ func (h *WorkflowBulkHandler) BulkDisable(w http.ResponseWriter, r *http.Request
 // @Param request body BulkOperationRequest true "Bulk export request"
 // @Security TenantID
 // @Security UserID
-// @Success 200 {object} map[string]interface{} "Export data and result"
+// @Success 200 {object} map[string]any "Export data and result"
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /workflows/bulk/export [post]
@@ -156,18 +157,18 @@ func (h *WorkflowBulkHandler) BulkExport(w http.ResponseWriter, r *http.Request)
 
 	var input BulkOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "workflow_ids is required and must contain 1-100 workflow IDs")
+		_ = response.BadRequest(w, "workflow_ids is required and must contain 1-100 workflow IDs")
 		return
 	}
 
 	export, result := h.service.BulkExport(r.Context(), tenantID, input.WorkflowIDs)
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"export": export,
 		"result": result,
 	})
@@ -182,7 +183,7 @@ func (h *WorkflowBulkHandler) BulkExport(w http.ResponseWriter, r *http.Request)
 // @Param request body BulkOperationRequest true "Bulk clone request"
 // @Security TenantID
 // @Security UserID
-// @Success 200 {object} map[string]interface{} "Cloned workflows and result"
+// @Success 200 {object} map[string]any "Cloned workflows and result"
 // @Failure 400 {object} map[string]string "Invalid request"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 500 {object} map[string]string "Internal server error"
@@ -192,39 +193,25 @@ func (h *WorkflowBulkHandler) BulkClone(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserID(r)
 
 	if userID == "" {
-		h.respondError(w, http.StatusUnauthorized, "user ID is required")
+		_ = response.Unauthorized(w, "user ID is required")
 		return
 	}
 
 	var input BulkOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "workflow_ids is required and must contain 1-100 workflow IDs")
+		_ = response.BadRequest(w, "workflow_ids is required and must contain 1-100 workflow IDs")
 		return
 	}
 
 	clones, result := h.service.BulkClone(r.Context(), tenantID, userID, input.WorkflowIDs)
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"clones": clones,
 		"result": result,
-	})
-}
-
-// Helper methods
-
-func (h *WorkflowBulkHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WorkflowBulkHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
 	})
 }

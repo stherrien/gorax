@@ -269,3 +269,128 @@ func calculatePercentage(current, max int) float64 {
 	}
 	return percentage
 }
+
+// SwitchTenantRequest represents the request to switch tenant context
+type SwitchTenantRequest struct {
+	TenantID string `json:"tenant_id" validate:"required"`
+}
+
+// SwitchTenant handles POST /api/v1/admin/switch-tenant
+// Allows admin users to switch their tenant context
+func (h *TenantAdminHandler) SwitchTenant(w http.ResponseWriter, r *http.Request) {
+	var req SwitchTenantRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode switch tenant request", "error", err)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TenantID == "" {
+		http.Error(w, "tenant_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Switch tenant context
+	_, targetTenant, err := h.tenantService.SwitchTenant(r.Context(), req.TenantID)
+	if err != nil {
+		h.logger.Error("failed to switch tenant", "error", err, "target_tenant_id", req.TenantID)
+		if err == tenant.ErrNotFound {
+			http.Error(w, "tenant not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to switch tenant: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"tenant":  targetTenant,
+		"message": "Successfully switched to tenant: " + targetTenant.Name,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// SetTenantStatus handles PUT /api/v1/admin/tenants/{id}/status
+func (h *TenantAdminHandler) SetTenantStatus(w http.ResponseWriter, r *http.Request) {
+	tenantID := chi.URLParam(r, "tenantID")
+	if tenantID == "" {
+		http.Error(w, "tenant ID is required", http.StatusBadRequest)
+		return
+	}
+
+	var input struct {
+		Status string `json:"status" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.logger.Error("failed to decode status request", "error", err)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if !tenant.IsValidStatus(input.Status) {
+		http.Error(w, "invalid status: must be one of active, inactive, suspended", http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.tenantService.SetStatus(r.Context(), tenantID, tenant.TenantStatus(input.Status))
+	if err != nil {
+		if err == tenant.ErrNotFound {
+			http.Error(w, "tenant not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to set tenant status", "error", err, "tenant_id", tenantID)
+		http.Error(w, "failed to set tenant status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(t)
+}
+
+// ActivateTenant handles POST /api/v1/admin/tenants/{id}/activate
+func (h *TenantAdminHandler) ActivateTenant(w http.ResponseWriter, r *http.Request) {
+	tenantID := chi.URLParam(r, "tenantID")
+	if tenantID == "" {
+		http.Error(w, "tenant ID is required", http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.tenantService.Activate(r.Context(), tenantID)
+	if err != nil {
+		if err == tenant.ErrNotFound {
+			http.Error(w, "tenant not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to activate tenant", "error", err, "tenant_id", tenantID)
+		http.Error(w, "failed to activate tenant: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(t)
+}
+
+// SuspendTenant handles POST /api/v1/admin/tenants/{id}/suspend
+func (h *TenantAdminHandler) SuspendTenant(w http.ResponseWriter, r *http.Request) {
+	tenantID := chi.URLParam(r, "tenantID")
+	if tenantID == "" {
+		http.Error(w, "tenant ID is required", http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.tenantService.Suspend(r.Context(), tenantID)
+	if err != nil {
+		if err == tenant.ErrNotFound {
+			http.Error(w, "tenant not found", http.StatusNotFound)
+			return
+		}
+		h.logger.Error("failed to suspend tenant", "error", err, "tenant_id", tenantID)
+		http.Error(w, "failed to suspend tenant: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(t)
+}

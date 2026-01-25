@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -312,9 +313,11 @@ func (n *WebhookNotifier) deliverOnce(ctx context.Context, webhook WebhookConfig
 	defer resp.Body.Close()
 
 	// Read response (limited)
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	response := buf.String()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+	response := string(bodyBytes)
 
 	if len(response) > 1000 {
 		response = response[:1000]

@@ -1,0 +1,413 @@
+# Prometheus Alert Rules for Gorax
+# https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+
+groups:
+  # Workflow Performance Alerts
+  - name: gorax_workflow_performance
+    interval: 30s
+    rules:
+      # Alert when workflow failure rate exceeds 10%
+      - alert: HighWorkflowFailureRate
+        expr: |
+          (
+            sum(rate(gorax_workflow_executions_total{status="failed"}[5m]))
+            /
+            sum(rate(gorax_workflow_executions_total[5m]))
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: workflow
+          team: platform
+        annotations:
+          summary: "High workflow failure rate detected"
+          description: "More than 10% of workflows are failing (current: {{ $value | humanizePercentage }})"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-Workflow-Failure-Rate"
+
+      # Alert when workflow failure rate exceeds 25% (critical)
+      - alert: CriticalWorkflowFailureRate
+        expr: |
+          (
+            sum(rate(gorax_workflow_executions_total{status="failed"}[5m]))
+            /
+            sum(rate(gorax_workflow_executions_total[5m]))
+          ) > 0.25
+        for: 3m
+        labels:
+          severity: critical
+          component: workflow
+          team: platform
+        annotations:
+          summary: "Critical workflow failure rate detected"
+          description: "More than 25% of workflows are failing (current: {{ $value | humanizePercentage }}). This requires immediate attention."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Critical-Workflow-Failure-Rate"
+
+      # Alert when workflow execution duration is high (P99 > 60 seconds)
+      - alert: SlowWorkflowExecutions
+        expr: |
+          histogram_quantile(0.99,
+            rate(gorax_workflow_execution_duration_seconds_bucket[5m])
+          ) > 60
+        for: 10m
+        labels:
+          severity: warning
+          component: workflow
+          team: platform
+        annotations:
+          summary: "Slow workflow executions detected"
+          description: "P99 workflow execution duration is {{ $value | humanizeDuration }} (threshold: 60s)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Slow-Workflows"
+
+      # Alert when no workflows have been executed recently (possible system issue)
+      - alert: NoWorkflowExecutions
+        expr: |
+          sum(rate(gorax_workflow_executions_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: workflow
+          team: platform
+        annotations:
+          summary: "No workflow executions detected"
+          description: "No workflows have been executed in the last 15 minutes. This may indicate a system issue."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-No-Workflow-Executions"
+
+  # Formula Evaluation Performance Alerts
+  - name: gorax_formula_performance
+    interval: 30s
+    rules:
+      # Alert when formula cache hit rate is low (< 80%)
+      - alert: LowFormulaCacheHitRate
+        expr: |
+          (
+            sum(rate(gorax_formula_cache_hits_total[5m]))
+            /
+            (
+              sum(rate(gorax_formula_cache_hits_total[5m])) +
+              sum(rate(gorax_formula_cache_misses_total[5m]))
+            )
+          ) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: formula
+          team: platform
+        annotations:
+          summary: "Formula cache hit rate is low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 80%). Consider increasing cache size."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Low-Cache-Hit-Rate"
+
+      # Alert when formula cache hit rate is very low (< 50%)
+      - alert: VeryLowFormulaCacheHitRate
+        expr: |
+          (
+            sum(rate(gorax_formula_cache_hits_total[5m]))
+            /
+            (
+              sum(rate(gorax_formula_cache_hits_total[5m])) +
+              sum(rate(gorax_formula_cache_misses_total[5m]))
+            )
+          ) < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: formula
+          team: platform
+        annotations:
+          summary: "Formula cache hit rate is very low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 50%). This is severely impacting performance."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Very-Low-Cache-Hit-Rate"
+
+      # Alert when formula evaluation latency is high (P99 > 500ms)
+      - alert: HighFormulaEvaluationLatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(gorax_formula_evaluation_duration_seconds_bucket[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: formula
+          team: platform
+        annotations:
+          summary: "High formula evaluation latency detected"
+          description: "P99 formula evaluation duration is {{ $value | humanizeDuration }} (threshold: 500ms)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-Formula-Latency"
+
+      # Alert when formula evaluation error rate is high (> 5%)
+      - alert: HighFormulaEvaluationErrorRate
+        expr: |
+          (
+            sum(rate(gorax_formula_evaluations_total{status="error"}[5m]))
+            /
+            sum(rate(gorax_formula_evaluations_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: formula
+          team: platform
+        annotations:
+          summary: "High formula evaluation error rate"
+          description: "More than 5% of formula evaluations are failing (current: {{ $value | humanizePercentage }})"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Formula-Errors"
+
+  # Database Performance Alerts
+  - name: gorax_database_performance
+    interval: 30s
+    rules:
+      # Alert when database connection pool utilization is high (> 90%)
+      - alert: HighDBConnectionPoolUtilization
+        expr: |
+          (gorax_db_connections_in_use / gorax_db_connections_open) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool {{ $labels.pool }} is {{ $value | humanizePercentage }} utilized (threshold: 90%)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-DB-Pool-Utilization"
+
+      # Alert when database connection pool is completely exhausted
+      - alert: DBConnectionPoolExhausted
+        expr: |
+          (gorax_db_connections_in_use / gorax_db_connections_open) >= 1.0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "Connection pool {{ $labels.pool }} is 100% utilized. New requests will fail or timeout."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-DB-Pool-Exhausted"
+
+      # Alert when database queries are slow (P95 > 1 second)
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(gorax_db_query_duration_seconds_bucket[5m])
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 query duration is {{ $value | humanizeDuration }} for {{ $labels.operation }} on {{ $labels.table }} (threshold: 1s)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Slow-DB-Queries"
+
+      # Alert when database queries are very slow (P99 > 5 seconds)
+      - alert: VerySlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.99,
+            rate(gorax_db_query_duration_seconds_bucket[5m])
+          ) > 5.0
+        for: 3m
+        labels:
+          severity: critical
+          component: database
+          team: platform
+        annotations:
+          summary: "Very slow database queries detected"
+          description: "P99 query duration is {{ $value | humanizeDuration }} for {{ $labels.operation }} on {{ $labels.table }} (threshold: 5s)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Very-Slow-DB-Queries"
+
+      # Alert when database error rate is high (> 1%)
+      - alert: HighDatabaseErrorRate
+        expr: |
+          (
+            sum(rate(gorax_db_queries_total{status="error"}[5m]))
+            /
+            sum(rate(gorax_db_queries_total[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: platform
+        annotations:
+          summary: "High database error rate"
+          description: "More than 1% of database queries are failing (current: {{ $value | humanizePercentage }})"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-DB-Error-Rate"
+
+  # API Performance Alerts
+  - name: gorax_api_performance
+    interval: 30s
+    rules:
+      # Alert when API error rate is high (5xx errors > 5%)
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(gorax_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(gorax_http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+          team: platform
+        annotations:
+          summary: "High API error rate detected"
+          description: "More than 5% of API requests are returning 5xx errors (current: {{ $value | humanizePercentage }})"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-API-Error-Rate"
+
+      # Alert when API client error rate is high (4xx errors > 20%)
+      - alert: HighAPIClientErrorRate
+        expr: |
+          (
+            sum(rate(gorax_http_requests_total{status=~"4.."}[5m]))
+            /
+            sum(rate(gorax_http_requests_total[5m]))
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "High API client error rate detected"
+          description: "More than 20% of API requests are returning 4xx errors (current: {{ $value | humanizePercentage }})"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-API-Client-Error-Rate"
+
+      # Alert when API latency is high (P99 > 2 seconds)
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(gorax_http_request_duration_seconds_bucket[5m])
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "High API latency detected"
+          description: "P99 API response time is {{ $value | humanizeDuration }} (threshold: 2s)"
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-High-API-Latency"
+
+      # Alert when API latency is very high (P99 > 5 seconds)
+      - alert: VeryHighAPILatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(gorax_http_request_duration_seconds_bucket[5m])
+          ) > 5.0
+        for: 3m
+        labels:
+          severity: critical
+          component: api
+          team: platform
+        annotations:
+          summary: "Very high API latency detected"
+          description: "P99 API response time is {{ $value | humanizeDuration }} (threshold: 5s). This is severely impacting user experience."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Very-High-API-Latency"
+
+      # Alert when API is receiving no traffic (possible issue)
+      - alert: NoAPITraffic
+        expr: |
+          sum(rate(gorax_http_requests_total[5m])) == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "No API traffic detected"
+          description: "The API has not received any requests in the last 10 minutes. This may indicate an issue with load balancer or DNS."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-No-API-Traffic"
+
+  # System Resource Alerts (optional - requires node_exporter)
+  # - name: gorax_system_resources
+  #   interval: 30s
+  #   rules:
+  #     # Alert when CPU usage is high
+  #     - alert: HighCPUUsage
+  #       expr: |
+  #         100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+  #       for: 5m
+  #       labels:
+  #         severity: warning
+  #         component: system
+  #         team: platform
+  #       annotations:
+  #         summary: "High CPU usage detected"
+  #         description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+  #
+  #     # Alert when memory usage is high
+  #     - alert: HighMemoryUsage
+  #       expr: |
+  #         (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+  #       for: 5m
+  #       labels:
+  #         severity: warning
+  #         component: system
+  #         team: platform
+  #       annotations:
+  #         summary: "High memory usage detected"
+  #         description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+  #
+  #     # Alert when disk space is low
+  #     - alert: LowDiskSpace
+  #       expr: |
+  #         (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+  #       for: 5m
+  #       labels:
+  #         severity: warning
+  #         component: system
+  #         team: platform
+  #       annotations:
+  #         summary: "Low disk space detected"
+  #         description: "Disk usage is {{ $value }}% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+
+  # Service Health Alerts
+  - name: gorax_service_health
+    interval: 30s
+    rules:
+      # Alert when Prometheus cannot scrape Gorax API
+      - alert: GoraxAPIDown
+        expr: up{job="gorax-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+          team: platform
+        annotations:
+          summary: "Gorax API is down"
+          description: "Prometheus cannot scrape metrics from Gorax API at {{ $labels.instance }}. The service may be down or unreachable."
+          dashboard_url: "http://grafana:3000/d/gorax-performance-overview"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Service-Down"
+
+      # Alert when Prometheus cannot scrape itself
+      - alert: PrometheusTargetDown
+        expr: up{job="prometheus"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: monitoring
+          team: platform
+        annotations:
+          summary: "Prometheus scrape target is down"
+          description: "Prometheus cannot scrape target {{ $labels.job }} at {{ $labels.instance }}"
+          runbook_url: "https://github.com/stherrien/gorax/wiki/Runbooks-Prometheus-Target-Down"

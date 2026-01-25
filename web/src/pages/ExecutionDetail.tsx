@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { useExecution } from '../hooks/useExecutions'
 import { executionAPI } from '../api/executions'
 import type { ExecutionStep, ExecutionStatus } from '../api/executions'
+import { isValidResourceId } from '../utils/routing'
 
 export default function ExecutionDetail() {
   const { id } = useParams()
-  const { execution, loading, error, refetch } = useExecution(id || null)
 
+  // Hooks must be called unconditionally before any early returns
+  const { execution, loading, error, refetch } = useExecution(id || '')
   const [steps, setSteps] = useState<ExecutionStep[]>([])
   const [stepsLoading, setStepsLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -31,6 +33,11 @@ export default function ExecutionDetail() {
 
     loadSteps()
   }, [execution?.id])
+
+  // Guard against invalid IDs (after all hooks are called)
+  if (!isValidResourceId(id)) {
+    return <Navigate to="/executions" replace />
+  }
 
   const handleCancel = async () => {
     if (!execution?.id) return

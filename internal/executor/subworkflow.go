@@ -71,7 +71,15 @@ func (e *Executor) executeSubWorkflowAction(ctx context.Context, node workflow.N
 	}
 
 	// Create adapter for the repository
-	repoAdapter := &workflowRepositoryAdapter{repo: e.repo}
+	// If e.repo is already a workflowRepoAdapter, extract the underlying *workflow.Repository
+	var workflowRepo *workflow.Repository
+	if adapter, ok := e.repo.(*workflowRepoAdapter); ok {
+		workflowRepo = adapter.repo
+	} else {
+		// This should not happen in production, but handle gracefully
+		return nil, fmt.Errorf("unexpected repository type")
+	}
+	repoAdapter := &workflowRepositoryAdapter{repo: workflowRepo}
 
 	// Create sub-workflow action
 	subWorkflowAction := actions.NewSubWorkflowAction(repoAdapter, e)

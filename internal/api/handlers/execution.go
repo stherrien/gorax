@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -36,17 +36,34 @@ func NewExecutionHandler(service ExecutionService, logger *slog.Logger) *Executi
 }
 
 // ListExecutionsAdvanced returns executions with advanced filtering and cursor pagination
-// GET /api/v1/executions
+// @Summary List workflow executions with advanced filtering
+// @Description Returns paginated workflow executions with support for filtering by status, trigger type, workflow, and date range
+// @Tags Executions
+// @Accept json
+// @Produce json
+// @Param workflow_id query string false "Filter by workflow ID"
+// @Param status query string false "Filter by status (pending, running, completed, failed)" Enums(pending, running, completed, failed)
+// @Param trigger_type query string false "Filter by trigger type (manual, webhook, schedule)" Enums(manual, webhook, schedule)
+// @Param from query string false "Start date (RFC3339 format)"
+// @Param to query string false "End date (RFC3339 format)"
+// @Param cursor query string false "Cursor for pagination"
+// @Param limit query int false "Maximum results" default(20)
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} workflow.ExecutionListResult "List of executions with cursor"
+// @Failure 400 {object} map[string]string "Invalid filter parameters"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/executions [get]
 func (h *ExecutionHandler) ListExecutionsAdvanced(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	filter, err := h.parseExecutionFilter(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid filter parameters: "+err.Error())
+		_ = response.BadRequest(w, "invalid filter parameters: "+err.Error())
 		return
 	}
 
@@ -56,39 +73,51 @@ func (h *ExecutionHandler) ListExecutionsAdvanced(w http.ResponseWriter, r *http
 	result, err := h.service.ListExecutionsAdvanced(r.Context(), tenantID, filter, cursor, limit)
 	if err != nil {
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		h.logger.Error("failed to list executions",
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to list executions")
+		_ = response.InternalError(w, "failed to list executions")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // GetExecutionWithSteps retrieves an execution with all its step executions
-// GET /api/v1/executions/:executionID/steps
+// @Summary Get execution with detailed steps
+// @Description Retrieves complete execution details including all step executions, inputs, outputs, and errors
+// @Tags Executions
+// @Accept json
+// @Produce json
+// @Param executionID path string true "Execution ID"
+// @Security TenantID
+// @Security UserID
+// @Success 200 {object} workflow.ExecutionWithSteps "Execution with step details"
+// @Failure 400 {object} map[string]string "Invalid execution ID"
+// @Failure 404 {object} map[string]string "Execution not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/executions/{executionID}/steps [get]
 func (h *ExecutionHandler) GetExecutionWithSteps(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	executionID := chi.URLParam(r, "executionID")
 	if executionID == "" {
-		h.respondError(w, http.StatusBadRequest, "execution ID is required")
+		_ = response.BadRequest(w, "execution ID is required")
 		return
 	}
 
 	result, err := h.service.GetExecutionWithSteps(r.Context(), tenantID, executionID)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "execution not found")
+			_ = response.NotFound(w, "execution not found")
 			return
 		}
 		h.logger.Error("failed to get execution with steps",
@@ -96,11 +125,11 @@ func (h *ExecutionHandler) GetExecutionWithSteps(w http.ResponseWriter, r *http.
 			"tenant_id", tenantID,
 			"execution_id", executionID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get execution")
+		_ = response.InternalError(w, "failed to get execution")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // GetExecutionStats returns execution statistics grouped by status
@@ -108,31 +137,31 @@ func (h *ExecutionHandler) GetExecutionWithSteps(w http.ResponseWriter, r *http.
 func (h *ExecutionHandler) GetExecutionStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	filter, err := h.parseExecutionFilter(r)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid filter parameters: "+err.Error())
+		_ = response.BadRequest(w, "invalid filter parameters: "+err.Error())
 		return
 	}
 
 	stats, err := h.service.GetExecutionStats(r.Context(), tenantID, filter)
 	if err != nil {
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
 		h.logger.Error("failed to get execution stats",
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to get execution stats")
+		_ = response.InternalError(w, "failed to get execution stats")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, stats)
+	_ = response.OK(w, stats)
 }
 
 // parseExecutionFilter parses execution filter from query parameters
@@ -175,20 +204,4 @@ func (h *ExecutionHandler) parseLimit(r *http.Request) int {
 	}
 
 	return limit
-}
-
-// Helper methods
-
-func (h *ExecutionHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("failed to encode response", "error", err)
-	}
-}
-
-func (h *ExecutionHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
 }

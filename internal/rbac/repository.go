@@ -182,7 +182,7 @@ func (r *Repository) SetRolePermissions(ctx context.Context, roleID string, perm
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Delete existing permissions
 	_, err = tx.ExecContext(ctx, `DELETE FROM role_permissions WHERE role_id = $1`, roleID)
@@ -233,7 +233,7 @@ func (r *Repository) AssignRolesToUser(ctx context.Context, userID string, roleI
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
 
 	// Delete existing roles
 	_, err = tx.ExecContext(ctx, `DELETE FROM user_roles WHERE user_id = $1`, userID)

@@ -16,6 +16,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/gorax/gorax/internal/analytics"
 	"github.com/gorax/gorax/internal/api/handlers"
 	apiMiddleware "github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/audit"
 	"github.com/gorax/gorax/internal/collaboration"
 	"github.com/gorax/gorax/internal/config"
 	"github.com/gorax/gorax/internal/credential"
@@ -34,8 +37,12 @@ import (
 	"github.com/gorax/gorax/internal/llm/providers/bedrock"
 	"github.com/gorax/gorax/internal/llm/providers/openai"
 	"github.com/gorax/gorax/internal/marketplace"
+	"github.com/gorax/gorax/internal/metrics"
+	"github.com/gorax/gorax/internal/oauth"
+	oauthProviders "github.com/gorax/gorax/internal/oauth/providers"
 	"github.com/gorax/gorax/internal/quota"
 	"github.com/gorax/gorax/internal/schedule"
+	"github.com/gorax/gorax/internal/sso"
 	"github.com/gorax/gorax/internal/suggestions"
 	"github.com/gorax/gorax/internal/template"
 	"github.com/gorax/gorax/internal/tenant"
@@ -44,9 +51,9 @@ import (
 	"github.com/gorax/gorax/internal/websocket"
 	"github.com/gorax/gorax/internal/workflow"
 
-	// GraphQL
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+
 	goraxGraphQL "github.com/gorax/gorax/internal/graphql"
 	"github.com/gorax/gorax/internal/graphql/generated"
 )
@@ -85,6 +92,13 @@ type App struct {
 	// Error tracking
 	errorTracker *errortracking.Tracker
 
+	// Metrics
+	metrics          *metrics.Metrics
+	metricsRegistry  *prometheus.Registry
+	dbStatsCollector *metrics.DBStatsCollector
+	metricsStopCtx   context.Context
+	metricsStopFunc  context.CancelFunc
+
 	// Services
 	tenantService       *tenant.Service
 	workflowService     *workflow.Service
@@ -96,6 +110,9 @@ type App struct {
 	templateService     *template.Service
 	marketplaceService  *marketplace.Service
 	collabService       *collaboration.Service
+	oauthService        *oauth.Service
+	ssoService          *sso.Service
+	auditService        *audit.Service
 
 	// WebSocket
 	wsHub     *websocket.Hub
@@ -111,6 +128,7 @@ type App struct {
 	webhookFilterHandler     *handlers.WebhookFilterHandler
 	websocketHandler         *handlers.WebSocketHandler
 	tenantAdminHandler       *handlers.TenantAdminHandler
+	tenantHandler            *handlers.TenantHandler
 	scheduleHandler          *handlers.ScheduleHandler
 	executionHandler         *handlers.ExecutionHandler
 	usageHandler             *handlers.UsageHandler
@@ -122,6 +140,9 @@ type App struct {
 	marketplaceHandler       *handlers.MarketplaceHandler
 	analyticsHandler         *handlers.AnalyticsHandler
 	collaborationHandler     *handlers.CollaborationHandler
+	oauthHandler             *handlers.OAuthHandler
+	ssoHandler               *handlers.SSOHandler
+	auditHandler             *handlers.AuditHandler
 
 	// Middleware
 	quotaChecker *apiMiddleware.QuotaChecker
@@ -145,9 +166,28 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
+
+	// Configure connection pool for optimal performance
+	// See docs/POST_DEPLOYMENT_CHECKLIST.md for calculation details
+	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(cfg.Database.ConnMaxIdleTime)
 	app.db = db
+
+	// Initialize metrics and Prometheus registry
+	app.metrics = metrics.NewMetrics()
+	app.metricsRegistry = prometheus.NewRegistry()
+	if err := app.metrics.Register(app.metricsRegistry); err != nil {
+		return nil, fmt.Errorf("failed to register metrics: %w", err)
+	}
+	logger.Info("Metrics initialized")
+
+	// Initialize and start DB stats collector
+	app.metricsStopCtx, app.metricsStopFunc = context.WithCancel(context.Background())
+	app.dbStatsCollector = metrics.NewDBStatsCollector(app.metrics, db.DB, "main", logger)
+	go app.dbStatsCollector.Start(app.metricsStopCtx, 15*time.Second)
+	logger.Info("DB stats collector started", "interval", "15s")
 
 	// Initialize Redis client
 	app.redis = redis.NewClient(&redis.Options{
@@ -172,6 +212,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	eventTypeRepo := eventtypes.NewRepository(db)
 	templateRepo := template.NewRepository(db)
 	marketplaceRepo := marketplace.NewRepository(db)
+	categoryRepo := marketplace.NewCategoryRepository(db)
 
 	// Initialize services
 	app.tenantService = tenant.NewService(tenantRepo, logger)
@@ -186,6 +227,9 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	workflowServiceForMarketplace := &workflowServiceMarketplaceAdapter{workflowService: app.workflowService}
 	app.marketplaceService = marketplace.NewService(marketplaceRepo, workflowServiceForMarketplace, logger)
 
+	// Initialize category service
+	categoryService := marketplace.NewCategoryService(categoryRepo)
+
 	// Initialize WebSocket hub
 	app.wsHub = websocket.NewHub(logger)
 	go app.wsHub.Run() // Start hub in background
@@ -194,9 +238,10 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.collabService = collaboration.NewService()
 	app.collabHub = collaboration.NewHub(app.collabService, app.wsHub, logger)
 
-	// Initialize executor with WebSocket broadcaster
+	// Initialize executor with WebSocket broadcaster and metrics
 	broadcaster := websocket.NewHubBroadcaster(app.wsHub)
 	workflowExecutor := executor.NewWithBroadcaster(workflowRepo, logger, broadcaster)
+	workflowExecutor.SetMetrics(app.metrics)
 
 	// Create workflow getter adapter for schedule service
 	workflowGetter := &workflowServiceAdapter{workflowService: app.workflowService}
@@ -223,6 +268,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 
 	app.websocketHandler = handlers.NewWebSocketHandler(app.wsHub, logger)
 	app.tenantAdminHandler = handlers.NewTenantAdminHandler(app.tenantService, logger)
+	app.tenantHandler = handlers.NewTenantHandler(app.tenantService, logger)
 	app.scheduleHandler = handlers.NewScheduleHandler(app.scheduleService, logger)
 	app.executionHandler = handlers.NewExecutionHandler(app.workflowService, logger)
 	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
@@ -366,7 +412,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.aiBuilderHandler = handlers.NewAIBuilderHandler(aibuilderService)
 
 	// Initialize marketplace handler
-	app.marketplaceHandler = handlers.NewMarketplaceHandler(app.marketplaceService, logger)
+	app.marketplaceHandler = handlers.NewMarketplaceHandler(app.marketplaceService, categoryService, logger)
 
 	// Initialize collaboration handler
 	app.collaborationHandler = handlers.NewCollaborationHandler(app.collabHub, app.wsHub, cfg.WebSocket, logger)
@@ -375,6 +421,46 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	analyticsRepo := analytics.NewRepository(db)
 	analyticsService := analytics.NewService(analyticsRepo)
 	app.analyticsHandler = handlers.NewAnalyticsHandler(analyticsService, logger)
+
+	// Initialize OAuth service and handler
+	oauthRepo := oauth.NewRepository(db)
+
+	// Determine Salesforce environment (sandbox or production)
+	salesforceIsSandbox := cfg.OAuth.SalesforceEnvironment == "sandbox"
+
+	oauthProviderRegistry := map[string]oauth.Provider{
+		"github":     oauthProviders.NewGitHubProvider(),
+		"google":     oauthProviders.NewGoogleProvider(),
+		"slack":      oauthProviders.NewSlackProvider(),
+		"microsoft":  oauthProviders.NewMicrosoftProvider(),
+		"twitter":    oauthProviders.NewTwitterProvider(),
+		"linkedin":   oauthProviders.NewLinkedInProvider(),
+		"salesforce": oauthProviders.NewSalesforceProvider(salesforceIsSandbox),
+		"auth0":      oauthProviders.NewAuth0Provider(cfg.OAuth.Auth0Domain),
+	}
+	// Create an OAuth encryption adapter from the credential encryption service
+	oauthEncryptionAdapter := &oauthEncryptionAdapter{encryptionSvc: encryptionService}
+	app.oauthService = oauth.NewService(oauthRepo, oauthEncryptionAdapter, oauthProviderRegistry, cfg.OAuth.BaseURL)
+	app.oauthHandler = handlers.NewOAuthHandler(app.oauthService)
+	logger.Info("OAuth service initialized", "providers", len(oauthProviderRegistry))
+
+	// Initialize SSO service and handler
+	// TODO: SSO service requires refactoring to avoid import cycles
+	// For now, initialize with nil to allow compilation
+	// ssoRepo := sso.NewRepository(db)
+	// ssoFactory := sso.NewProviderFactory()
+	// app.ssoService = sso.NewService(ssoRepo, nil, ssoFactory)
+	// app.ssoHandler = handlers.NewSSOHandler(app.ssoService)
+	logger.Info("SSO service initialization skipped - requires refactoring")
+
+	// Initialize Audit service and handler
+	auditRepo := audit.NewRepository(db)
+	app.auditService = audit.NewService(auditRepo, cfg.Audit.BufferSize, cfg.Audit.FlushInterval)
+	app.auditHandler = handlers.NewAuditHandler(app.auditService, logger)
+	logger.Info("Audit service initialized",
+		"buffer_size", cfg.Audit.BufferSize,
+		"flush_interval", cfg.Audit.FlushInterval,
+	)
 
 	// Initialize middleware
 	app.quotaChecker = apiMiddleware.NewQuotaChecker(app.tenantService, app.redis, logger)
@@ -404,6 +490,19 @@ func (a *App) Router() http.Handler {
 
 // Close cleans up application resources
 func (a *App) Close() error {
+	// Stop metrics collection
+	if a.metricsStopFunc != nil {
+		a.metricsStopFunc()
+	}
+	if a.dbStatsCollector != nil {
+		a.dbStatsCollector.Stop()
+	}
+
+	// Close audit service (flush buffered events)
+	if a.auditService != nil {
+		a.auditService.Close()
+	}
+
 	if a.errorTracker != nil {
 		a.errorTracker.Close()
 	}
@@ -422,7 +521,12 @@ func (a *App) setupRouter() {
 	// Global middleware
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(apiMiddleware.StructuredLogger(a.logger))
+
+	// HTTP logging with configured level
+	httpLogLevel := parseHTTPLogLevel(a.config.Log.HTTPLogLevel)
+	r.Use(apiMiddleware.StructuredLoggerWithConfig(a.logger, apiMiddleware.HTTPLoggerConfig{
+		LogLevel: httpLogLevel,
+	}))
 
 	// Security headers middleware
 	securityHeadersConfig := apiMiddleware.SecurityHeadersConfig{
@@ -443,6 +547,11 @@ func (a *App) setupRouter() {
 		r.Use(apiMiddleware.SentryMiddleware(a.errorTracker))
 	}
 
+	// Add audit middleware if enabled
+	if a.config.Audit.Enabled && a.auditService != nil {
+		r.Use(apiMiddleware.AuditMiddleware(a.auditService, a.logger))
+	}
+
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 
@@ -458,6 +567,11 @@ func (a *App) setupRouter() {
 	// Health check endpoints (no auth required)
 	r.Get("/health", a.healthHandler.Health)
 	r.Get("/ready", a.healthHandler.Ready)
+
+	// Prometheus metrics endpoint (no auth required for scraping)
+	if a.config.Observability.MetricsEnabled {
+		r.Handle("/metrics", promhttp.HandlerFor(a.metricsRegistry, promhttp.HandlerOpts{}))
+	}
 
 	// Swagger API documentation (no auth required)
 	r.Get("/api/docs/*", httpSwagger.Handler(
@@ -479,6 +593,10 @@ func (a *App) setupRouter() {
 		r.Route("/admin", func(r chi.Router) {
 			// Require admin role for all admin routes
 			r.Use(apiMiddleware.RequireAdmin())
+
+			// Tenant switching for admins
+			r.Post("/switch-tenant", a.tenantAdminHandler.SwitchTenant)
+
 			r.Route("/tenants", func(r chi.Router) {
 				r.Get("/", a.tenantAdminHandler.ListTenants)
 				r.Post("/", a.tenantAdminHandler.CreateTenant)
@@ -487,13 +605,45 @@ func (a *App) setupRouter() {
 				r.Delete("/{tenantID}", a.tenantAdminHandler.DeleteTenant)
 				r.Put("/{tenantID}/quotas", a.tenantAdminHandler.UpdateTenantQuotas)
 				r.Get("/{tenantID}/usage", a.tenantAdminHandler.GetTenantUsage)
+				r.Put("/{tenantID}/status", a.tenantAdminHandler.SetTenantStatus)
+				r.Post("/{tenantID}/activate", a.tenantAdminHandler.ActivateTenant)
+				r.Post("/{tenantID}/suspend", a.tenantAdminHandler.SuspendTenant)
+			})
+
+			// SSO provider management routes (admin only)
+			// TODO: Re-enable when SSO service is properly initialized
+			/* r.Route("/sso", func(r chi.Router) {
+				r.Post("/providers", a.ssoHandler.CreateProvider)
+				r.Get("/providers", a.ssoHandler.ListProviders)
+				r.Get("/providers/{id}", a.ssoHandler.GetProvider)
+				r.Put("/providers/{id}", a.ssoHandler.UpdateProvider)
+				r.Delete("/providers/{id}", a.ssoHandler.DeleteProvider)
+			}) */
+
+			// Audit log routes (admin only)
+			r.Route("/audit", func(r chi.Router) {
+				r.Get("/events", a.auditHandler.QueryEvents)
+				r.Get("/events/{id}", a.auditHandler.GetEvent)
+				r.Get("/stats", a.auditHandler.GetStats)
+				r.Post("/export", a.auditHandler.ExportEvents)
 			})
 		})
 
 		// Tenant context middleware (for non-admin routes)
 		r.Group(func(r chi.Router) {
-			r.Use(apiMiddleware.TenantContext(a.tenantService))
+			// Configure tenant middleware with single/multi tenant mode support
+			tenantMiddlewareCfg := apiMiddleware.TenantMiddlewareConfig{
+				TenantConfig: a.config.Tenant,
+			}
+			r.Use(apiMiddleware.TenantContextWithConfig(a.tenantService, tenantMiddlewareCfg))
 			r.Use(a.quotaChecker.CheckQuotas())
+
+			// Current tenant info routes (available to all authenticated users)
+			r.Route("/tenant", func(r chi.Router) {
+				r.Get("/info", a.tenantHandler.GetCurrentTenant)
+				r.Get("/settings", a.tenantHandler.GetTenantSettings)
+				r.Get("/quotas", a.tenantHandler.GetTenantQuotas)
+			})
 
 			// Workflow routes
 			r.Route("/workflows", func(r chi.Router) {
@@ -561,6 +711,10 @@ func (a *App) setupRouter() {
 				r.Delete("/{scheduleID}", a.scheduleHandler.Delete)
 				r.Post("/parse-cron", a.scheduleHandler.ParseCron)
 				r.Post("/preview", a.scheduleHandler.PreviewSchedule)
+
+				// Execution history routes
+				r.Get("/{scheduleID}/executions", a.scheduleHandler.ListExecutionHistory)
+				r.Get("/{scheduleID}/executions/{logID}", a.scheduleHandler.GetExecutionLog)
 			})
 
 			// Webhook management routes
@@ -643,16 +797,43 @@ func (a *App) setupRouter() {
 
 			// Marketplace routes
 			r.Route("/marketplace", func(r chi.Router) {
+				// Public template routes
 				r.Get("/templates", a.marketplaceHandler.ListTemplates)
 				r.Get("/templates/{id}", a.marketplaceHandler.GetTemplate)
 				r.Post("/templates", a.marketplaceHandler.PublishTemplate)
 				r.Post("/templates/{id}/install", a.marketplaceHandler.InstallTemplate)
-				r.Post("/templates/{id}/rate", a.marketplaceHandler.RateTemplate)
-				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
-				r.Delete("/templates/{id}/reviews/{reviewId}", a.marketplaceHandler.DeleteReview)
 				r.Get("/trending", a.marketplaceHandler.GetTrending)
 				r.Get("/popular", a.marketplaceHandler.GetPopular)
+
+				// Category routes
 				r.Get("/categories", a.marketplaceHandler.GetCategories)
+				r.Get("/categories/{id}", a.marketplaceHandler.GetCategory)
+
+				// Review routes
+				r.Get("/templates/{id}/reviews", a.marketplaceHandler.GetReviews)
+				r.Get("/templates/{id}/rating-distribution", a.marketplaceHandler.GetRatingDistribution)
+				r.Post("/templates/{id}/rate", a.marketplaceHandler.RateTemplate)
+				r.Delete("/templates/{id}/reviews/{reviewId}", a.marketplaceHandler.DeleteReview)
+
+				// Review helpful votes
+				r.Post("/reviews/{reviewId}/helpful", a.marketplaceHandler.VoteReviewHelpful)
+				r.Delete("/reviews/{reviewId}/helpful", a.marketplaceHandler.UnvoteReviewHelpful)
+
+				// Review reporting
+				r.Post("/reviews/{reviewId}/report", a.marketplaceHandler.ReportReview)
+
+				// Admin routes (marketplace moderation)
+				r.Route("/admin", func(r chi.Router) {
+					r.Use(apiMiddleware.RequireAdmin())
+
+					// Category management (admin only)
+					r.Post("/categories", a.marketplaceHandler.CreateCategory)
+
+					// Review moderation
+					r.Get("/review-reports", a.marketplaceHandler.GetReviewReports)
+					r.Put("/review-reports/{reportId}", a.marketplaceHandler.ResolveReviewReport)
+					r.Put("/reviews/{reviewId}/hide", a.marketplaceHandler.HideReview)
+				})
 			})
 
 			// Analytics routes
@@ -663,6 +844,17 @@ func (a *App) setupRouter() {
 				r.Get("/top-workflows", a.analyticsHandler.GetTopWorkflows)
 				r.Get("/errors", a.analyticsHandler.GetErrorBreakdown)
 				r.Get("/workflows/{workflowID}/nodes", a.analyticsHandler.GetNodePerformance)
+			})
+
+			// OAuth routes
+			r.Route("/oauth", func(r chi.Router) {
+				r.Get("/providers", a.oauthHandler.ListProviders)
+				r.Get("/authorize/{provider}", a.oauthHandler.Authorize)
+				r.Get("/callback/{provider}", a.oauthHandler.Callback)
+				r.Get("/connections", a.oauthHandler.ListConnections)
+				r.Get("/connections/{id}", a.oauthHandler.GetConnection)
+				r.Delete("/connections/{id}", a.oauthHandler.RevokeConnection)
+				r.Post("/connections/{id}/test", a.oauthHandler.TestConnection)
 			})
 		})
 
@@ -696,6 +888,17 @@ func (a *App) setupRouter() {
 	r.Route("/webhooks", func(r chi.Router) {
 		r.Post("/{workflowID}/{webhookID}", a.webhookHandler.Handle)
 	})
+
+	// SSO authentication endpoints (public)
+	// TODO: Re-enable when SSO service is properly initialized
+	/* r.Route("/sso", func(r chi.Router) {
+		r.Get("/login/{id}", a.ssoHandler.InitiateLogin)
+		r.Get("/callback/{id}", a.ssoHandler.HandleCallback)
+		r.Post("/callback/{id}", a.ssoHandler.HandleCallback)
+		r.Post("/acs", a.ssoHandler.HandleSAMLAssertion) // SAML Assertion Consumer Service
+		r.Get("/metadata/{id}", a.ssoHandler.GetMetadata)
+		r.Get("/discover", a.ssoHandler.DiscoverProvider)
+	}) */
 
 	a.router = r
 }
@@ -799,6 +1002,30 @@ func (w *workflowCreatorAdapter) CreateWorkflow(ctx context.Context, tenantID, u
 	return created.ID, nil
 }
 
+// oauthEncryptionAdapter adapts credential.EncryptionServiceInterface to oauth.EncryptionService
+type oauthEncryptionAdapter struct {
+	encryptionSvc credential.EncryptionServiceInterface
+}
+
+func (a *oauthEncryptionAdapter) Encrypt(ctx context.Context, tenantID string, data *credential.CredentialData) (*credential.EncryptedSecret, error) {
+	return a.encryptionSvc.Encrypt(ctx, tenantID, data)
+}
+
+func (a *oauthEncryptionAdapter) Decrypt(ctx context.Context, encrypted *credential.EncryptedSecret) (*credential.CredentialData, error) {
+	// Convert EncryptedSecret to byte array format expected by EncryptionServiceInterface
+	// encryptedData format: nonce (12 bytes) + ciphertext + authTag (16 bytes)
+	const nonceSize = 12
+	encryptedData := make([]byte, 0, nonceSize+len(encrypted.Ciphertext)+len(encrypted.AuthTag))
+	encryptedData = append(encryptedData, encrypted.Nonce...)
+	encryptedData = append(encryptedData, encrypted.Ciphertext...)
+	encryptedData = append(encryptedData, encrypted.AuthTag...)
+
+	// encryptedKey is the encrypted DEK
+	encryptedKey := encrypted.EncryptedDEK
+
+	return a.encryptionSvc.Decrypt(ctx, encryptedData, encryptedKey)
+}
+
 // workflowServiceMarketplaceAdapter adapts workflow.Service to marketplace.WorkflowService interface
 type workflowServiceMarketplaceAdapter struct {
 	workflowService *workflow.Service
@@ -815,4 +1042,21 @@ func (w *workflowServiceMarketplaceAdapter) CreateFromTemplate(ctx context.Conte
 		return "", err
 	}
 	return created.ID, nil
+}
+
+// parseHTTPLogLevel converts string log level to slog.Level for HTTP access logs
+func parseHTTPLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		// Default to debug for HTTP logs to reduce noise
+		return slog.LevelDebug
+	}
 }
