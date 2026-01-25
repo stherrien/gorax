@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sort"
 	"testing"
 	"time"
 
@@ -554,6 +555,13 @@ func (m *mockRepository) GetPopular(ctx context.Context, limit int) ([]*Marketpl
 	var results []*MarketplaceTemplate
 	for _, template := range m.templates {
 		results = append(results, template)
+	}
+	// Sort by download count descending
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].DownloadCount > results[j].DownloadCount
+	})
+	if len(results) > limit {
+		results = results[:limit]
 	}
 	return results, nil
 }
