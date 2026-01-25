@@ -190,17 +190,17 @@ func (s *categoryService) GetTemplateCategories(ctx context.Context, templateID 
 
 // SetTemplateCategories sets all categories for a template
 func (s *categoryService) SetTemplateCategories(ctx context.Context, templateID string, categoryIDs []string) error {
+	// Limit to maximum 5 categories per template
+	if len(categoryIDs) > 5 {
+		return errors.New("templates can have a maximum of 5 categories")
+	}
+
 	// Verify all categories exist
 	for _, categoryID := range categoryIDs {
 		_, err := s.repo.GetByID(ctx, categoryID)
 		if err != nil {
 			return fmt.Errorf("category %s not found: %w", categoryID, err)
 		}
-	}
-
-	// Limit to maximum 5 categories per template
-	if len(categoryIDs) > 5 {
-		return errors.New("templates can have a maximum of 5 categories")
 	}
 
 	err := s.repo.SetTemplateCategories(ctx, templateID, categoryIDs)
