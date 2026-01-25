@@ -4,6 +4,7 @@ import { useTemplates, useTemplate, useTemplateMutations } from './useTemplates'
 import type { Template } from '../api/templates'
 
 // Mock the template API
+import { createQueryWrapper } from "../test/test-utils"
 vi.mock('../api/templates', () => ({
   templateAPI: {
     list: vi.fn(),
@@ -20,7 +21,7 @@ import { templateAPI } from '../api/templates'
 
 describe('useTemplates', () => {
   const mockTemplate: Template = {
-    id: 'tmpl-123',
+    id: '12345678-1234-4234-8234-123456789abc',
     tenantId: 'tenant-1',
     name: 'Security Scan Pipeline',
     description: 'Automated security scanning',
@@ -44,7 +45,7 @@ describe('useTemplates', () => {
     it('should load templates on mount', async () => {
       vi.mocked(templateAPI.list).mockResolvedValueOnce([mockTemplate])
 
-      const { result } = renderHook(() => useTemplates())
+      const { result } = renderHook(() => useTemplates(), { wrapper: createQueryWrapper() })
 
       expect(result.current.loading).toBe(true)
       expect(result.current.templates).toEqual([])
@@ -60,7 +61,7 @@ describe('useTemplates', () => {
     it('should handle empty list', async () => {
       vi.mocked(templateAPI.list).mockResolvedValueOnce([])
 
-      const { result } = renderHook(() => useTemplates())
+      const { result } = renderHook(() => useTemplates(), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -74,7 +75,7 @@ describe('useTemplates', () => {
       const error = new Error('Failed to fetch templates')
       vi.mocked(templateAPI.list).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTemplates())
+      const { result } = renderHook(() => useTemplates(), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -87,7 +88,7 @@ describe('useTemplates', () => {
     it('should refetch templates', async () => {
       vi.mocked(templateAPI.list).mockResolvedValue([mockTemplate])
 
-      const { result } = renderHook(() => useTemplates())
+      const { result } = renderHook(() => useTemplates(), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -106,7 +107,7 @@ describe('useTemplates', () => {
       vi.mocked(templateAPI.list).mockResolvedValueOnce([mockTemplate])
 
       const params = { category: 'security', tags: ['scan'] }
-      const { result } = renderHook(() => useTemplates(params))
+      const { result } = renderHook(() => useTemplates(params), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -120,7 +121,7 @@ describe('useTemplates', () => {
     it('should load template on mount', async () => {
       vi.mocked(templateAPI.get).mockResolvedValueOnce(mockTemplate)
 
-      const { result } = renderHook(() => useTemplate('tmpl-123'))
+      const { result } = renderHook(() => useTemplate('12345678-1234-4234-8234-123456789abc'), { wrapper: createQueryWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -133,7 +134,7 @@ describe('useTemplates', () => {
     })
 
     it('should not load if id is null', async () => {
-      const { result } = renderHook(() => useTemplate(null))
+      const { result } = renderHook(() => useTemplate(null), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -147,7 +148,7 @@ describe('useTemplates', () => {
       const error = new Error('Template not found')
       vi.mocked(templateAPI.get).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useTemplate('tmpl-123'))
+      const { result } = renderHook(() => useTemplate('12345678-1234-4234-8234-123456789abc'), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -160,7 +161,7 @@ describe('useTemplates', () => {
     it('should refetch template', async () => {
       vi.mocked(templateAPI.get).mockResolvedValue(mockTemplate)
 
-      const { result } = renderHook(() => useTemplate('tmpl-123'))
+      const { result } = renderHook(() => useTemplate('12345678-1234-4234-8234-123456789abc'), { wrapper: createQueryWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -186,7 +187,7 @@ describe('useTemplates', () => {
 
       vi.mocked(templateAPI.create).mockResolvedValueOnce(mockTemplate)
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       let createdTemplate: Template | undefined
 
@@ -209,7 +210,7 @@ describe('useTemplates', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(mockTemplate), 100))
       )
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       expect(result.current.creating).toBe(false)
 
@@ -229,25 +230,25 @@ describe('useTemplates', () => {
 
       vi.mocked(templateAPI.update).mockResolvedValueOnce()
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
-        await result.current.updateTemplate('tmpl-123', updates)
+        await result.current.updateTemplate('12345678-1234-4234-8234-123456789abc', updates)
       })
 
-      expect(templateAPI.update).toHaveBeenCalledWith('tmpl-123', updates)
+      expect(templateAPI.update).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc', updates)
     })
 
     it('should delete a template', async () => {
       vi.mocked(templateAPI.delete).mockResolvedValueOnce()
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
-        await result.current.deleteTemplate('tmpl-123')
+        await result.current.deleteTemplate('12345678-1234-4234-8234-123456789abc')
       })
 
-      expect(templateAPI.delete).toHaveBeenCalledWith('tmpl-123')
+      expect(templateAPI.delete).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc')
     })
 
     it('should create template from workflow', async () => {
@@ -259,7 +260,7 @@ describe('useTemplates', () => {
 
       vi.mocked(templateAPI.createFromWorkflow).mockResolvedValueOnce(mockTemplate)
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       let createdTemplate: Template | undefined
 
@@ -280,16 +281,16 @@ describe('useTemplates', () => {
 
       vi.mocked(templateAPI.instantiate).mockResolvedValueOnce(mockResult)
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       let instantiateResult
 
       await act(async () => {
-        instantiateResult = await result.current.instantiateTemplate('tmpl-123', input)
+        instantiateResult = await result.current.instantiateTemplate('12345678-1234-4234-8234-123456789abc', input)
       })
 
       expect(instantiateResult).toEqual(mockResult)
-      expect(templateAPI.instantiate).toHaveBeenCalledWith('tmpl-123', input)
+      expect(templateAPI.instantiate).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc', input)
     })
 
     it('should track instantiating state', async () => {
@@ -303,12 +304,12 @@ describe('useTemplates', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(mockResult), 100))
       )
 
-      const { result } = renderHook(() => useTemplateMutations())
+      const { result } = renderHook(() => useTemplateMutations(), { wrapper: createQueryWrapper() })
 
       expect(result.current.instantiating).toBe(false)
 
       const promise = act(async () => {
-        await result.current.instantiateTemplate('tmpl-123', input)
+        await result.current.instantiateTemplate('12345678-1234-4234-8234-123456789abc', input)
       })
 
       await waitFor(() => {

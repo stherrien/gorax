@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/eventtypes"
 )
 
@@ -33,25 +33,11 @@ func (h *EventTypesHandler) List(w http.ResponseWriter, r *http.Request) {
 	eventTypes, err := h.service.ListEventTypes(r.Context())
 	if err != nil {
 		h.logger.Error("failed to list event types", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to list event types")
+		_ = response.InternalError(w, "failed to list event types")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": eventTypes,
-	})
-}
-
-// Helper methods
-
-func (h *EventTypesHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *EventTypesHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
 	})
 }

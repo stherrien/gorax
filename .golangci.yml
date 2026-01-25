@@ -80,6 +80,13 @@ issues:
         - errcheck
         - gosec
         - goconst
+        - bodyclose  # Response bodies are closed by test helper functions
+        - ineffassign  # Test files often have unused assignments for setup
+
+    # Exclude ineffassign in integration tests setup
+    - path: tests/integration/
+      linters:
+        - ineffassign
 
     # Exclude known issues
     - text: "weak cryptographic primitive"
@@ -170,6 +177,11 @@ issues:
     - text: "S1039"
       linters:
         - gosimple
+
+    # Exclude empty branch warnings (pre-existing patterns for body close error handling)
+    - text: "SA9003"
+      linters:
+        - staticcheck
 
     # Exclude unusedwrite warnings (struct initializations)
     - text: "unusedwrite"

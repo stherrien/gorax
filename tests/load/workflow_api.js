@@ -5,6 +5,7 @@ import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import { config, getScenario, generateTestWorkflow } from './config.js';
+import { setupAuth, getAuthHeaders } from './lib/auth.js';
 
 // Custom metrics
 const workflowCreateDuration = new Trend('workflow_create_duration', true);
@@ -23,28 +24,16 @@ export const options = {
   tags: config.options.tags,
 };
 
-// Setup: Create test user and authenticate
+// Setup: Authenticate based on environment
 export function setup() {
-  const loginRes = http.post(`${config.baseUrl}/api/v1/auth/login`, JSON.stringify({
-    email: config.testUser.email,
-    password: config.testUser.password,
-  }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Setup failed: Unable to authenticate. Status: ${loginRes.status}`);
-  }
-
-  const authToken = loginRes.json('token');
-  return { authToken };
+  return setupAuth(config);
 }
 
 // Main test function
 export default function (data) {
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${data.authToken}`,
+    ...getAuthHeaders(data),
   };
 
   const workflowId = `${__VU}-${__ITER}`;

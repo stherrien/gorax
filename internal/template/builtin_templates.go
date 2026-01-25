@@ -212,7 +212,7 @@ func createCICDNotificationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -319,7 +319,7 @@ func createDeploymentApprovalTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -429,7 +429,7 @@ func createInfraAlertHandlerTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -535,7 +535,7 @@ func createCustomerOnboardingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -621,7 +621,7 @@ func createApprovalRequestTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -733,7 +733,7 @@ func createDocumentProcessingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -854,7 +854,7 @@ func createSlackToJiraTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -964,7 +964,7 @@ func createEmailToTaskTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1064,7 +1064,7 @@ func createCalendarReminderTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1128,7 +1128,7 @@ func createDataSyncTemplate(now time.Time) *Template {
 					"name": "Transform Data",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"records": "${steps.http-1.response.data}",
+							"records":   "${steps.http-1.response.data}",
 							"synced_at": "${now()}",
 							"count":     "${len(steps.http-1.response.data)}",
 						},
@@ -1174,7 +1174,7 @@ func createDataSyncTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1249,11 +1249,11 @@ func createReportGenerationTemplate(now time.Time) *Template {
 					"name": "Compile Report",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"total_sales":     "${steps.http-1.response.total}",
-							"new_customers":   "${steps.http-2.response.count}",
-							"average_order":   "${steps.http-1.response.average}",
-							"growth_rate":     "${steps.http-1.response.growth}",
-							"report_week":     "${now()}",
+							"total_sales":   "${steps.http-1.response.total}",
+							"new_customers": "${steps.http-2.response.count}",
+							"average_order": "${steps.http-1.response.average}",
+							"growth_rate":   "${steps.http-1.response.growth}",
+							"report_week":   "${now()}",
 						},
 					},
 				},
@@ -1304,7 +1304,7 @@ func createReportGenerationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1456,7 +1456,7 @@ func createDataValidationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1503,11 +1503,11 @@ func createSlackAlertNotificationTemplate(now time.Time) *Template {
 					"name": "Format Alert Message",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"severity":     "${trigger.severity}",
-							"service":      "${trigger.service}",
-							"message":      "${trigger.message}",
-							"timestamp":    "${trigger.timestamp}",
-							"environment":  "${trigger.environment}",
+							"severity":      "${trigger.severity}",
+							"service":       "${trigger.service}",
+							"message":       "${trigger.message}",
+							"timestamp":     "${trigger.timestamp}",
+							"environment":   "${trigger.environment}",
 							"formatted_msg": "🚨 Alert: ${trigger.severity}\nService: ${trigger.service}\nEnvironment: ${trigger.environment}\nMessage: ${trigger.message}\nTime: ${trigger.timestamp}",
 						},
 					},
@@ -1585,7 +1585,7 @@ func createSlackAlertNotificationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1748,7 +1748,7 @@ func createGitHubPRAutomationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -1841,12 +1841,12 @@ func createDataBackupWorkflowTemplate(now time.Time) *Template {
 					"name": "Compile Backup Report",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"db_backup_status":   "${steps.http-1.response.status}",
-							"db_backup_size":     "${steps.http-1.response.size}",
+							"db_backup_status":    "${steps.http-1.response.status}",
+							"db_backup_size":      "${steps.http-1.response.size}",
 							"files_backup_status": "${steps.http-2.response.status}",
-							"files_count":        "${steps.http-2.response.files_count}",
-							"timestamp":          "${now()}",
-							"success":            "${steps.http-1.response.status == 'success' && steps.http-2.response.status == 'success'}",
+							"files_count":         "${steps.http-2.response.files_count}",
+							"timestamp":           "${now()}",
+							"success":             "${steps.http-1.response.status == 'success' && steps.http-2.response.status == 'success'}",
 						},
 					},
 				},
@@ -1940,7 +1940,7 @@ func createDataBackupWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2119,7 +2119,7 @@ func createErrorMonitoringWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2203,10 +2203,10 @@ func createMultiStepUserOnboardingTemplate(now time.Time) *Template {
 						"method": "POST",
 						"url":    "${env.CRM_API_URL}/contacts",
 						"body": map[string]interface{}{
-							"email":        "${trigger.email}",
-							"name":         "${trigger.first_name} ${trigger.last_name}",
-							"plan":         "${trigger.plan}",
-							"signup_date":  "${now()}",
+							"email":           "${trigger.email}",
+							"name":            "${trigger.first_name} ${trigger.last_name}",
+							"plan":            "${trigger.plan}",
+							"signup_date":     "${now()}",
 							"lifecycle_stage": "customer",
 						},
 					},
@@ -2297,7 +2297,7 @@ func createMultiStepUserOnboardingTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2389,14 +2389,14 @@ func createAPIHealthCheckWorkflowTemplate(now time.Time) *Template {
 					"name": "Compile Health Status",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"api1_status":    "${steps.http-1.status_code}",
-							"api1_healthy":   "${steps.http-1.status_code == 200}",
-							"api2_status":    "${steps.http-2.status_code}",
-							"api2_healthy":   "${steps.http-2.status_code == 200}",
-							"db_status":      "${steps.http-3.status_code}",
-							"db_healthy":     "${steps.http-3.status_code == 200}",
-							"all_healthy":    "${steps.http-1.status_code == 200 && steps.http-2.status_code == 200 && steps.http-3.status_code == 200}",
-							"timestamp":      "${now()}",
+							"api1_status":  "${steps.http-1.status_code}",
+							"api1_healthy": "${steps.http-1.status_code == 200}",
+							"api2_status":  "${steps.http-2.status_code}",
+							"api2_healthy": "${steps.http-2.status_code == 200}",
+							"db_status":    "${steps.http-3.status_code}",
+							"db_healthy":   "${steps.http-3.status_code == 200}",
+							"all_healthy":  "${steps.http-1.status_code == 200 && steps.http-2.status_code == 200 && steps.http-3.status_code == 200}",
+							"timestamp":    "${now()}",
 						},
 					},
 				},
@@ -2444,11 +2444,11 @@ func createAPIHealthCheckWorkflowTemplate(now time.Time) *Template {
 						"method": "POST",
 						"url":    "${env.MONITORING_API}/health-checks",
 						"body": map[string]interface{}{
-							"api1_healthy":    "${steps.transform-1.api1_healthy}",
-							"api2_healthy":    "${steps.transform-1.api2_healthy}",
-							"db_healthy":      "${steps.transform-1.db_healthy}",
-							"all_healthy":     "${steps.transform-1.all_healthy}",
-							"timestamp":       "${steps.transform-1.timestamp}",
+							"api1_healthy": "${steps.transform-1.api1_healthy}",
+							"api2_healthy": "${steps.transform-1.api2_healthy}",
+							"db_healthy":   "${steps.transform-1.db_healthy}",
+							"all_healthy":  "${steps.transform-1.all_healthy}",
+							"timestamp":    "${steps.transform-1.timestamp}",
 						},
 					},
 				},
@@ -2504,7 +2504,7 @@ func createAPIHealthCheckWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2606,15 +2606,15 @@ func createScheduledReportGenerationTemplate(now time.Time) *Template {
 					"name": "Compile Report Data",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"period":           "${dateFormat(dateAdd(now(), -1, 'month'), 'MMMM YYYY')}",
-							"total_revenue":    "${steps.http-1.response.total}",
-							"revenue_growth":   "${steps.http-1.response.growth_percentage}",
-							"new_users":        "${steps.http-2.response.new_users}",
-							"active_users":     "${steps.http-2.response.active_users}",
-							"churn_rate":       "${steps.http-2.response.churn_rate}",
-							"conversion_rate":  "${steps.http-3.response.rate}",
+							"period":            "${dateFormat(dateAdd(now(), -1, 'month'), 'MMMM YYYY')}",
+							"total_revenue":     "${steps.http-1.response.total}",
+							"revenue_growth":    "${steps.http-1.response.growth_percentage}",
+							"new_users":         "${steps.http-2.response.new_users}",
+							"active_users":      "${steps.http-2.response.active_users}",
+							"churn_rate":        "${steps.http-2.response.churn_rate}",
+							"conversion_rate":   "${steps.http-3.response.rate}",
 							"total_conversions": "${steps.http-3.response.total}",
-							"generated_at":     "${now()}",
+							"generated_at":      "${now()}",
 						},
 					},
 				},
@@ -2725,7 +2725,7 @@ func createScheduledReportGenerationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2756,8 +2756,8 @@ func createDataETLSyncWorkflowTemplate(now time.Time) *Template {
 				"data": map[string]interface{}{
 					"name": "Scheduled ETL Trigger",
 					"config": map[string]interface{}{
-						"cron": "0 2 * * *",
-						"timezone": "UTC",
+						"cron":        "0 2 * * *",
+						"timezone":    "UTC",
 						"description": "Run ETL sync at 2 AM daily",
 					},
 				},
@@ -2905,7 +2905,7 @@ func createDataETLSyncWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -2934,8 +2934,8 @@ func createScheduledReportingWorkflowTemplate(now time.Time) *Template {
 				"data": map[string]interface{}{
 					"name": "Weekly Report Trigger",
 					"config": map[string]interface{}{
-						"cron": "0 9 * * 1",
-						"timezone": "America/New_York",
+						"cron":        "0 9 * * 1",
+						"timezone":    "America/New_York",
 						"description": "Generate report every Monday at 9 AM",
 					},
 				},
@@ -2956,9 +2956,9 @@ func createScheduledReportingWorkflowTemplate(now time.Time) *Template {
 							"Authorization": "Bearer ${credentials.analytics_token}",
 						},
 						"body": map[string]interface{}{
-							"metrics": []string{"revenue", "users", "conversions"},
+							"metrics":    []string{"revenue", "users", "conversions"},
 							"start_date": "${trigger.last_week_start}",
-							"end_date": "${trigger.last_week_end}",
+							"end_date":   "${trigger.last_week_end}",
 						},
 					},
 				},
@@ -2974,10 +2974,10 @@ func createScheduledReportingWorkflowTemplate(now time.Time) *Template {
 					"name": "Calculate Metrics",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"total_revenue": "${steps.fetch-1.revenue.reduce((sum, v) => sum + v, 0)}",
+							"total_revenue":   "${steps.fetch-1.revenue.reduce((sum, v) => sum + v, 0)}",
 							"avg_daily_users": "${steps.fetch-1.users.reduce((sum, v) => sum + v, 0) / 7}",
 							"conversion_rate": "${(steps.fetch-1.conversions / steps.fetch-1.users.reduce((sum, v) => sum + v, 0)) * 100}",
-							"week_period": "${trigger.last_week_start + ' to ' + trigger.last_week_end}",
+							"week_period":     "${trigger.last_week_start + ' to ' + trigger.last_week_end}",
 						},
 					},
 				},
@@ -3074,7 +3074,7 @@ func createScheduledReportingWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3120,11 +3120,11 @@ func createMultiStepApprovalWorkflowTemplate(now time.Time) *Template {
 						"method": "POST",
 						"url":    "${env.API_URL}/approvals",
 						"body": map[string]interface{}{
-							"request_id":   "${trigger.request_id}",
-							"requester":    "${trigger.requester}",
-							"amount":       "${trigger.amount}",
-							"description":  "${trigger.description}",
-							"status":       "pending_manager",
+							"request_id":  "${trigger.request_id}",
+							"requester":   "${trigger.requester}",
+							"amount":      "${trigger.amount}",
+							"description": "${trigger.description}",
+							"status":      "pending_manager",
 						},
 					},
 				},
@@ -3159,7 +3159,7 @@ func createMultiStepApprovalWorkflowTemplate(now time.Time) *Template {
 				"data": map[string]interface{}{
 					"name": "Wait for Manager Approval",
 					"config": map[string]interface{}{
-						"timeout": "48h",
+						"timeout":      "48h",
 						"webhook_path": "/webhooks/approval/${steps.http-1.id}/manager",
 					},
 				},
@@ -3208,7 +3208,7 @@ func createMultiStepApprovalWorkflowTemplate(now time.Time) *Template {
 				"data": map[string]interface{}{
 					"name": "Wait for Director Approval",
 					"config": map[string]interface{}{
-						"timeout": "24h",
+						"timeout":      "24h",
 						"webhook_path": "/webhooks/approval/${steps.http-1.id}/director",
 					},
 				},
@@ -3307,7 +3307,7 @@ func createMultiStepApprovalWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3351,15 +3351,15 @@ func createErrorNotificationWorkflowTemplate(now time.Time) *Template {
 					"name": "Enrich Error Context",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"error_message":   "${trigger.error}",
-							"service":         "${trigger.service}",
-							"environment":     "${trigger.environment}",
-							"timestamp":       "${trigger.timestamp}",
-							"stack_trace":     "${trigger.stack_trace}",
-							"user_id":         "${trigger.user_id}",
-							"request_id":      "${trigger.request_id}",
-							"severity":        "${trigger.severity || 'medium'}",
-							"error_hash":      "${trigger.error.split(':')[0]}",
+							"error_message": "${trigger.error}",
+							"service":       "${trigger.service}",
+							"environment":   "${trigger.environment}",
+							"timestamp":     "${trigger.timestamp}",
+							"stack_trace":   "${trigger.stack_trace}",
+							"user_id":       "${trigger.user_id}",
+							"request_id":    "${trigger.request_id}",
+							"severity":      "${trigger.severity || 'medium'}",
+							"error_hash":    "${trigger.error.split(':')[0]}",
 						},
 					},
 				},
@@ -3494,7 +3494,7 @@ func createErrorNotificationWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3737,7 +3737,7 @@ func createAPIOrchestrationWorkflowTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3842,7 +3842,7 @@ func createKubernetesDeploymentMonitorTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -3963,7 +3963,7 @@ func createContainerRegistryCleanupTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4010,11 +4010,11 @@ func createSalesforceLeadSyncTemplate(now time.Time) *Template {
 					"name": "Map to Salesforce",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"FirstName": "${trigger.first_name}",
-							"LastName":  "${trigger.last_name}",
-							"Email":     "${trigger.email}",
-							"Company":   "${trigger.company}",
-							"Phone":     "${trigger.phone}",
+							"FirstName":  "${trigger.first_name}",
+							"LastName":   "${trigger.last_name}",
+							"Email":      "${trigger.email}",
+							"Company":    "${trigger.company}",
+							"Phone":      "${trigger.phone}",
 							"LeadSource": "Web",
 						},
 					},
@@ -4094,7 +4094,7 @@ func createSalesforceLeadSyncTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4141,10 +4141,10 @@ func createServiceNowIncidentTemplate(now time.Time) *Template {
 						"mapping": map[string]interface{}{
 							"short_description": "${trigger.title}",
 							"description":       "${trigger.description}",
-							"urgency":          "${trigger.severity == 'critical' ? '1' : trigger.severity == 'high' ? '2' : '3'}",
-							"impact":           "${trigger.severity == 'critical' ? '1' : trigger.severity == 'high' ? '2' : '3'}",
-							"category":         "software",
-							"caller_id":        "${env.SERVICENOW_CALLER_ID}",
+							"urgency":           "${trigger.severity == 'critical' ? '1' : trigger.severity == 'high' ? '2' : '3'}",
+							"impact":            "${trigger.severity == 'critical' ? '1' : trigger.severity == 'high' ? '2' : '3'}",
+							"category":          "software",
+							"caller_id":         "${env.SERVICENOW_CALLER_ID}",
 						},
 					},
 				},
@@ -4210,7 +4210,7 @@ func createServiceNowIncidentTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4258,12 +4258,12 @@ func createSecurityAlertTriageTemplate(now time.Time) *Template {
 					"name": "Enrich Alert Data",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"severity":     "${trigger.severity}",
-							"source":       "${trigger.source}",
-							"description":  "${trigger.description}",
+							"severity":       "${trigger.severity}",
+							"source":         "${trigger.source}",
+							"description":    "${trigger.description}",
 							"affected_asset": "${trigger.asset}",
-							"timestamp":    "${trigger.timestamp}",
-							"is_critical":  "${trigger.severity == 'critical' || trigger.severity == 'high'}",
+							"timestamp":      "${trigger.timestamp}",
+							"is_critical":    "${trigger.severity == 'critical' || trigger.severity == 'high'}",
 						},
 					},
 				},
@@ -4371,7 +4371,7 @@ func createSecurityAlertTriageTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4416,12 +4416,12 @@ func createVulnerabilityResponseTemplate(now time.Time) *Template {
 					"name": "Parse Vulnerability",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"cve_id":       "${trigger.cve_id}",
-							"cvss_score":   "${trigger.cvss_score}",
-							"severity":     "${trigger.cvss_score >= 9.0 ? 'critical' : trigger.cvss_score >= 7.0 ? 'high' : trigger.cvss_score >= 4.0 ? 'medium' : 'low'}",
-							"affected":     "${trigger.affected_packages}",
-							"description":  "${trigger.description}",
-							"remediation":  "${trigger.fix_available ? trigger.fix_version : 'No fix available'}",
+							"cve_id":      "${trigger.cve_id}",
+							"cvss_score":  "${trigger.cvss_score}",
+							"severity":    "${trigger.cvss_score >= 9.0 ? 'critical' : trigger.cvss_score >= 7.0 ? 'high' : trigger.cvss_score >= 4.0 ? 'medium' : 'low'}",
+							"affected":    "${trigger.affected_packages}",
+							"description": "${trigger.description}",
+							"remediation": "${trigger.fix_available ? trigger.fix_version : 'No fix available'}",
 						},
 					},
 				},
@@ -4513,7 +4513,7 @@ func createVulnerabilityResponseTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,
@@ -4593,9 +4593,9 @@ func createAccessReviewAutomationTemplate(now time.Time) *Template {
 					"name": "Identify Stale Accounts",
 					"config": map[string]interface{}{
 						"mapping": map[string]interface{}{
-							"stale_accounts":   "filter(${steps.api-1.body.users}, u => !contains(map(${steps.api-2.body.logins}, l => l.user_id), u.id))",
-							"review_required":  "${len(steps.api-1.body.users)}",
-							"stale_count":      "len(filter(${steps.api-1.body.users}, u => !contains(map(${steps.api-2.body.logins}, l => l.user_id), u.id)))",
+							"stale_accounts":  "filter(${steps.api-1.body.users}, u => !contains(map(${steps.api-2.body.logins}, l => l.user_id), u.id))",
+							"review_required": "${len(steps.api-1.body.users)}",
+							"stale_count":     "len(filter(${steps.api-1.body.users}, u => !contains(map(${steps.api-2.body.logins}, l => l.user_id), u.id)))",
 						},
 					},
 				},
@@ -4654,7 +4654,7 @@ func createAccessReviewAutomationTemplate(now time.Time) *Template {
 		},
 	}
 
-	defJSON, _ := json.Marshal(definition)
+	defJSON, _ := json.Marshal(definition) //nolint:errcheck // static template definition cannot fail
 
 	return &Template{
 		TenantID:    nil,

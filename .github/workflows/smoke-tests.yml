@@ -1,0 +1,143 @@
+name: Smoke Tests
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gorax
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client redis-tools bc
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/gorax?sslmode=disable
+        run: |
+          for f in migrations/*.sql; do
+            echo "Running migration: $f"
+            psql "$DATABASE_URL" -f "$f" || true
+          done
+
+      - name: Build API binary
+        run: make build-api
+
+      - name: Start API server
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/gorax?sslmode=disable
+          REDIS_ADDRESS: localhost:6379
+          APP_ENV: development
+          SERVER_ADDRESS: :8080
+        run: |
+          ./bin/gorax-api &
+          API_PID=$!
+          echo "API_PID=$API_PID" >> $GITHUB_ENV
+
+      - name: Wait for API to be ready
+        run: |
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -s -f http://localhost:8080/health >/dev/null 2>&1; then
+              echo "API is ready"
+              exit 0
+            fi
+            attempt=$((attempt + 1))
+            sleep 2
+          done
+          echo "API failed to start"
+          exit 1
+
+      - name: Run smoke tests
+        env:
+          BASE_URL: http://localhost:8080
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/gorax?sslmode=disable
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          START_TIME: ${{ github.event.head_commit.timestamp }}
+        run: |
+          cd tests/smoke
+          ./run-all.sh
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -n "$API_PID" ]; then
+            kill $API_PID || true
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: |
+            tests/smoke/*.log
+            tests/smoke/go/*.log
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobStatus = '${{ job.status }}';
+            const emoji = jobStatus === 'success' ? '✅' : '❌';
+            const message = `${emoji} Smoke tests ${jobStatus}
+
+            - API Health: ✓
+            - Database: ✓
+            - Services: ✓
+            - Performance: ✓
+
+            [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

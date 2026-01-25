@@ -26,7 +26,12 @@ export const AIWorkflowBuilder: FC = () => {
   const handleOpenEditor = useCallback(() => {
     // For now, just show a message - in production this would open
     // a modal or navigate to an editor with the workflow pre-loaded
-    console.log('Open in editor:', previewWorkflow)
+    if (previewWorkflow) {
+      // TODO: Implement workflow editor navigation with preview workflow
+      // This would typically create a new workflow from the preview and navigate to it
+      // For now, we just show an alert as this is a placeholder
+      alert('Opening in editor with preview workflow (not yet implemented)')
+    }
   }, [previewWorkflow])
 
   return (

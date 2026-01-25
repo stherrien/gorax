@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sort"
 	"testing"
 	"time"
 
@@ -264,7 +265,7 @@ func TestIntegration_RateAndReviewTemplate(t *testing.T) {
 	t.Logf("✓ Average rating after update: %.1f (%d ratings)", retrieved.AverageRating, retrieved.TotalRatings)
 
 	// Step 8: Get all reviews
-	reviews, err := service.GetReviews(ctx, template.ID, 10, 0)
+	reviews, err := service.GetReviews(ctx, template.ID, ReviewSortRecent, 10, 0)
 	require.NoError(t, err)
 	assert.Len(t, reviews, 2)
 	t.Logf("✓ Retrieved %d reviews", len(reviews))
@@ -555,6 +556,13 @@ func (m *mockRepository) GetPopular(ctx context.Context, limit int) ([]*Marketpl
 	for _, template := range m.templates {
 		results = append(results, template)
 	}
+	// Sort by download count descending
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].DownloadCount > results[j].DownloadCount
+	})
+	if len(results) > limit {
+		results = results[:limit]
+	}
 	return results, nil
 }
 
@@ -656,7 +664,7 @@ func (m *mockRepository) UpdateReview(ctx context.Context, tenantID, reviewID st
 	return ErrReviewNotFound
 }
 
-func (m *mockRepository) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error) {
+func (m *mockRepository) GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error) {
 	var results []*TemplateReview
 	for _, review := range m.reviews {
 		if review.TemplateID == templateID {
@@ -664,6 +672,28 @@ func (m *mockRepository) GetReviews(ctx context.Context, templateID string, limi
 		}
 	}
 	return results, nil
+}
+
+func (m *mockRepository) CreateReviewReport(ctx context.Context, report *ReviewReport) error {
+	// Mock implementation - just accept the report
+	return nil
+}
+
+func (m *mockRepository) GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error) {
+	template, ok := m.templates[templateID]
+	if !ok {
+		return nil, ErrTemplateNotFound
+	}
+
+	return &RatingDistribution{
+		Rating1Count:  template.Rating1Count,
+		Rating2Count:  template.Rating2Count,
+		Rating3Count:  template.Rating3Count,
+		Rating4Count:  template.Rating4Count,
+		Rating5Count:  template.Rating5Count,
+		TotalRatings:  template.TotalRatings,
+		AverageRating: template.AverageRating,
+	}, nil
 }
 
 func (m *mockRepository) DeleteReview(ctx context.Context, tenantID, reviewID string) error {
@@ -700,6 +730,41 @@ func (m *mockRepository) UpdateTemplateRating(ctx context.Context, templateID st
 		template.TotalRatings = 0
 	}
 
+	return nil
+}
+
+func (m *mockRepository) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error) {
+	// Return empty list for mock - not used in integration tests
+	return []*ReviewReport{}, nil
+}
+
+func (m *mockRepository) HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error) {
+	// Return false for mock - not used in integration tests
+	return false, nil
+}
+
+func (m *mockRepository) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UnhideReview(ctx context.Context, reviewID string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UpdateReviewReportStatus(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) VoteReviewHelpful(ctx context.Context, vote *ReviewHelpfulVote) error {
+	// Mock implementation - not used in integration tests
+	return nil
+}
+
+func (m *mockRepository) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	// Mock implementation - not used in integration tests
 	return nil
 }
 

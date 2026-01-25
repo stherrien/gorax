@@ -10,16 +10,17 @@ import (
 
 // Workflow represents a workflow definition
 type Workflow struct {
-	ID          string          `db:"id" json:"id"`
-	TenantID    string          `db:"tenant_id" json:"tenant_id"`
-	Name        string          `db:"name" json:"name"`
-	Description string          `db:"description" json:"description"`
-	Definition  json.RawMessage `db:"definition" json:"definition"`
-	Status      string          `db:"status" json:"status"`
-	Version     int             `db:"version" json:"version"`
-	CreatedBy   string          `db:"created_by" json:"created_by"`
-	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
+	ID              string          `db:"id" json:"id"`
+	TenantID        string          `db:"tenant_id" json:"tenant_id"`
+	Name            string          `db:"name" json:"name"`
+	Description     string          `db:"description" json:"description"`
+	Definition      json.RawMessage `db:"definition" json:"definition"`
+	Status          string          `db:"status" json:"status"`
+	Version         int             `db:"version" json:"version"`
+	CreatedBy       string          `db:"created_by" json:"created_by"`
+	CreatedAt       time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time       `db:"updated_at" json:"updated_at"`
+	ErrorStatistics json.RawMessage `db:"error_statistics" json:"error_statistics,omitempty"`
 }
 
 // WorkflowDefinition represents the full workflow structure
@@ -74,6 +75,7 @@ const (
 	NodeTypeActionSlackSendDM        NodeType = "slack:send_dm"
 	NodeTypeActionSlackUpdateMessage NodeType = "slack:update_message"
 	NodeTypeActionSlackAddReaction   NodeType = "slack:add_reaction"
+	NodeTypeActionSubworkflow        NodeType = "action:subworkflow"
 	NodeTypeControlIf                NodeType = "control:if"
 	NodeTypeControlLoop              NodeType = "control:loop"
 	NodeTypeControlParallel          NodeType = "control:parallel"
@@ -81,6 +83,11 @@ const (
 	NodeTypeControlJoin              NodeType = "control:join"
 	NodeTypeControlDelay             NodeType = "control:delay"
 	NodeTypeControlSubWorkflow       NodeType = "control:sub_workflow"
+	NodeTypeControlTry               NodeType = "control:try"
+	NodeTypeControlCatch             NodeType = "control:catch"
+	NodeTypeControlFinally           NodeType = "control:finally"
+	NodeTypeControlRetry             NodeType = "control:retry"
+	NodeTypeControlCircuitBreaker    NodeType = "control:circuit_breaker"
 )
 
 // HTTPActionConfig represents HTTP action configuration
@@ -138,17 +145,49 @@ type ConditionalActionConfig struct {
 
 // LoopActionConfig represents loop (for-each) action configuration
 type LoopActionConfig struct {
-	Source        string `json:"source"`                   // JSONPath to array (e.g., ${steps.node1.output.items})
-	ItemVariable  string `json:"item_variable"`            // Variable name for current item (e.g., "item")
-	IndexVariable string `json:"index_variable,omitempty"` // Variable name for current index (e.g., "index")
-	MaxIterations int    `json:"max_iterations,omitempty"` // Safety limit (default 1000)
-	OnError       string `json:"on_error,omitempty"`       // "continue" or "stop" (default "stop")
+	Source          string           `json:"source"`                     // JSONPath to array or object (e.g., ${steps.node1.output.items})
+	ItemVariable    string           `json:"item_variable"`              // Variable name for current item (e.g., "item")
+	IndexVariable   string           `json:"index_variable,omitempty"`   // Variable name for current index (e.g., "index")
+	KeyVariable     string           `json:"key_variable,omitempty"`     // Variable name for object key when iterating objects (e.g., "key")
+	MaxIterations   int              `json:"max_iterations,omitempty"`   // Safety limit (default 1000)
+	OnError         string           `json:"on_error,omitempty"`         // "continue" or "stop" (default "stop")
+	BreakConditions []BreakCondition `json:"break_conditions,omitempty"` // Conditions to exit loop early
+}
+
+// BreakCondition represents a condition that can exit a loop early
+type BreakCondition struct {
+	// Condition is an expression to evaluate (e.g., "item.status == 'error'")
+	// Supports the same expression syntax as conditional nodes
+	Condition string `json:"condition"`
+	// Operator is an alternative way to specify the comparison (equals, contains, greater_than, less_than, custom)
+	// If Condition is set, Operator is ignored
+	Operator string `json:"operator,omitempty"`
+	// Field is the field to compare when using Operator (e.g., "item.count")
+	Field string `json:"field,omitempty"`
+	// Value is the value to compare against when using Operator
+	Value interface{} `json:"value,omitempty"`
 }
 
 // ParallelConfig represents parallel execution configuration
 type ParallelConfig struct {
-	ErrorStrategy  string `json:"error_strategy"`            // "fail_fast" or "wait_all" (default "fail_fast")
-	MaxConcurrency int    `json:"max_concurrency,omitempty"` // 0 = unlimited, >0 = max concurrent branches
+	// Branches to execute in parallel (named branches for better organization)
+	Branches []ParallelBranch `json:"branches,omitempty"`
+	// Wait for all branches or first completion
+	WaitMode string `json:"wait_mode,omitempty"` // "all" or "first" (default "all")
+	// Maximum concurrent executions (0 = unlimited, >0 = max concurrent branches)
+	MaxConcurrency int `json:"max_concurrency,omitempty"`
+	// Timeout for parallel execution (e.g., "30s", "1m", "2h")
+	Timeout string `json:"timeout,omitempty"`
+	// What to do if one branch fails
+	FailureMode string `json:"failure_mode,omitempty"` // "stop_all" or "continue" (default "stop_all")
+	// Legacy: ErrorStrategy for backward compatibility (maps to FailureMode)
+	ErrorStrategy string `json:"error_strategy,omitempty"` // "fail_fast" or "wait_all" (deprecated, use FailureMode)
+}
+
+// ParallelBranch represents a named branch in parallel execution
+type ParallelBranch struct {
+	Name  string   `json:"name"`  // Branch name for identification
+	Nodes []string `json:"nodes"` // Node IDs in this branch (sequential execution within branch)
 }
 
 // DelayConfig represents delay action configuration
@@ -171,11 +210,82 @@ type JoinConfig struct {
 
 // SubWorkflowConfig represents sub-workflow action configuration
 type SubWorkflowConfig struct {
-	WorkflowID    string            `json:"workflow_id"`              // ID of the workflow to execute
-	InputMapping  map[string]string `json:"input_mapping,omitempty"`  // Map parent context to sub-workflow input
-	OutputMapping map[string]string `json:"output_mapping,omitempty"` // Map sub-workflow output to parent context
-	WaitForResult bool              `json:"wait_for_result"`          // Sync (true) vs async (false) execution
-	TimeoutMs     int               `json:"timeout_ms,omitempty"`     // Timeout in milliseconds (0 = no timeout)
+	WorkflowID     string            `json:"workflow_id"`              // ID of the workflow to execute
+	WorkflowName   string            `json:"workflow_name,omitempty"`  // Optional, for display purposes
+	InputMapping   map[string]string `json:"input_mapping,omitempty"`  // Map parent context to sub-workflow input
+	OutputMapping  map[string]string `json:"output_mapping,omitempty"` // Map sub-workflow output to parent context
+	Mode           string            `json:"mode"`                     // "sync" or "async" execution mode
+	Timeout        string            `json:"timeout,omitempty"`        // Timeout duration (e.g., "5m", "30s")
+	TimeoutMs      int               `json:"timeout_ms,omitempty"`     // Timeout in milliseconds (deprecated, use Timeout)
+	WaitForResult  bool              `json:"wait_for_result"`          // Sync (true) vs async (false) execution (deprecated, use Mode)
+	InheritContext bool              `json:"inherit_context"`          // Whether to inherit parent context
+}
+
+// TryConfig represents try/catch/finally error handling configuration
+type TryConfig struct {
+	TryNodes     []string          `json:"try_nodes"`               // Node IDs to execute in the try block
+	CatchNodes   []string          `json:"catch_nodes,omitempty"`   // Node IDs to execute on error (catch block)
+	FinallyNodes []string          `json:"finally_nodes,omitempty"` // Node IDs to always execute (finally block)
+	ErrorBinding string            `json:"error_binding,omitempty"` // Variable name to bind error details (e.g., "error")
+	RetryConfig  *RetryNodeConfig  `json:"retry_config,omitempty"`  // Optional retry configuration
+	Metadata     map[string]string `json:"metadata,omitempty"`      // Additional metadata
+}
+
+// RetryNodeConfig represents retry configuration for error handling
+type RetryNodeConfig struct {
+	Strategy             string   `json:"strategy"`                         // "fixed", "exponential", "exponential_jitter"
+	MaxAttempts          int      `json:"max_attempts"`                     // Maximum number of retry attempts
+	InitialDelayMs       int      `json:"initial_delay_ms"`                 // Initial delay in milliseconds
+	MaxDelayMs           int      `json:"max_delay_ms,omitempty"`           // Maximum delay in milliseconds (for exponential)
+	Multiplier           float64  `json:"multiplier,omitempty"`             // Backoff multiplier (for exponential, default 2.0)
+	Jitter               bool     `json:"jitter,omitempty"`                 // Add random jitter to delays
+	RetryableErrors      []string `json:"retryable_errors,omitempty"`       // Error types/patterns to retry (empty = all transient)
+	NonRetryableErrors   []string `json:"non_retryable_errors,omitempty"`   // Error types/patterns to never retry
+	RetryableStatusCodes []int    `json:"retryable_status_codes,omitempty"` // HTTP status codes to retry
+}
+
+// CatchConfig represents catch block configuration
+type CatchConfig struct {
+	ErrorTypes    []string          `json:"error_types,omitempty"`    // Specific error types to catch (empty = all)
+	ErrorPatterns []string          `json:"error_patterns,omitempty"` // Regex patterns for error messages
+	ErrorBinding  string            `json:"error_binding,omitempty"`  // Variable name to bind error details
+	PropagateAs   string            `json:"propagate_as,omitempty"`   // Rethrow as different error type
+	Metadata      map[string]string `json:"metadata,omitempty"`       // Additional metadata
+}
+
+// FinallyConfig represents finally block configuration
+type FinallyConfig struct {
+	AlwaysRun bool              `json:"always_run"` // Run even if try/catch nodes fail (default true)
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// CircuitBreakerConfig represents circuit breaker configuration for nodes
+type CircuitBreakerConfig struct {
+	Enabled           bool    `json:"enabled"`                       // Enable circuit breaker
+	MaxFailures       int     `json:"max_failures"`                  // Consecutive failures to open circuit
+	TimeoutMs         int     `json:"timeout_ms"`                    // Time to wait before half-open (milliseconds)
+	MaxRequests       int     `json:"max_requests,omitempty"`        // Max requests in half-open state
+	FailureThreshold  float64 `json:"failure_threshold,omitempty"`   // Failure ratio to open (0.0-1.0)
+	SlidingWindowSize int     `json:"sliding_window_size,omitempty"` // Window size for failure tracking
+	Name              string  `json:"name,omitempty"`                // Circuit breaker name (defaults to node ID)
+}
+
+// ErrorHandlingMetadata represents error metadata captured during execution
+type ErrorHandlingMetadata struct {
+	ErrorType      string                 `json:"error_type"`
+	ErrorMessage   string                 `json:"error_message"`
+	ErrorStack     string                 `json:"error_stack,omitempty"`
+	Classification string                 `json:"classification"` // "transient", "permanent", "unknown"
+	NodeID         string                 `json:"node_id"`
+	NodeType       string                 `json:"node_type"`
+	RetryAttempt   int                    `json:"retry_attempt"`
+	MaxRetries     int                    `json:"max_retries"`
+	Timestamp      string                 `json:"timestamp"`
+	Context        map[string]interface{} `json:"context,omitempty"`
+	CaughtBy       string                 `json:"caught_by,omitempty"`        // Node ID that caught the error
+	RecoveryAction string                 `json:"recovery_action,omitempty"`  // "retry", "fallback", "propagate", "handled"
+	HTTPStatusCode int                    `json:"http_status_code,omitempty"` // For HTTP errors
+	OriginalError  *ErrorHandlingMetadata `json:"original_error,omitempty"`   // For wrapped/rethrown errors
 }
 
 // CreateWorkflowInput represents input for creating a workflow

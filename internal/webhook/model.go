@@ -93,22 +93,28 @@ func (n *NullableEventMetadata) Scan(value interface{}) error {
 
 // WebhookEvent represents a webhook event delivery log
 type WebhookEvent struct {
-	ID               string             `json:"id" db:"id"`
-	TenantID         string             `json:"tenantId" db:"tenant_id"`
-	WebhookID        string             `json:"webhookId" db:"webhook_id"`
-	ExecutionID      *string            `json:"executionId,omitempty" db:"execution_id"`
-	RequestMethod    string             `json:"requestMethod" db:"request_method"`
-	RequestHeaders   map[string]string  `json:"requestHeaders" db:"request_headers"`
-	RequestBody      json.RawMessage    `json:"requestBody" db:"request_body"`
-	ResponseStatus   *int               `json:"responseStatus,omitempty" db:"response_status"`
-	ProcessingTimeMs *int               `json:"processingTimeMs,omitempty" db:"processing_time_ms"`
-	Status           WebhookEventStatus `json:"status" db:"status"`
-	ErrorMessage     *string            `json:"errorMessage,omitempty" db:"error_message"`
-	FilteredReason   *string            `json:"filteredReason,omitempty" db:"filtered_reason"`
-	ReplayCount      int                `json:"replayCount" db:"replay_count"`
-	SourceEventID    *string            `json:"sourceEventId,omitempty" db:"source_event_id"`
-	Metadata         *EventMetadata     `json:"metadata,omitempty" db:"metadata"`
-	CreatedAt        time.Time          `json:"createdAt" db:"created_at"`
+	ID                string             `json:"id" db:"id"`
+	TenantID          string             `json:"tenantId" db:"tenant_id"`
+	WebhookID         string             `json:"webhookId" db:"webhook_id"`
+	ExecutionID       *string            `json:"executionId,omitempty" db:"execution_id"`
+	RequestMethod     string             `json:"requestMethod" db:"request_method"`
+	RequestHeaders    map[string]string  `json:"requestHeaders" db:"request_headers"`
+	RequestBody       json.RawMessage    `json:"requestBody" db:"request_body"`
+	ResponseStatus    *int               `json:"responseStatus,omitempty" db:"response_status"`
+	ProcessingTimeMs  *int               `json:"processingTimeMs,omitempty" db:"processing_time_ms"`
+	Status            WebhookEventStatus `json:"status" db:"status"`
+	ErrorMessage      *string            `json:"errorMessage,omitempty" db:"error_message"`
+	FilteredReason    *string            `json:"filteredReason,omitempty" db:"filtered_reason"`
+	ReplayCount       int                `json:"replayCount" db:"replay_count"`
+	SourceEventID     *string            `json:"sourceEventId,omitempty" db:"source_event_id"`
+	Metadata          *EventMetadata     `json:"metadata,omitempty" db:"metadata"`
+	RetryCount        int                `json:"retryCount" db:"retry_count"`
+	MaxRetries        int                `json:"maxRetries" db:"max_retries"`
+	NextRetryAt       *time.Time         `json:"nextRetryAt,omitempty" db:"next_retry_at"`
+	LastRetryAt       *time.Time         `json:"lastRetryAt,omitempty" db:"last_retry_at"`
+	RetryError        *string            `json:"retryError,omitempty" db:"retry_error"`
+	PermanentlyFailed bool               `json:"permanentlyFailed" db:"permanently_failed"`
+	CreatedAt         time.Time          `json:"createdAt" db:"created_at"`
 }
 
 // WebhookEventFilter represents filter criteria for querying webhook events
@@ -125,19 +131,26 @@ type WebhookEventFilter struct {
 type FilterOperator string
 
 const (
-	OpEquals      FilterOperator = "equals"
-	OpNotEquals   FilterOperator = "not_equals"
-	OpContains    FilterOperator = "contains"
-	OpNotContains FilterOperator = "not_contains"
-	OpStartsWith  FilterOperator = "starts_with"
-	OpEndsWith    FilterOperator = "ends_with"
-	OpRegex       FilterOperator = "regex"
-	OpGreaterThan FilterOperator = "gt"
-	OpLessThan    FilterOperator = "lt"
-	OpIn          FilterOperator = "in"
-	OpNotIn       FilterOperator = "not_in"
-	OpExists      FilterOperator = "exists"
-	OpNotExists   FilterOperator = "not_exists"
+	OpEquals             FilterOperator = "equals"
+	OpNotEquals          FilterOperator = "not_equals"
+	OpContains           FilterOperator = "contains"
+	OpNotContains        FilterOperator = "not_contains"
+	OpStartsWith         FilterOperator = "starts_with"
+	OpEndsWith           FilterOperator = "ends_with"
+	OpRegex              FilterOperator = "regex"
+	OpGreaterThan        FilterOperator = "gt"
+	OpGreaterThanOrEqual FilterOperator = "gte"
+	OpLessThan           FilterOperator = "lt"
+	OpLessThanOrEqual    FilterOperator = "lte"
+	OpIn                 FilterOperator = "in"
+	OpNotIn              FilterOperator = "not_in"
+	OpExists             FilterOperator = "exists"
+	OpNotExists          FilterOperator = "not_exists"
+	OpIsEmpty            FilterOperator = "is_empty"
+	OpIsNotEmpty         FilterOperator = "is_not_empty"
+	OpBetween            FilterOperator = "between"
+	OpMatchesAny         FilterOperator = "matches_any"
+	OpMatchesAll         FilterOperator = "matches_all"
 )
 
 // WebhookFilter represents a filter rule for webhook payload evaluation
@@ -202,6 +215,16 @@ type ReplayResult struct {
 // BatchReplayResponse represents the response from batch replaying events
 type BatchReplayResponse struct {
 	Results map[string]*ReplayResult `json:"results"`
+}
+
+// RetryStatistics represents retry statistics for a webhook
+type RetryStatistics struct {
+	WebhookID               string  `db:"webhook_id"`
+	TotalRetriedEvents      int     `db:"total_retried_events"`
+	PermanentlyFailedEvents int     `db:"permanently_failed_events"`
+	PendingRetries          int     `db:"pending_retries"`
+	AvgRetryCount           float64 `db:"avg_retry_count"`
+	MaxRetryCount           int     `db:"max_retry_count"`
 }
 
 // ExtractMetadataFromRequest creates EventMetadata from HTTP request components

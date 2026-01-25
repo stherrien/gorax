@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/validation"
 	"github.com/gorax/gorax/internal/webhook"
@@ -79,7 +80,7 @@ type TestWebhookRequest struct {
 // @Param offset query int false "Offset for pagination" default(0)
 // @Security TenantID
 // @Security UserID
-// @Success 200 {object} map[string]interface{} "List of webhooks"
+// @Success 200 {object} map[string]any "List of webhooks"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /webhooks [get]
 func (h *WebhookManagementHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -94,11 +95,11 @@ func (h *WebhookManagementHandler) List(w http.ResponseWriter, r *http.Request) 
 
 	webhooks, total, err := h.service.List(r.Context(), tenantID, limit, offset)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to list webhooks")
+		_ = response.InternalError(w, "failed to list webhooks")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data":   webhooks,
 		"total":  total,
 		"limit":  limit,
@@ -115,7 +116,7 @@ func (h *WebhookManagementHandler) List(w http.ResponseWriter, r *http.Request) 
 // @Param id path string true "Webhook ID"
 // @Security TenantID
 // @Security UserID
-// @Success 200 {object} map[string]interface{} "Webhook details"
+// @Success 200 {object} map[string]any "Webhook details"
 // @Failure 404 {object} map[string]string "Webhook not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /webhooks/{id} [get]
@@ -126,14 +127,14 @@ func (h *WebhookManagementHandler) Get(w http.ResponseWriter, r *http.Request) {
 	wh, err := h.service.GetByID(r.Context(), tenantID, webhookID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get webhook")
+		_ = response.InternalError(w, "failed to get webhook")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": wh,
 	})
 }
@@ -147,7 +148,7 @@ func (h *WebhookManagementHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param webhook body CreateWebhookRequest true "Webhook creation request"
 // @Security TenantID
 // @Security UserID
-// @Success 201 {object} map[string]interface{} "Created webhook"
+// @Success 201 {object} map[string]any "Created webhook"
 // @Failure 400 {object} map[string]string "Invalid request or validation error"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /webhooks [post]
@@ -156,12 +157,12 @@ func (h *WebhookManagementHandler) Create(w http.ResponseWriter, r *http.Request
 
 	var input CreateWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -177,11 +178,11 @@ func (h *WebhookManagementHandler) Create(w http.ResponseWriter, r *http.Request
 	)
 	if err != nil {
 		h.logger.Error("failed to create webhook", "error", err)
-		h.respondError(w, http.StatusInternalServerError, "failed to create webhook")
+		_ = response.InternalError(w, "failed to create webhook")
 		return
 	}
 
-	h.respondJSON(w, http.StatusCreated, map[string]interface{}{
+	_ = response.Created(w, map[string]any{
 		"data": wh,
 	})
 }
@@ -193,12 +194,12 @@ func (h *WebhookManagementHandler) Update(w http.ResponseWriter, r *http.Request
 
 	var input UpdateWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -214,14 +215,14 @@ func (h *WebhookManagementHandler) Update(w http.ResponseWriter, r *http.Request
 	)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to update webhook")
+		_ = response.InternalError(w, "failed to update webhook")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": wh,
 	})
 }
@@ -234,14 +235,14 @@ func (h *WebhookManagementHandler) Delete(w http.ResponseWriter, r *http.Request
 	err := h.service.DeleteByID(r.Context(), tenantID, webhookID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to delete webhook")
+		_ = response.InternalError(w, "failed to delete webhook")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w)
 }
 
 // RegenerateSecret regenerates the webhook secret
@@ -253,7 +254,7 @@ func (h *WebhookManagementHandler) Delete(w http.ResponseWriter, r *http.Request
 // @Param id path string true "Webhook ID"
 // @Security TenantID
 // @Security UserID
-// @Success 200 {object} map[string]interface{} "Webhook with new secret"
+// @Success 200 {object} map[string]any "Webhook with new secret"
 // @Failure 404 {object} map[string]string "Webhook not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /webhooks/{id}/regenerate-secret [post]
@@ -264,14 +265,14 @@ func (h *WebhookManagementHandler) RegenerateSecret(w http.ResponseWriter, r *ht
 	wh, err := h.service.RegenerateSecret(r.Context(), tenantID, webhookID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to regenerate secret")
+		_ = response.InternalError(w, "failed to regenerate secret")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": wh,
 	})
 }
@@ -283,12 +284,12 @@ func (h *WebhookManagementHandler) TestWebhook(w http.ResponseWriter, r *http.Re
 
 	var input TestWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validate.Struct(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -310,14 +311,14 @@ func (h *WebhookManagementHandler) TestWebhook(w http.ResponseWriter, r *http.Re
 
 	if testErr != nil {
 		if testErr == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to test webhook")
+		_ = response.InternalError(w, "failed to test webhook")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // GetEventHistory retrieves webhook event history
@@ -335,31 +336,17 @@ func (h *WebhookManagementHandler) GetEventHistory(w http.ResponseWriter, r *htt
 	events, total, err := h.service.GetEventHistory(r.Context(), tenantID, webhookID, limit, offset)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to get event history")
+		_ = response.InternalError(w, "failed to get event history")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data":   events,
 		"total":  total,
 		"limit":  limit,
 		"offset": offset,
-	})
-}
-
-// Helper methods
-
-func (h *WebhookManagementHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WebhookManagementHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
 	})
 }

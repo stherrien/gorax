@@ -130,7 +130,9 @@ describe('ScheduleForm', () => {
       const submitButton = screen.getByRole('button', { name: /create schedule/i })
       await user.click(submitButton)
 
-      expect(await screen.findByText(/schedule name is required/i)).toBeInTheDocument()
+      // Error appears in both FormErrorSummary and individual field error div
+      const errors = await screen.findAllByText(/schedule name is required/i)
+      expect(errors.length).toBeGreaterThanOrEqual(1)
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
 

@@ -9,19 +9,32 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/webhook"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
+// WebhookWorkflowService defines the interface for workflow operations used by webhook handler
+type WebhookWorkflowService interface {
+	Execute(ctx context.Context, tenantID, workflowID, triggerType string, triggerData []byte) (*workflow.Execution, error)
+}
+
+// WebhookService defines the interface for webhook operations
+type WebhookService interface {
+	GetByWorkflowAndWebhookID(ctx context.Context, workflowID, webhookID string) (*webhook.Webhook, error)
+	VerifySignature(payload []byte, signature string, secret string) bool
+	LogEvent(ctx context.Context, event *webhook.WebhookEvent) error
+}
+
 // WebhookHandler handles incoming webhook requests
 type WebhookHandler struct {
-	workflowService *workflow.Service
-	webhookService  *webhook.Service
+	workflowService WebhookWorkflowService
+	webhookService  WebhookService
 	logger          *slog.Logger
 }
 
 // NewWebhookHandler creates a new webhook handler
-func NewWebhookHandler(workflowService *workflow.Service, webhookService *webhook.Service, logger *slog.Logger) *WebhookHandler {
+func NewWebhookHandler(workflowService WebhookWorkflowService, webhookService WebhookService, logger *slog.Logger) *WebhookHandler {
 	return &WebhookHandler{
 		workflowService: workflowService,
 		webhookService:  webhookService,
@@ -48,18 +61,18 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	webhookConfig, err := h.webhookService.GetByWorkflowAndWebhookID(r.Context(), workflowID, webhookID)
 	if err != nil {
 		if err == webhook.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "webhook not found")
+			_ = response.NotFound(w, "webhook not found")
 			return
 		}
 		h.logger.Error("failed to get webhook config", "error", err, "webhook_id", webhookID)
-		h.respondError(w, http.StatusInternalServerError, "failed to process webhook")
+		_ = response.InternalError(w, "failed to process webhook")
 		return
 	}
 
 	// Read request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.respondError(w, http.StatusBadRequest, "failed to read request body")
+		_ = response.BadRequest(w, "failed to read request body")
 		return
 	}
 
@@ -73,7 +86,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 		if !h.webhookService.VerifySignature(body, signature, webhookConfig.Secret) {
 			h.logger.Warn("webhook signature verification failed", "webhook_id", webhookID)
-			h.respondError(w, http.StatusUnauthorized, "invalid signature")
+			_ = response.Unauthorized(w, "invalid signature")
 			return
 		}
 	}
@@ -88,7 +101,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	triggerDataJSON, err := json.Marshal(triggerData)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to process trigger data")
+		_ = response.InternalError(w, "failed to process trigger data")
 		return
 	}
 
@@ -96,7 +109,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	execution, err := h.workflowService.Execute(r.Context(), webhookConfig.TenantID, workflowID, "webhook", triggerDataJSON)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		h.logger.Error("failed to execute workflow from webhook", "error", err, "workflow_id", workflowID)
@@ -104,7 +117,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		// Log failed event with metadata
 		h.logWebhookEvent(r.Context(), webhookConfig, r, body, nil, webhook.EventStatusFailed, metadata, stringPtr(err.Error()))
 
-		h.respondError(w, http.StatusInternalServerError, "failed to execute workflow")
+		_ = response.InternalError(w, "failed to execute workflow")
 		return
 	}
 
@@ -114,7 +127,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.logWebhookEvent(r.Context(), webhookConfig, r, body, &execution.ID, webhook.EventStatusProcessed, metadata, nil)
 
 	// Return execution ID
-	h.respondJSON(w, http.StatusAccepted, map[string]interface{}{
+	_ = response.JSON(w, http.StatusAccepted, map[string]any{
 		"execution_id": execution.ID,
 		"status":       execution.Status,
 	})
@@ -138,18 +151,6 @@ func flattenQuery(query map[string][]string) map[string]string {
 		}
 	}
 	return result
-}
-
-func (h *WebhookHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WebhookHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
 }
 
 // logWebhookEvent logs a webhook event with metadata

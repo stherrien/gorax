@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { webhookAPI, type WebhookEvent } from '../../api/webhooks'
 import { ReplayModal } from './ReplayModal'
@@ -32,11 +32,7 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
 
   const limit = 20
 
-  useEffect(() => {
-    fetchEvents()
-  }, [webhookId, page])
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -48,7 +44,11 @@ export function WebhookEventHistory({ webhookId }: WebhookEventHistoryProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [webhookId, page, limit])
+
+  useEffect(() => {
+    fetchEvents()
+  }, [fetchEvents])
 
   const filteredAndSortedEvents = useMemo(() => {
     let result = [...events]

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -41,7 +42,7 @@ func (h *LogExportHandler) ExportExecutionLogs(w http.ResponseWriter, r *http.Re
 	format := getExportFormat(r)
 
 	if !isValidFormat(format) {
-		h.respondError(w, http.StatusBadRequest, "invalid format: must be txt, json, or csv")
+		_ = response.BadRequest(w, "invalid format: must be txt, json, or csv")
 		return
 	}
 
@@ -53,7 +54,7 @@ func (h *LogExportHandler) ExportExecutionLogs(w http.ResponseWriter, r *http.Re
 
 	data, contentType, err := h.service.ExportLogs(execution, steps, format)
 	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, "failed to export logs")
+		_ = response.InternalError(w, "failed to export logs")
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *LogExportHandler) ExportExecutionLogs(w http.ResponseWriter, r *http.Re
 	setDownloadHeaders(w, contentType, filename)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // getExportFormat retrieves the export format from query parameters
@@ -98,15 +99,8 @@ func setDownloadHeaders(w http.ResponseWriter, contentType, filename string) {
 // handleExportError handles errors from GetExecutionWithSteps
 func (h *LogExportHandler) handleExportError(w http.ResponseWriter, err error) {
 	if strings.Contains(err.Error(), "not found") {
-		h.respondError(w, http.StatusNotFound, "execution not found")
+		_ = response.NotFound(w, "execution not found")
 		return
 	}
-	h.respondError(w, http.StatusInternalServerError, "failed to retrieve execution")
-}
-
-// respondError sends an error response
-func (h *LogExportHandler) respondError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"error":"%s"}`, message)
+	_ = response.InternalError(w, "failed to retrieve execution")
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/gorax/gorax/internal/graphql/generated"
 	"github.com/gorax/gorax/internal/schedule"
@@ -650,8 +651,69 @@ func (r *queryResolver) Template(ctx context.Context, id string) (*generated.Tem
 
 // ExecutionUpdated is the resolver for the executionUpdated field.
 func (r *subscriptionResolver) ExecutionUpdated(ctx context.Context, workflowID *string) (<-chan *generated.Execution, error) {
-	// TODO: Implement execution subscription using WebSocket hub
-	return nil, fmt.Errorf("not implemented: ExecutionUpdated subscription")
+	tenantID, err := getTenantID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create channel for sending execution updates
+	execChan := make(chan *generated.Execution, 10)
+
+	// Start goroutine to poll for execution updates
+	// Note: This is a simplified implementation. A full implementation would:
+	// 1. Create a temporary WebSocket client
+	// 2. Subscribe to the appropriate room (workflow:ID or tenant:ID)
+	// 3. Listen for ExecutionEvents
+	// 4. Convert events to GraphQL Execution objects
+	// 5. Send through the channel
+	go func() {
+		defer close(execChan)
+
+		// Poll for new executions periodically
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				// Client disconnected
+				return
+			case <-ticker.C:
+				// Fetch latest executions
+				var executions []*workflow.Execution
+				if workflowID != nil {
+					// Get executions for specific workflow
+					execs, err := r.WorkflowService.ListExecutions(ctx, tenantID, *workflowID, 5, 0)
+					if err != nil {
+						continue
+					}
+					executions = execs
+				} else {
+					// Get all recent executions for tenant
+					// Note: Would need a method to list all executions across workflows
+					continue
+				}
+
+				// Send each execution to the channel
+				for _, exec := range executions {
+					gqlExec, err := toGraphQLExecution(exec)
+					if err != nil {
+						continue
+					}
+
+					select {
+					case execChan <- gqlExec:
+					case <-ctx.Done():
+						return
+					default:
+						// Channel full, skip this update
+					}
+				}
+			}
+		}
+	}()
+
+	return execChan, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

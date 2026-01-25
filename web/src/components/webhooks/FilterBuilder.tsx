@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { webhookAPI } from '../../api/webhooks'
 import type {
   FilterOperator,
@@ -28,22 +28,27 @@ interface ValidationError {
   message: string
 }
 
-const OPERATORS: { value: FilterOperator; label: string; description: string }[] = [
-  { value: 'equals', label: 'Equals', description: 'Exact match' },
-  { value: 'not_equals', label: 'Not Equals', description: 'Does not match' },
-  { value: 'contains', label: 'Contains', description: 'String contains substring' },
-  { value: 'not_contains', label: 'Not Contains', description: 'String does not contain' },
-  { value: 'starts_with', label: 'Starts With', description: 'String starts with prefix' },
-  { value: 'ends_with', label: 'Ends With', description: 'String ends with suffix' },
-  { value: 'regex', label: 'Regex', description: 'Matches regular expression' },
-  { value: 'gt', label: 'Greater Than', description: 'Number > value' },
-  { value: 'gte', label: 'Greater Than or Equal', description: 'Number >= value' },
-  { value: 'lt', label: 'Less Than', description: 'Number < value' },
-  { value: 'lte', label: 'Less Than or Equal', description: 'Number <= value' },
-  { value: 'in', label: 'In', description: 'Value in array' },
-  { value: 'not_in', label: 'Not In', description: 'Value not in array' },
-  { value: 'exists', label: 'Exists', description: 'Field exists in payload' },
-  { value: 'not_exists', label: 'Not Exists', description: 'Field does not exist' },
+const OPERATORS: { value: FilterOperator; label: string; description: string; category: string }[] = [
+  { value: 'equals', label: 'Equals', description: 'Exact match', category: 'Comparison' },
+  { value: 'not_equals', label: 'Not Equals', description: 'Does not match', category: 'Comparison' },
+  { value: 'contains', label: 'Contains', description: 'String contains substring', category: 'String' },
+  { value: 'not_contains', label: 'Not Contains', description: 'String does not contain', category: 'String' },
+  { value: 'starts_with', label: 'Starts With', description: 'String starts with prefix', category: 'String' },
+  { value: 'ends_with', label: 'Ends With', description: 'String ends with suffix', category: 'String' },
+  { value: 'regex', label: 'Regex', description: 'Matches regular expression', category: 'String' },
+  { value: 'gt', label: 'Greater Than', description: 'Number > value', category: 'Numeric' },
+  { value: 'gte', label: 'Greater Than or Equal', description: 'Number >= value', category: 'Numeric' },
+  { value: 'lt', label: 'Less Than', description: 'Number < value', category: 'Numeric' },
+  { value: 'lte', label: 'Less Than or Equal', description: 'Number <= value', category: 'Numeric' },
+  { value: 'between', label: 'Between', description: 'Number within range (min, max)', category: 'Numeric' },
+  { value: 'in', label: 'In', description: 'Value in array', category: 'Array' },
+  { value: 'not_in', label: 'Not In', description: 'Value not in array', category: 'Array' },
+  { value: 'matches_any', label: 'Matches Any', description: 'Array contains any of values', category: 'Array' },
+  { value: 'matches_all', label: 'Matches All', description: 'Array contains all values', category: 'Array' },
+  { value: 'exists', label: 'Exists', description: 'Field exists in payload', category: 'Existence' },
+  { value: 'not_exists', label: 'Not Exists', description: 'Field does not exist', category: 'Existence' },
+  { value: 'is_empty', label: 'Is Empty', description: 'String/array/object is empty', category: 'Existence' },
+  { value: 'is_not_empty', label: 'Is Not Empty', description: 'String/array/object is not empty', category: 'Existence' },
 ]
 
 const parseValue = (value: unknown): string => {
@@ -56,16 +61,38 @@ const parseValue = (value: unknown): string => {
 }
 
 const serializeValue = (value: string, operator: FilterOperator): unknown => {
-  if (operator === 'exists' || operator === 'not_exists') {
+  if (operator === 'exists' || operator === 'not_exists' || operator === 'is_empty' || operator === 'is_not_empty') {
     return null
   }
 
-  if (operator === 'in' || operator === 'not_in') {
+  if (operator === 'in' || operator === 'not_in' || operator === 'matches_any' || operator === 'matches_all') {
     try {
       return JSON.parse(value)
     } catch {
       return value.split(',').map(v => v.trim())
     }
+  }
+
+  if (operator === 'between') {
+    try {
+      const parsed = JSON.parse(value)
+      if (parsed && typeof parsed === 'object' && 'min' in parsed && 'max' in parsed) {
+        return {
+          min: parseFloat(parsed.min),
+          max: parseFloat(parsed.max),
+        }
+      }
+    } catch {
+      // Try to parse as comma-separated values
+      const parts = value.split(',').map(v => v.trim())
+      if (parts.length === 2) {
+        return {
+          min: parseFloat(parts[0]),
+          max: parseFloat(parts[1]),
+        }
+      }
+    }
+    return value
   }
 
   if (
@@ -118,12 +145,37 @@ const validateFilter = (filter: FilterRule): ValidationError[] => {
     }
   }
 
-  if (
-    filter.operator !== 'exists' &&
-    filter.operator !== 'not_exists' &&
-    !filter.value.trim()
-  ) {
+  // Operators that don't require a value
+  const noValueOperators: FilterOperator[] = ['exists', 'not_exists', 'is_empty', 'is_not_empty']
+
+  if (!noValueOperators.includes(filter.operator) && !filter.value.trim()) {
     errors.push({ filterId, field: 'value', message: 'Value is required' })
+  }
+
+  // Validate between operator format
+  if (filter.operator === 'between' && filter.value.trim()) {
+    try {
+      const parsed = JSON.parse(filter.value)
+      if (!parsed || typeof parsed !== 'object' || !('min' in parsed) || !('max' in parsed)) {
+        const parts = filter.value.split(',')
+        if (parts.length !== 2 || isNaN(parseFloat(parts[0])) || isNaN(parseFloat(parts[1]))) {
+          errors.push({
+            filterId,
+            field: 'value',
+            message: 'Between requires format: {"min": 10, "max": 100} or 10,100'
+          })
+        }
+      }
+    } catch {
+      const parts = filter.value.split(',')
+      if (parts.length !== 2 || isNaN(parseFloat(parts[0])) || isNaN(parseFloat(parts[1]))) {
+        errors.push({
+          filterId,
+          field: 'value',
+          message: 'Between requires format: {"min": 10, "max": 100} or 10,100'
+        })
+      }
+    }
   }
 
   return errors
@@ -140,11 +192,7 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
   const [testError, setTestError] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
 
-  useEffect(() => {
-    loadFilters()
-  }, [webhookId])
-
-  const loadFilters = async () => {
+  const loadFilters = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -163,7 +211,11 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [webhookId])
+
+  useEffect(() => {
+    loadFilters()
+  }, [loadFilters])
 
   const addFilter = () => {
     const newFilter: FilterRule = {
@@ -340,6 +392,38 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
     return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0])
   }
 
+  const getValuePlaceholder = (operator: FilterOperator): string => {
+    switch (operator) {
+      case 'between':
+        return '{"min": 10, "max": 100} or 10,100'
+      case 'in':
+      case 'not_in':
+        return '["active", "pending"] or active,pending'
+      case 'matches_any':
+      case 'matches_all':
+        return '["tag1", "tag2"] or tag1,tag2'
+      case 'regex':
+        return '^[a-z]+$'
+      case 'gt':
+      case 'gte':
+      case 'lt':
+      case 'lte':
+        return '100'
+      case 'exists':
+      case 'not_exists':
+      case 'is_empty':
+      case 'is_not_empty':
+        return '(no value needed)'
+      default:
+        return 'Value'
+    }
+  }
+
+  const getOperatorDescription = (operator: FilterOperator): string => {
+    const op = OPERATORS.find(o => o.value === operator)
+    return op ? op.description : ''
+  }
+
   if (loading) {
     return (
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
@@ -477,10 +561,12 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
                               onChange={e =>
                                 updateFilter(globalIndex, { value: e.target.value })
                               }
-                              placeholder="Value"
+                              placeholder={getValuePlaceholder(filter.operator)}
                               disabled={
                                 filter.operator === 'exists' ||
-                                filter.operator === 'not_exists'
+                                filter.operator === 'not_exists' ||
+                                filter.operator === 'is_empty' ||
+                                filter.operator === 'is_not_empty'
                               }
                               className={`w-full px-3 py-2 bg-gray-600 text-white rounded text-sm focus:outline-none focus:ring-2 ${
                                 valueError
@@ -490,6 +576,11 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
                             />
                             {valueError && (
                               <p className="text-xs text-red-400 mt-1">{valueError}</p>
+                            )}
+                            {!valueError && getOperatorDescription(filter.operator) && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                {getOperatorDescription(filter.operator)}
+                              </p>
                             )}
                           </div>
                         </div>

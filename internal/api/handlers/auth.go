@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorax/gorax/internal/api/middleware"
 	"github.com/gorax/gorax/internal/config"
@@ -74,7 +75,9 @@ func (h *AuthHandler) InitiateRegistration(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		h.logger.Error("failed to initiate registration flow", "error", err)
@@ -129,7 +132,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	kratosReq.Header.Set("Content-Type", "application/json")
 	kratosReq.Body = http.NoBody
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to register with kratos", "error", err)
@@ -164,7 +169,9 @@ func (h *AuthHandler) InitiateLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		h.logger.Error("failed to initiate login flow", "error", err)
@@ -216,7 +223,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	kratosReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to login with kratos", "error", err)
@@ -269,7 +278,9 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Header.Set("X-Session-Token", sessionToken)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		h.logger.Error("failed to logout with kratos", "error", err)
@@ -331,7 +342,9 @@ func (h *AuthHandler) RequestPasswordReset(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to initiate recovery", "error", err)
@@ -383,7 +396,9 @@ func (h *AuthHandler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Reques
 
 	kratosReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to confirm password reset", "error", err)
@@ -417,7 +432,9 @@ func (h *AuthHandler) RequestEmailVerification(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to initiate verification", "error", err)
@@ -469,7 +486,9 @@ func (h *AuthHandler) ConfirmEmailVerification(w http.ResponseWriter, r *http.Re
 
 	kratosReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	resp, err := client.Do(kratosReq)
 	if err != nil {
 		h.logger.Error("failed to confirm email verification", "error", err)

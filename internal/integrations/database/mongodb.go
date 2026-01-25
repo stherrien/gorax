@@ -47,7 +47,7 @@ func newMongoClient(connStr string) (MongoClient, error) {
 
 	// Ping to verify connection
 	if err := client.Ping(ctx, nil); err != nil {
-		client.Disconnect(ctx)
+		_ = client.Disconnect(ctx) // Best effort disconnect on ping failure
 		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 

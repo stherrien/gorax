@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/webhook"
 )
@@ -62,11 +63,11 @@ func (h *WebhookReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Reques
 		if result.Error == "event not found: webhook not found" {
 			status = http.StatusNotFound
 		}
-		h.respondJSON(w, status, result)
+		_ = response.JSON(w, status, result)
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BatchReplayEvents replays multiple webhook events
@@ -77,12 +78,12 @@ func (h *WebhookReplayHandler) BatchReplayEvents(w http.ResponseWriter, r *http.
 
 	var input webhook.BatchReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if len(input.EventIDs) == 0 {
-		h.respondError(w, http.StatusBadRequest, "eventIds is required and cannot be empty")
+		_ = response.BadRequest(w, "eventIds is required and cannot be empty")
 		return
 	}
 
@@ -104,19 +105,5 @@ func (h *WebhookReplayHandler) BatchReplayEvents(w http.ResponseWriter, r *http.
 		return successCount, failureCount, nil
 	})
 
-	h.respondJSON(w, http.StatusOK, results)
-}
-
-// Helper methods
-
-func (h *WebhookReplayHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *WebhookReplayHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
+	_ = response.OK(w, results)
 }

@@ -1,0 +1,221 @@
+version: '3.8'
+
+# Gorax Monitoring Stack
+# Complete monitoring setup with Prometheus and Grafana
+# Use this for local development monitoring or as a template for production
+
+services:
+  # Prometheus - Metrics collection and storage
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: gorax-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      # Configuration files
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
+      # Persistent data storage
+      - prometheus-data:/prometheus
+    networks:
+      - gorax-monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.gorax.service=prometheus"
+      - "com.gorax.component=monitoring"
+
+  # Grafana - Metrics visualization and dashboards
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: gorax-grafana
+    hostname: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Security settings
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+
+      # Server settings
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+
+      # Anonymous access (disable in production)
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+      # Provisioning
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+      # Performance
+      - GF_DATABASE_WAL=true
+      - GF_LOG_LEVEL=info
+
+      # Feature toggles
+      - GF_FEATURE_TOGGLES_ENABLE=tempoSearch tempoBackendSearch
+    volumes:
+      # Persistent data storage
+      - grafana-data:/var/lib/grafana
+
+      # Provisioning configurations
+      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./configs/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+
+      # Dashboard JSON files
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - gorax-monitoring
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.gorax.service=grafana"
+      - "com.gorax.component=monitoring"
+
+  # Alertmanager (optional) - Alert routing and notification management
+  # Uncomment to enable alerting
+  # alertmanager:
+  #   image: prom/alertmanager:v0.26.0
+  #   container_name: gorax-alertmanager
+  #   hostname: alertmanager
+  #   restart: unless-stopped
+  #   command:
+  #     - '--config.file=/etc/alertmanager/alertmanager.yml'
+  #     - '--storage.path=/alertmanager'
+  #     - '--web.external-url=http://localhost:9093'
+  #   ports:
+  #     - "9093:9093"
+  #   volumes:
+  #     - ./configs/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+  #     - alertmanager-data:/alertmanager
+  #   networks:
+  #     - gorax-monitoring
+  #   labels:
+  #     - "com.gorax.service=alertmanager"
+  #     - "com.gorax.component=monitoring"
+
+  # Node Exporter (optional) - System metrics collector
+  # Uncomment to enable system-level monitoring
+  # node-exporter:
+  #   image: prom/node-exporter:v1.7.0
+  #   container_name: gorax-node-exporter
+  #   hostname: node-exporter
+  #   restart: unless-stopped
+  #   command:
+  #     - '--path.procfs=/host/proc'
+  #     - '--path.sysfs=/host/sys'
+  #     - '--path.rootfs=/rootfs'
+  #     - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+  #   ports:
+  #     - "9100:9100"
+  #   volumes:
+  #     - /proc:/host/proc:ro
+  #     - /sys:/host/sys:ro
+  #     - /:/rootfs:ro
+  #   networks:
+  #     - gorax-monitoring
+  #   labels:
+  #     - "com.gorax.service=node-exporter"
+  #     - "com.gorax.component=monitoring"
+
+  # PostgreSQL Exporter (optional) - Database metrics collector
+  # Uncomment to enable PostgreSQL monitoring
+  # postgres-exporter:
+  #   image: prometheuscommunity/postgres-exporter:v0.15.0
+  #   container_name: gorax-postgres-exporter
+  #   hostname: postgres-exporter
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9187:9187"
+  #   environment:
+  #     - DATA_SOURCE_NAME=postgresql://postgres:postgres@postgres:5432/rflow?sslmode=disable
+  #   networks:
+  #     - gorax-monitoring
+  #     - rflow-dev-network  # Connect to database network
+  #   depends_on:
+  #     - postgres
+  #   labels:
+  #     - "com.gorax.service=postgres-exporter"
+  #     - "com.gorax.component=monitoring"
+
+  # Redis Exporter (optional) - Cache metrics collector
+  # Uncomment to enable Redis monitoring
+  # redis-exporter:
+  #   image: oliver006/redis_exporter:v1.56.0
+  #   container_name: gorax-redis-exporter
+  #   hostname: redis-exporter
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9121:9121"
+  #   environment:
+  #     - REDIS_ADDR=redis://redis:6379
+  #   networks:
+  #     - gorax-monitoring
+  #     - rflow-dev-network  # Connect to cache network
+  #   depends_on:
+  #     - redis
+  #   labels:
+  #     - "com.gorax.service=redis-exporter"
+  #     - "com.gorax.component=monitoring"
+
+networks:
+  # Dedicated monitoring network
+  gorax-monitoring:
+    name: gorax-monitoring
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  # Connect to existing Gorax networks (if running docker-compose.dev.yml)
+  rflow-dev-network:
+    external: true
+    name: rflow-dev-network
+
+volumes:
+  # Prometheus data persistence
+  prometheus-data:
+    name: gorax-prometheus-data
+    driver: local
+
+  # Grafana data persistence
+  grafana-data:
+    name: gorax-grafana-data
+    driver: local
+
+  # Alertmanager data persistence (if enabled)
+  # alertmanager-data:
+  #   name: gorax-alertmanager-data
+  #   driver: local
+
+# Health check script for the entire stack
+# Run: docker-compose -f docker-compose.monitoring.yml ps
+# All services should show "healthy" status
+
+# Quick commands:
+# Start:   docker-compose -f docker-compose.monitoring.yml up -d
+# Stop:    docker-compose -f docker-compose.monitoring.yml down
+# Logs:    docker-compose -f docker-compose.monitoring.yml logs -f
+# Restart: docker-compose -f docker-compose.monitoring.yml restart
+# Clean:   docker-compose -f docker-compose.monitoring.yml down -v  # WARNING: Deletes data

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/webhook"
 )
 
@@ -69,7 +70,7 @@ func newTestReplayHandlerWithMock() (*testReplayHandler, *MockReplayService) {
 }
 
 func (h *testReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Request) {
-	tenantID := getTenantIDFromContext(r.Context())
+	tenantID := getTestTenantID(r.Context())
 	eventID := chi.URLParam(r, "eventID")
 
 	var input webhook.ReplayRequest
@@ -93,43 +94,31 @@ func (h *testReplayHandler) ReplayEvent(w http.ResponseWriter, r *http.Request) 
 			containsString(result.Error, "event not found")) {
 			status = http.StatusNotFound
 		}
-		h.respondJSON(w, status, result)
+		_ = response.JSON(w, status, result)
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 func (h *testReplayHandler) BatchReplayEvents(w http.ResponseWriter, r *http.Request) {
-	tenantID := getTenantIDFromContext(r.Context())
+	tenantID := getTestTenantID(r.Context())
 	webhookID := chi.URLParam(r, "webhookID")
 
 	var input webhook.BatchReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if len(input.EventIDs) == 0 {
-		h.respondError(w, http.StatusBadRequest, "eventIds is required and cannot be empty")
+		_ = response.BadRequest(w, "eventIds is required and cannot be empty")
 		return
 	}
 
 	results := h.mockService.BatchReplayEvents(r.Context(), tenantID, webhookID, input.EventIDs)
 
-	h.respondJSON(w, http.StatusOK, results)
-}
-
-func (h *testReplayHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *testReplayHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
+	_ = response.OK(w, results)
 }
 
 func containsString(s, substr string) bool {
@@ -145,7 +134,7 @@ func findSubstring(s, substr string) bool {
 	return false
 }
 
-func getTenantIDFromContext(ctx context.Context) string {
+func getTestTenantID(ctx context.Context) string {
 	if v := ctx.Value("tenant_id"); v != nil {
 		return v.(string)
 	}

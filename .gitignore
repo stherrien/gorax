@@ -148,3 +148,14 @@ scratch/
 
 # Project context and notes
 .context/
+
+# GitHub Configuration - Terraform
+terraform/github/terraform.tfstate
+terraform/github/terraform.tfstate.backup
+terraform/github/.terraform/
+terraform/github/.terraform.lock.hcl
+terraform/github/terraform.tfvars
+
+# GitHub Configuration - Scripts
+scripts/.env
+scripts/*.log

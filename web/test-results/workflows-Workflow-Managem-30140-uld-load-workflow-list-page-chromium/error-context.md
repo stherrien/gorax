@@ -1,0 +1,52 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: gorax
+    - navigation [ref=e7]:
+      - link "Dashboard" [ref=e8] [cursor=pointer]:
+        - /url: /
+      - link "Workflows" [ref=e9] [cursor=pointer]:
+        - /url: /workflows
+      - link "Marketplace" [ref=e10] [cursor=pointer]:
+        - /url: /marketplace
+      - link "AI Builder" [ref=e11] [cursor=pointer]:
+        - /url: /ai/builder
+      - link "Webhooks" [ref=e12] [cursor=pointer]:
+        - /url: /webhooks
+      - link "Schedules" [ref=e13] [cursor=pointer]:
+        - /url: /schedules
+      - link "Executions" [ref=e14] [cursor=pointer]:
+        - /url: /executions
+      - link "Analytics" [ref=e15] [cursor=pointer]:
+        - /url: /analytics
+      - link "Credentials" [ref=e16] [cursor=pointer]:
+        - /url: /credentials
+      - link "OAuth" [ref=e17] [cursor=pointer]:
+        - /url: /oauth/connections
+      - link "Docs" [ref=e18] [cursor=pointer]:
+        - /url: /docs
+      - generic [ref=e19]: Admin
+      - link "SSO Settings" [ref=e20] [cursor=pointer]:
+        - /url: /admin/sso
+      - link "Audit Logs" [ref=e21] [cursor=pointer]:
+        - /url: /admin/audit-logs
+  - generic [ref=e22]:
+    - banner [ref=e23]:
+      - generic [ref=e24]:
+        - button "Switch to dark mode" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+        - link "New Workflow" [ref=e28] [cursor=pointer]:
+          - /url: /workflows/new
+    - main [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - heading "Workflows" [level=1] [ref=e32]
+          - link "New Workflow" [ref=e33] [cursor=pointer]:
+            - /url: /workflows/new
+        - generic [ref=e35]:
+          - generic [ref=e36]: No workflows found
+          - link "Create your first workflow" [ref=e37] [cursor=pointer]:
+            - /url: /workflows/new
+```

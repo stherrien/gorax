@@ -1,0 +1,172 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: gorax
+    - navigation [ref=e7]:
+      - link "Dashboard" [ref=e8] [cursor=pointer]:
+        - /url: /
+      - link "Workflows" [ref=e9] [cursor=pointer]:
+        - /url: /workflows
+      - link "Marketplace" [ref=e10] [cursor=pointer]:
+        - /url: /marketplace
+      - link "AI Builder" [ref=e11] [cursor=pointer]:
+        - /url: /ai/builder
+      - link "Webhooks" [ref=e12] [cursor=pointer]:
+        - /url: /webhooks
+      - link "Schedules" [ref=e13] [cursor=pointer]:
+        - /url: /schedules
+      - link "Executions" [ref=e14] [cursor=pointer]:
+        - /url: /executions
+      - link "Analytics" [ref=e15] [cursor=pointer]:
+        - /url: /analytics
+      - link "Credentials" [ref=e16] [cursor=pointer]:
+        - /url: /credentials
+      - link "OAuth" [ref=e17] [cursor=pointer]:
+        - /url: /oauth/connections
+      - link "Docs" [ref=e18] [cursor=pointer]:
+        - /url: /docs
+      - generic [ref=e19]: Admin
+      - link "SSO Settings" [ref=e20] [cursor=pointer]:
+        - /url: /admin/sso
+      - link "Audit Logs" [ref=e21] [cursor=pointer]:
+        - /url: /admin/audit-logs
+  - generic [ref=e22]:
+    - banner [ref=e23]:
+      - generic [ref=e24]:
+        - button "Switch to dark mode" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+        - link "New Workflow" [active] [ref=e28] [cursor=pointer]:
+          - /url: /workflows/new
+    - main [ref=e29]:
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - link "Back to workflows" [ref=e34] [cursor=pointer]:
+                - /url: /workflows
+                - text: ← Back to Workflows
+              - heading "Edit Workflow" [level=1] [ref=e35]
+            - generic [ref=e36]:
+              - button "Browse Templates" [ref=e37] [cursor=pointer]
+              - button "Save as Template" [ref=e38] [cursor=pointer]
+              - button "Version History" [ref=e39] [cursor=pointer]
+              - button "Test Workflow" [ref=e40] [cursor=pointer]
+              - button "Save Workflow" [ref=e41] [cursor=pointer]
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]: Workflow Name *
+              - textbox "Workflow Name *" [ref=e45]:
+                - /placeholder: Enter workflow name
+            - generic [ref=e46]:
+              - generic [ref=e47]: Description
+              - textbox "Description" [ref=e48]:
+                - /placeholder: Enter workflow description
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - heading "Node Palette" [level=2] [ref=e52]
+              - textbox "Search nodes..." [ref=e53]
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - button "Triggers ▼" [ref=e56] [cursor=pointer]:
+                  - generic [ref=e57]: Triggers
+                  - generic [ref=e58]: ▼
+                - generic [ref=e59]:
+                  - generic [ref=e61]:
+                    - generic [ref=e62]: 🔗
+                    - generic [ref=e64]: Webhook
+                  - generic [ref=e66]:
+                    - generic [ref=e67]: ⏰
+                    - generic [ref=e69]: Schedule
+                  - generic [ref=e71]:
+                    - generic [ref=e72]: 👆
+                    - generic [ref=e74]: Manual
+              - generic [ref=e75]:
+                - button "Actions ▼" [ref=e76] [cursor=pointer]:
+                  - generic [ref=e77]: Actions
+                  - generic [ref=e78]: ▼
+                - generic [ref=e79]:
+                  - generic [ref=e81]:
+                    - generic [ref=e82]: 🌐
+                    - generic [ref=e84]: HTTP Request
+                  - generic [ref=e86]:
+                    - generic [ref=e87]: 🔄
+                    - generic [ref=e89]: Transform
+                  - generic [ref=e91]:
+                    - generic [ref=e92]: 📧
+                    - generic [ref=e94]: Email
+                  - generic [ref=e96]:
+                    - generic [ref=e97]: 📜
+                    - generic [ref=e99]: Run Script
+                  - generic [ref=e101]:
+                    - generic [ref=e102]: 💬
+                    - generic [ref=e104]: "Slack: Send Message"
+                  - generic [ref=e106]:
+                    - generic [ref=e107]: ✉️
+                    - generic [ref=e109]: "Slack: Send DM"
+                  - generic [ref=e111]:
+                    - generic [ref=e112]: ✏️
+                    - generic [ref=e114]: "Slack: Update Message"
+                  - generic [ref=e116]:
+                    - generic [ref=e117]: 👍
+                    - generic [ref=e119]: "Slack: Add Reaction"
+              - generic [ref=e120]:
+                - button "AI ▼" [ref=e121] [cursor=pointer]:
+                  - generic [ref=e122]: AI
+                  - generic [ref=e123]: ▼
+                - generic [ref=e124]:
+                  - generic [ref=e126]:
+                    - generic [ref=e127]: 🤖
+                    - generic [ref=e129]: "AI: Chat Completion"
+                  - generic [ref=e131]:
+                    - generic [ref=e132]: 📝
+                    - generic [ref=e134]: "AI: Summarize"
+                  - generic [ref=e136]:
+                    - generic [ref=e137]: 🏷️
+                    - generic [ref=e139]: "AI: Classify"
+                  - generic [ref=e141]:
+                    - generic [ref=e142]: 🔍
+                    - generic [ref=e144]: "AI: Extract Entities"
+                  - generic [ref=e146]:
+                    - generic [ref=e147]: 📊
+                    - generic [ref=e149]: "AI: Generate Embeddings"
+              - generic [ref=e150]:
+                - button "Controls ▼" [ref=e151] [cursor=pointer]:
+                  - generic [ref=e152]: Controls
+                  - generic [ref=e153]: ▼
+                - generic [ref=e154]:
+                  - generic [ref=e156]:
+                    - generic [ref=e157]: 🔀
+                    - generic [ref=e159]: Conditional
+                  - generic [ref=e161]:
+                    - generic [ref=e162]: 🔁
+                    - generic [ref=e164]: Loop
+                  - generic [ref=e166]:
+                    - generic [ref=e167]: ⚡
+                    - generic [ref=e169]: Parallel
+                  - generic [ref=e171]:
+                    - generic [ref=e172]: ⏸️
+                    - generic [ref=e174]: Delay
+          - generic [ref=e176]:
+            - generic [ref=e177]:
+              - button "Add Node" [ref=e179] [cursor=pointer]
+              - button "Save" [ref=e181] [cursor=pointer]
+            - application [ref=e183]:
+              - img
+              - generic "Control Panel" [ref=e186]:
+                - button "Zoom In" [ref=e187] [cursor=pointer]:
+                  - img [ref=e188]
+                - button "Zoom Out" [ref=e190] [cursor=pointer]:
+                  - img [ref=e191]
+                - button "Fit View" [ref=e193] [cursor=pointer]:
+                  - img [ref=e194]
+                - button "Toggle Interactivity" [ref=e196] [cursor=pointer]:
+                  - img [ref=e197]
+              - img "Mini Map" [ref=e200]
+              - link "React Flow attribution" [ref=e202] [cursor=pointer]:
+                - /url: https://reactflow.dev
+                - text: React Flow
+          - generic [ref=e205]: No node selected
+```

@@ -1,7 +1,20 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { CronBuilder } from './CronBuilder'
 import { TimezoneSelector } from './TimezoneSelector'
 import { SchedulePreview } from './SchedulePreview'
+import {
+  validateCronExpression,
+  validateTimezone,
+  validateRequired,
+  type ValidationResult,
+} from '../../utils/formValidation'
+import {
+  useFormValidation,
+  hasVisibleError,
+  getVisibleError,
+  getFormErrors,
+} from '../../hooks/useFormValidation'
+import { FormErrorSummary } from '../common/FormErrorSummary'
 
 export interface ScheduleFormData {
   name: string
@@ -17,15 +30,47 @@ export interface ScheduleFormProps {
   submitLabel?: string
 }
 
-interface FormErrors {
-  name?: string
-  cronExpression?: string
+interface FormValues {
+  name: string
+  cronExpression: string
+  timezone: string
 }
 
-const validateCronExpression = (cron: string): boolean => {
-  if (!cron || cron.trim() === '') return false
-  const parts = cron.split(' ')
-  return parts.length === 5
+/**
+ * Validates the schedule form fields
+ */
+function validateScheduleFormValues(values: FormValues): ValidationResult {
+  const errors: ValidationResult['errors'] = []
+
+  // Validate name
+  const nameResult = validateRequired(values.name, 'name')
+  if (!nameResult.valid) {
+    errors.push({
+      field: 'name',
+      message: 'Schedule name is required',
+      code: 'required',
+    })
+  }
+
+  // Validate cron expression
+  const cronResult = validateCronExpression(values.cronExpression, 'cronExpression')
+  if (!cronResult.valid) {
+    // Use the first error message from cron validation
+    const cronError = cronResult.errors[0]
+    errors.push({
+      field: 'cronExpression',
+      message: cronError?.message || 'Invalid cron expression',
+      code: cronError?.code || 'invalid_cron',
+    })
+  }
+
+  // Validate timezone
+  const tzResult = validateTimezone(values.timezone, 'timezone')
+  if (!tzResult.valid) {
+    errors.push(...tzResult.errors)
+  }
+
+  return { valid: errors.length === 0, errors }
 }
 
 export const ScheduleForm: React.FC<ScheduleFormProps> = ({
@@ -35,75 +80,87 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
   submitLabel,
 }) => {
   const isEditMode = !!initialData
-
-  const [formData, setFormData] = useState<ScheduleFormData>({
-    name: initialData?.name || '',
-    cronExpression: initialData?.cronExpression || '0 9 * * *',
-    timezone: initialData?.timezone || 'UTC',
-    enabled: initialData?.enabled !== undefined ? initialData.enabled : true,
-  })
-
-  const [errors, setErrors] = useState<FormErrors>({})
+  const [enabled, setEnabled] = useState(
+    initialData?.enabled !== undefined ? initialData.enabled : true
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
+  const {
+    values,
+    errors,
+    touched,
+    setFieldValue,
+    setFieldTouched,
+    validateForm,
+    getFieldProps,
+  } = useFormValidation({
+    initialValues: {
+      name: initialData?.name || '',
+      cronExpression: initialData?.cronExpression || '0 9 * * *',
+      timezone: initialData?.timezone || 'UTC',
+    },
+    validate: validateScheduleFormValues,
+    validateOnChange: true,
+    validateOnBlur: true,
+  })
 
-    if (!formData.name || formData.name.trim() === '') {
-      newErrors.name = 'Schedule name is required'
-    }
-
-    if (!validateCronExpression(formData.cronExpression)) {
-      newErrors.cronExpression = 'Invalid cron expression'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!validateForm()) {
+    // Touch all fields to show any validation errors
+    setFieldTouched('name', true)
+    setFieldTouched('cronExpression', true)
+    setFieldTouched('timezone', true)
+
+    const result = await validateForm()
+    if (!result.valid) {
       return
     }
 
     try {
       setIsSubmitting(true)
-      await onSubmit(formData)
+      await onSubmit({
+        name: values.name,
+        cronExpression: values.cronExpression,
+        timezone: values.timezone,
+        enabled,
+      })
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [values, enabled, onSubmit, validateForm, setFieldTouched])
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, name: e.target.value })
-    if (errors.name) {
-      setErrors({ ...errors, name: undefined })
-    }
-  }
+  const handleCronChange = useCallback((value: string) => {
+    setFieldValue('cronExpression', value)
+  }, [setFieldValue])
 
-  const handleCronChange = (value: string) => {
-    setFormData({ ...formData, cronExpression: value })
-    if (errors.cronExpression) {
-      setErrors({ ...errors, cronExpression: undefined })
-    }
-  }
+  const handleCronBlur = useCallback(() => {
+    setFieldTouched('cronExpression', true)
+  }, [setFieldTouched])
 
-  const handleTimezoneChange = (timezone: string) => {
-    setFormData({ ...formData, timezone })
-  }
+  const handleTimezoneChange = useCallback((timezone: string) => {
+    setFieldValue('timezone', timezone)
+    setFieldTouched('timezone', true)
+  }, [setFieldValue, setFieldTouched])
 
-  const handleEnabledChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, enabled: e.target.checked })
-  }
+  const handleEnabledChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEnabled(e.target.checked)
+  }, [])
 
   const buttonText = isSubmitting
     ? 'Creating...'
     : submitLabel || (isEditMode ? 'Update Schedule' : 'Create Schedule')
 
+  const nameError = getVisibleError('name', errors, touched)
+  const cronError = getVisibleError('cronExpression', errors, touched)
+  const hasNameError = hasVisibleError('name', errors, touched)
+  const hasCronError = hasVisibleError('cronExpression', errors, touched)
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      {/* Form Error Summary */}
+      <FormErrorSummary errors={getFormErrors(errors, touched)} />
+
       <div>
         <label
           htmlFor="schedule-name"
@@ -112,34 +169,43 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
           Schedule Name
         </label>
         <input
+          {...getFieldProps('name')}
           id="schedule-name"
           type="text"
-          value={formData.name}
-          onChange={handleNameChange}
           placeholder="e.g., Daily Data Sync"
           className={`w-full px-3 py-2 border rounded-md ${
-            errors.name ? 'border-red-500' : 'border-gray-300'
-          }`}
+            hasNameError ? 'border-red-500' : 'border-gray-300'
+          } focus:outline-none focus:ring-2 focus:ring-blue-500`}
           disabled={isSubmitting}
           aria-label="Schedule Name"
+          aria-invalid={hasNameError}
+          aria-describedby={hasNameError ? 'name-error' : undefined}
         />
-        {errors.name && <div className="mt-1 text-sm text-red-600">{errors.name}</div>}
+        {nameError && (
+          <div id="name-error" className="mt-1 text-sm text-red-600" role="alert">
+            {nameError}
+          </div>
+        )}
       </div>
 
       <div>
         <CronBuilder
-          value={formData.cronExpression}
+          value={values.cronExpression}
           onChange={handleCronChange}
+          onBlur={handleCronBlur}
           disabled={isSubmitting}
+          error={hasCronError}
         />
-        {errors.cronExpression && (
-          <div className="mt-1 text-sm text-red-600">{errors.cronExpression}</div>
+        {cronError && (
+          <div id="cron-error" className="mt-1 text-sm text-red-600" role="alert">
+            {cronError}
+          </div>
         )}
       </div>
 
       <div>
         <TimezoneSelector
-          value={formData.timezone}
+          value={values.timezone}
           onChange={handleTimezoneChange}
           disabled={isSubmitting}
           searchable
@@ -151,7 +217,7 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
         <input
           id="schedule-enabled"
           type="checkbox"
-          checked={formData.enabled}
+          checked={enabled}
           onChange={handleEnabledChange}
           disabled={isSubmitting}
           className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -162,11 +228,11 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
         </label>
       </div>
 
-      {formData.cronExpression && (
+      {values.cronExpression && !hasCronError && (
         <div className="pt-4 border-t border-gray-200">
           <SchedulePreview
-            cronExpression={formData.cronExpression}
-            timezone={formData.timezone}
+            cronExpression={values.cronExpression}
+            timezone={values.timezone}
             count={10}
           />
         </div>

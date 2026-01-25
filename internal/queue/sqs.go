@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -305,13 +306,19 @@ func (c *SQSClient) GetQueueAttributes(ctx context.Context) (*QueueAttributes, e
 
 	attrs := &QueueAttributes{}
 	if val, ok := result.Attributes[string(types.QueueAttributeNameApproximateNumberOfMessages)]; ok {
-		fmt.Sscanf(val, "%d", &attrs.ApproximateNumberOfMessages)
+		if n, err := strconv.Atoi(val); err == nil {
+			attrs.ApproximateNumberOfMessages = n
+		}
 	}
 	if val, ok := result.Attributes[string(types.QueueAttributeNameApproximateNumberOfMessagesNotVisible)]; ok {
-		fmt.Sscanf(val, "%d", &attrs.ApproximateNumberOfMessagesNotVisible)
+		if n, err := strconv.Atoi(val); err == nil {
+			attrs.ApproximateNumberOfMessagesNotVisible = n
+		}
 	}
 	if val, ok := result.Attributes[string(types.QueueAttributeNameApproximateNumberOfMessagesDelayed)]; ok {
-		fmt.Sscanf(val, "%d", &attrs.ApproximateNumberOfMessagesDelayed)
+		if n, err := strconv.Atoi(val); err == nil {
+			attrs.ApproximateNumberOfMessagesDelayed = n
+		}
 	}
 
 	return attrs, nil
@@ -336,7 +343,9 @@ func (c *SQSClient) GetDLQAttributes(ctx context.Context) (*QueueAttributes, err
 
 	attrs := &QueueAttributes{}
 	if val, ok := result.Attributes[string(types.QueueAttributeNameApproximateNumberOfMessages)]; ok {
-		fmt.Sscanf(val, "%d", &attrs.ApproximateNumberOfMessages)
+		if n, err := strconv.Atoi(val); err == nil {
+			attrs.ApproximateNumberOfMessages = n
+		}
 	}
 
 	return attrs, nil
@@ -388,9 +397,9 @@ func (c *SQSClient) HealthCheck(ctx context.Context) error {
 // Helper function to extract approximate receive count from message attributes
 func getApproximateReceiveCount(attrs map[string]string) int {
 	if val, ok := attrs[string(types.MessageSystemAttributeNameApproximateReceiveCount)]; ok {
-		var count int
-		fmt.Sscanf(val, "%d", &count)
-		return count
+		if count, err := strconv.Atoi(val); err == nil {
+			return count
+		}
 	}
 	return 0
 }

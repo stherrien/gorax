@@ -7,28 +7,41 @@ Welcome to the Gorax documentation! Here you'll find everything you need to buil
 ### Getting Started
 - [Installation & Setup](getting-started.md) - Get Gorax running in minutes
 - [Your First Workflow](first-workflow.md) - Create your first automated workflow
-- [Core Concepts](concepts.md) - Understand nodes, triggers, and actions
-
-### Building Workflows
-- [Workflow Builder Guide](workflows.md) - Master the visual workflow builder
-- [Template Variables](template-variables.md) - Use dynamic data in your workflows
-- [Control Flow](control-flow.md) - Conditionals, loops, and parallel execution
 
 ### Integrations
 - [Slack](integrations/slack.md) - Send messages, DMs, and reactions
-- [HTTP/REST APIs](integrations/http.md) - Connect to any API
-- [Webhooks](integrations/webhooks.md) - Trigger workflows from external events
+- [Integration Quick Reference](INTEGRATION_QUICK_REFERENCE.md) - Overview of available integrations
 
 ### Advanced
-- [API Reference](api-reference.md) - Complete REST API documentation
-- [Authentication](authentication.md) - OAuth and credential management
-- [Deployment](deployment.md) - Production deployment guide
-- [Performance Tuning](performance.md) - Optimize workflow execution
+- [API Reference](API_REFERENCE.md) - Complete REST API documentation
+- [API Documentation Summary](API_DOCUMENTATION_SUMMARY.md) - API overview and quick reference
+- [Security](SECURITY.md) - Security best practices and audit information
+- [Observability](observability.md) - Monitoring, tracing, and logging
+- [RBAC Implementation](RBAC_IMPLEMENTATION.md) - Role-based access control
+
+### Collaboration & Real-time Features
+- [Collaboration Quick Start](COLLABORATION_QUICK_START.md) - Get started with real-time collaboration
+- [Collaboration Implementation](COLLABORATION_IMPLEMENTATION.md) - Technical details
+- [WebSocket Security](WEBSOCKET_SECURITY.md) - Securing real-time connections
 
 ### Development
-- [Contributing](contributing.md) - Join the development community
-- [Architecture](architecture.md) - System design and internals
-- [Local Development](local-development.md) - Set up your dev environment
+- [Developer Guide](DEVELOPER_GUIDE.md) - Comprehensive development documentation
+- [Contributing](../CONTRIBUTING.md) - Join the development community
+- [CI/CD](CI-CD.md) - Continuous integration and deployment
+
+### Planned Documentation
+The following guides are planned for future releases:
+- Core Concepts - Understand nodes, triggers, and actions
+- Workflow Builder Guide - Master the visual workflow builder
+- Template Variables - Use dynamic data in your workflows
+- Control Flow - Conditionals, loops, and parallel execution
+- HTTP/REST APIs - Connect to any API
+- Webhooks - Trigger workflows from external events
+- Authentication - OAuth and credential management
+- Deployment - Production deployment guide
+- Performance Tuning - Optimize workflow execution
+- Architecture - System design and internals
+- Local Development - Set up your dev environment
 
 ## 🚀 Quick Links
 

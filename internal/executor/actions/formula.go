@@ -10,7 +10,12 @@ import (
 
 // FormulaAction implements the Action interface for formula evaluation
 type FormulaAction struct {
-	evaluator *formula.Evaluator
+	evaluator FormulaEvaluator
+}
+
+// FormulaEvaluator interface for formula evaluation (allows dependency injection)
+type FormulaEvaluator interface {
+	Evaluate(expression string, context map[string]interface{}) (interface{}, error)
 }
 
 // FormulaActionConfig represents the configuration for a formula action
@@ -21,9 +26,14 @@ type FormulaActionConfig struct {
 	OutputVariable string `json:"output_variable,omitempty"`
 }
 
+// SetEvaluator sets the formula evaluator for this action
+func (a *FormulaAction) SetEvaluator(evaluator FormulaEvaluator) {
+	a.evaluator = evaluator
+}
+
 // Execute implements the Action interface
 func (a *FormulaAction) Execute(ctx context.Context, input *ActionInput) (*ActionOutput, error) {
-	// Initialize evaluator if not already done
+	// Initialize evaluator with default if not already set
 	if a.evaluator == nil {
 		a.evaluator = formula.NewEvaluator()
 	}

@@ -8,7 +8,7 @@
  * - Node selection for detailed log viewing
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
@@ -25,6 +25,10 @@ import { useExecutionTrace } from '../../hooks/useExecutionTrace'
 import { useExecutionTraceStore } from '../../stores/executionTraceStore'
 import { ExecutionDetailsPanel } from './ExecutionDetailsPanel'
 import { nodeTypes } from '../nodes/nodeTypes'
+import {
+  deserializeWorkflowFromBackend,
+  type BackendWorkflowDefinition,
+} from '../../utils/nodeTypeMapper'
 
 export interface ExecutionCanvasProps {
   workflowId: string
@@ -52,9 +56,16 @@ export function ExecutionCanvas({
   // Selected node for log viewing
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
+  // Deserialize workflow definition from backend format
+  const deserializedDefinition = useMemo(() => {
+    if (!workflow?.definition) return { nodes: [], edges: [] }
+    const backendDef = workflow.definition as unknown as BackendWorkflowDefinition
+    return deserializeWorkflowFromBackend(backendDef)
+  }, [workflow?.definition])
+
   // ReactFlow state
-  const [nodes, , onNodesChange] = useNodesState<Node>(workflow?.definition?.nodes || [])
-  const [edges, , onEdgesChange] = useEdgesState<Edge>(workflow?.definition?.edges || [])
+  const [nodes, , onNodesChange] = useNodesState<Node>(deserializedDefinition.nodes as Node[])
+  const [edges, , onEdgesChange] = useEdgesState<Edge>(deserializedDefinition.edges as Edge[])
 
   // Set execution ID in store on mount
   useEffect(() => {

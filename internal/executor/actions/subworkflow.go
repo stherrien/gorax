@@ -105,7 +105,10 @@ func (a *SubWorkflowAction) Execute(ctx context.Context, input *ActionInput) (*A
 	}
 
 	// Execute based on sync/async mode
-	if config.WaitForResult {
+	// Support both new Mode field and legacy WaitForResult field
+	isSyncMode := config.Mode == "sync" || (config.Mode == "" && config.WaitForResult)
+
+	if isSyncMode {
 		// Synchronous execution - wait for completion
 		return a.executeSynchronous(ctx, execution, config, input.Context)
 	}
@@ -123,9 +126,20 @@ func (a *SubWorkflowAction) executeSynchronous(ctx context.Context, execution *w
 	}
 
 	// Create context with timeout if specified
+	// Support both new Timeout field and legacy TimeoutMs field
 	execCtx := ctx
-	if config.TimeoutMs > 0 {
-		var cancel context.CancelFunc
+	var cancel context.CancelFunc
+
+	if config.Timeout != "" {
+		// Parse duration string (e.g., "5m", "30s")
+		duration, err := time.ParseDuration(config.Timeout)
+		if err != nil {
+			return nil, fmt.Errorf("invalid timeout format %s: %w", config.Timeout, err)
+		}
+		execCtx, cancel = context.WithTimeout(ctx, duration)
+		defer cancel()
+	} else if config.TimeoutMs > 0 {
+		// Legacy TimeoutMs field
 		execCtx, cancel = context.WithTimeout(ctx, time.Duration(config.TimeoutMs)*time.Millisecond)
 		defer cancel()
 	}
@@ -176,7 +190,7 @@ func (a *SubWorkflowAction) executeAsynchronous(ctx context.Context, execution *
 	if a.executor != nil {
 		go func() {
 			// Use background context to avoid cancellation
-			_ = a.executor.Execute(context.Background(), execution)
+			_ = a.executor.Execute(context.Background(), execution) //nolint:errcheck // async fire-and-forget
 		}()
 	}
 

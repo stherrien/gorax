@@ -22,10 +22,14 @@ vi.mock('../api/executions', () => ({
 import { useExecution } from '../hooks/useExecutions'
 import { executionAPI } from '../api/executions'
 
+// Valid RFC 4122 UUIDs for testing
+const executionId = '11111111-1111-4111-8111-111111111111'
+const workflowId = '22222222-2222-4222-8222-222222222222'
+
 describe('ExecutionDetail Integration', () => {
   const mockExecution: Execution = {
-    id: 'exec-123',
-    workflowId: 'wf-123',
+    id: executionId,
+    workflowId: workflowId,
     workflowName: 'Test Workflow',
     status: 'completed',
     trigger: {
@@ -43,7 +47,7 @@ describe('ExecutionDetail Integration', () => {
   const mockSteps: ExecutionStep[] = [
     {
       id: 'step-1',
-      executionId: 'exec-123',
+      executionId: executionId,
       nodeId: 'node-1',
       nodeName: 'Webhook Trigger',
       status: 'completed',
@@ -55,7 +59,7 @@ describe('ExecutionDetail Integration', () => {
     },
     {
       id: 'step-2',
-      executionId: 'exec-123',
+      executionId: executionId,
       nodeId: 'node-2',
       nodeName: 'HTTP Request',
       status: 'completed',
@@ -67,7 +71,7 @@ describe('ExecutionDetail Integration', () => {
     },
     {
       id: 'step-3',
-      executionId: 'exec-123',
+      executionId: executionId,
       nodeId: 'node-3',
       nodeName: 'Transform Data',
       status: 'completed',
@@ -95,7 +99,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -118,7 +122,7 @@ describe('ExecutionDetail Integration', () => {
       })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -138,7 +142,7 @@ describe('ExecutionDetail Integration', () => {
       })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -162,7 +166,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -187,7 +191,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -211,7 +215,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -253,7 +257,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: failedSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -293,7 +297,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps.slice(0, 2) })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -329,7 +333,7 @@ describe('ExecutionDetail Integration', () => {
       })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -340,7 +344,7 @@ describe('ExecutionDetail Integration', () => {
       await user.click(cancelButton)
 
       await waitFor(() => {
-        expect(executionAPI.cancel).toHaveBeenCalledWith('exec-123')
+        expect(executionAPI.cancel).toHaveBeenCalledWith(executionId)
         expect(refetch).toHaveBeenCalled()
         expect(screen.getByText(/execution cancelled successfully/i)).toBeInTheDocument()
       })
@@ -364,7 +368,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -398,7 +402,7 @@ describe('ExecutionDetail Integration', () => {
       })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>
@@ -409,7 +413,7 @@ describe('ExecutionDetail Integration', () => {
       await user.click(retryButton)
 
       await waitFor(() => {
-        expect(executionAPI.retry).toHaveBeenCalledWith('exec-123')
+        expect(executionAPI.retry).toHaveBeenCalledWith(executionId)
         expect(screen.getByText(/execution started/i)).toBeInTheDocument()
       })
     })
@@ -427,7 +431,7 @@ describe('ExecutionDetail Integration', () => {
       ;(executionAPI.getSteps as any).mockResolvedValueOnce({ steps: mockSteps })
 
       render(
-        <MemoryRouter initialEntries={['/executions/exec-123']}>
+        <MemoryRouter initialEntries={[`/executions/${executionId}`]}>
           <Routes>
             <Route path="/executions/:id" element={<ExecutionDetail />} />
           </Routes>

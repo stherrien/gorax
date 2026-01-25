@@ -3,7 +3,9 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 export interface CronBuilderProps {
   value: string
   onChange: (value: string) => void
+  onBlur?: () => void
   disabled?: boolean
+  error?: boolean
 }
 
 interface CronPreset {
@@ -139,7 +141,7 @@ const parseCronExpression = (cron: string): string => {
   }
 }
 
-export const CronBuilder: React.FC<CronBuilderProps> = ({ value, onChange, disabled }) => {
+export const CronBuilder: React.FC<CronBuilderProps> = ({ value, onChange, onBlur, disabled, error }) => {
   const [isPresetsOpen, setIsPresetsOpen] = useState(false)
   const [mode, setMode] = useState<'simple' | 'advanced'>('simple')
   const presetsRef = useRef<HTMLDivElement>(null)
@@ -195,12 +197,14 @@ export const CronBuilder: React.FC<CronBuilderProps> = ({ value, onChange, disab
             type="text"
             value={value}
             onChange={handleInputChange}
+            onBlur={onBlur}
             placeholder="* * * * *"
             className={`w-full px-3 py-2 border rounded-md font-mono text-sm ${
-              !isValid ? 'border-red-500' : 'border-gray-300'
+              !isValid || error ? 'border-red-500' : 'border-gray-300'
             }`}
             disabled={disabled}
             aria-label="Cron expression input"
+            aria-invalid={error}
           />
         </div>
       ) : (
@@ -302,7 +306,7 @@ export const CronBuilder: React.FC<CronBuilderProps> = ({ value, onChange, disab
       </div>
 
       <div
-        className={`text-sm ${!isValid ? 'text-red-600' : 'text-gray-600'} bg-gray-50 p-3 rounded-md`}
+        className={`text-sm ${!isValid || error ? 'text-red-600' : 'text-gray-600'} bg-gray-50 p-3 rounded-md`}
       >
         {description}
       </div>

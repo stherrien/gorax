@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/tenant"
 	"github.com/gorax/gorax/internal/workflow"
 )
@@ -44,25 +45,25 @@ func (h *workflowHandlerWithMock) DryRun(w http.ResponseWriter, r *http.Request)
 
 	var input workflow.DryRunInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	result, err := h.mockService.DryRun(r.Context(), tenantID, workflowID, input.TestData)
 	if err != nil {
 		if err == workflow.ErrNotFound {
-			h.respondError(w, http.StatusNotFound, "workflow not found")
+			_ = response.NotFound(w, "workflow not found")
 			return
 		}
 		if _, ok := err.(*workflow.ValidationError); ok {
-			h.respondError(w, http.StatusBadRequest, err.Error())
+			_ = response.BadRequest(w, err.Error())
 			return
 		}
-		h.respondError(w, http.StatusInternalServerError, "failed to perform dry-run")
+		_ = response.InternalError(w, "failed to perform dry-run")
 		return
 	}
 
-	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+	_ = response.OK(w, map[string]any{
 		"data": result,
 	})
 }

@@ -5,6 +5,7 @@ import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import { config, getScenario } from './config.js';
+import { setupAuth, getAuthHeaders } from './lib/auth.js';
 
 // Custom metrics
 const webhookIngestionDuration = new Trend('webhook_ingestion_duration', true);
@@ -29,21 +30,10 @@ export const options = {
 
 // Setup: Create webhook-triggered workflows
 export function setup() {
-  const loginRes = http.post(`${config.baseUrl}/api/v1/auth/login`, JSON.stringify({
-    email: config.testUser.email,
-    password: config.testUser.password,
-  }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  if (loginRes.status !== 200) {
-    throw new Error(`Setup failed: Unable to authenticate. Status: ${loginRes.status}`);
-  }
-
-  const authToken = loginRes.json('token');
+  const authData = setupAuth(config);
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+    ...getAuthHeaders(authData),
   };
 
   // Create webhook-triggered workflows
@@ -52,25 +42,45 @@ export function setup() {
     const workflow = {
       name: `webhook-loadtest-${i}`,
       description: 'Load test webhook workflow',
-      trigger: {
-        type: 'webhook',
-        config: {
-          path: `/loadtest/webhook-${i}`,
-          method: 'POST',
-          validation: {
-            required_headers: ['x-test-id'],
+      definition: {
+        nodes: [
+          {
+            id: `trigger-webhook-${i}`,
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            data: {
+              name: 'Webhook Trigger',
+              config: {
+                type: 'webhook',
+                path: `/loadtest/webhook-${i}`,
+                method: 'POST',
+                validation: {
+                  required_headers: ['x-test-id'],
+                },
+              },
+            },
           },
-        },
+          {
+            id: `validate-${i}`,
+            type: 'action',
+            position: { x: 200, y: 0 },
+            data: {
+              name: 'Validate Data',
+              config: {
+                type: 'transform',
+                expression: '{{ trigger.body }}',
+              },
+            },
+          },
+        ],
+        edges: [
+          {
+            id: `e-webhook-${i}`,
+            source: `trigger-webhook-${i}`,
+            target: `validate-${i}`,
+          },
+        ],
       },
-      steps: [
-        {
-          id: 'validate',
-          type: 'transform',
-          config: {
-            formula: '{{ trigger.body }}',
-          },
-        },
-      ],
     };
 
     const createRes = http.post(
@@ -83,7 +93,7 @@ export function setup() {
       const workflowData = createRes.json();
       webhookWorkflows.push({
         id: workflowData.id,
-        webhookPath: workflow.trigger.config.path,
+        webhookPath: `/loadtest/webhook-${i}`,
       });
     }
   }
@@ -92,7 +102,7 @@ export function setup() {
     throw new Error('Setup failed: Unable to create webhook workflows');
   }
 
-  return { authToken, webhookWorkflows };
+  return { ...authData, webhookWorkflows };
 }
 
 // Main test function
@@ -318,7 +328,8 @@ export default function (data) {
 // Teardown: Clean up test workflows
 export function teardown(data) {
   const headers = {
-    'Authorization': `Bearer ${data.authToken}`,
+    'Content-Type': 'application/json',
+    ...getAuthHeaders(data),
   };
 
   // Delete test workflows

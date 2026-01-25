@@ -254,12 +254,16 @@ func (s *Service) RateTemplate(ctx context.Context, tenantID, userID, userName, 
 }
 
 // GetReviews retrieves reviews for a template
-func (s *Service) GetReviews(ctx context.Context, templateID string, limit, offset int) ([]*TemplateReview, error) {
+func (s *Service) GetReviews(ctx context.Context, templateID string, sortBy ReviewSortOption, limit, offset int) ([]*TemplateReview, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
-	reviews, err := s.repo.GetReviews(ctx, templateID, limit, offset)
+	if sortBy == "" {
+		sortBy = ReviewSortRecent
+	}
+
+	reviews, err := s.repo.GetReviews(ctx, templateID, sortBy, limit, offset)
 	if err != nil {
 		s.logger.Error("failed to get reviews",
 			"error", err,
@@ -297,6 +301,167 @@ func (s *Service) DeleteReview(ctx context.Context, tenantID, templateID, review
 // GetCategories returns all available categories
 func (s *Service) GetCategories() []string {
 	return GetCategories()
+}
+
+// VoteReviewHelpful marks a review as helpful
+func (s *Service) VoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	vote := &ReviewHelpfulVote{
+		ReviewID: reviewID,
+		TenantID: tenantID,
+		UserID:   userID,
+	}
+
+	if err := s.repo.VoteReviewHelpful(ctx, vote); err != nil {
+		s.logger.Error("failed to vote review helpful",
+			"error", err,
+			"review_id", reviewID,
+			"tenant_id", tenantID)
+		return fmt.Errorf("vote review helpful: %w", err)
+	}
+
+	s.logger.Info("review voted helpful",
+		"review_id", reviewID,
+		"tenant_id", tenantID)
+
+	return nil
+}
+
+// UnvoteReviewHelpful removes a helpful vote from a review
+func (s *Service) UnvoteReviewHelpful(ctx context.Context, tenantID, userID, reviewID string) error {
+	if err := s.repo.UnvoteReviewHelpful(ctx, tenantID, userID, reviewID); err != nil {
+		s.logger.Error("failed to unvote review helpful",
+			"error", err,
+			"review_id", reviewID,
+			"tenant_id", tenantID)
+		return fmt.Errorf("unvote review helpful: %w", err)
+	}
+
+	s.logger.Info("review unvoted helpful",
+		"review_id", reviewID,
+		"tenant_id", tenantID)
+
+	return nil
+}
+
+// HasVotedHelpful checks if a user has voted a review as helpful
+func (s *Service) HasVotedHelpful(ctx context.Context, tenantID, userID, reviewID string) (bool, error) {
+	return s.repo.HasVotedHelpful(ctx, tenantID, userID, reviewID)
+}
+
+// ReportReview reports a review for moderation
+func (s *Service) ReportReview(ctx context.Context, tenantID, userID, reviewID string, input ReportReviewInput) error {
+	if err := input.Validate(); err != nil {
+		return fmt.Errorf("invalid input: %w", err)
+	}
+
+	report := &ReviewReport{
+		ReviewID:         reviewID,
+		ReporterTenantID: tenantID,
+		ReporterUserID:   userID,
+		Reason:           input.Reason,
+		Details:          input.Details,
+	}
+
+	if err := s.repo.CreateReviewReport(ctx, report); err != nil {
+		s.logger.Error("failed to report review",
+			"error", err,
+			"review_id", reviewID,
+			"tenant_id", tenantID)
+		return fmt.Errorf("report review: %w", err)
+	}
+
+	s.logger.Info("review reported",
+		"review_id", reviewID,
+		"tenant_id", tenantID,
+		"reason", input.Reason)
+
+	return nil
+}
+
+// GetReviewReports retrieves review reports (admin only)
+func (s *Service) GetReviewReports(ctx context.Context, status string, limit, offset int) ([]*ReviewReport, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	reports, err := s.repo.GetReviewReports(ctx, status, limit, offset)
+	if err != nil {
+		s.logger.Error("failed to get review reports", "error", err)
+		return nil, fmt.Errorf("get review reports: %w", err)
+	}
+
+	return reports, nil
+}
+
+// ResolveReviewReport resolves a review report (admin only)
+func (s *Service) ResolveReviewReport(ctx context.Context, reportID, status, resolvedBy string, notes *string) error {
+	validStatuses := map[string]bool{
+		string(ReportStatusReviewed):  true,
+		string(ReportStatusActioned):  true,
+		string(ReportStatusDismissed): true,
+	}
+
+	if !validStatuses[status] {
+		return fmt.Errorf("invalid status: %s", status)
+	}
+
+	if err := s.repo.UpdateReviewReportStatus(ctx, reportID, status, resolvedBy, notes); err != nil {
+		s.logger.Error("failed to resolve report",
+			"error", err,
+			"report_id", reportID)
+		return fmt.Errorf("resolve report: %w", err)
+	}
+
+	s.logger.Info("review report resolved",
+		"report_id", reportID,
+		"status", status,
+		"resolved_by", resolvedBy)
+
+	return nil
+}
+
+// HideReview hides a review (admin/moderator only)
+func (s *Service) HideReview(ctx context.Context, reviewID, reason, hiddenBy string) error {
+	if err := s.repo.HideReview(ctx, reviewID, reason, hiddenBy); err != nil {
+		s.logger.Error("failed to hide review",
+			"error", err,
+			"review_id", reviewID)
+		return fmt.Errorf("hide review: %w", err)
+	}
+
+	s.logger.Info("review hidden",
+		"review_id", reviewID,
+		"hidden_by", hiddenBy,
+		"reason", reason)
+
+	return nil
+}
+
+// UnhideReview unhides a review (admin/moderator only)
+func (s *Service) UnhideReview(ctx context.Context, reviewID string) error {
+	if err := s.repo.UnhideReview(ctx, reviewID); err != nil {
+		s.logger.Error("failed to unhide review",
+			"error", err,
+			"review_id", reviewID)
+		return fmt.Errorf("unhide review: %w", err)
+	}
+
+	s.logger.Info("review unhidden", "review_id", reviewID)
+
+	return nil
+}
+
+// GetRatingDistribution retrieves the rating distribution for a template
+func (s *Service) GetRatingDistribution(ctx context.Context, templateID string) (*RatingDistribution, error) {
+	dist, err := s.repo.GetRatingDistribution(ctx, templateID)
+	if err != nil {
+		s.logger.Error("failed to get rating distribution",
+			"error", err,
+			"template_id", templateID)
+		return nil, fmt.Errorf("get rating distribution: %w", err)
+	}
+
+	return dist, nil
 }
 
 // validateDefinition validates the workflow definition structure

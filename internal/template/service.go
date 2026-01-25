@@ -191,6 +191,14 @@ func (s *Service) InstantiateTemplate(ctx context.Context, tenantID, templateID 
 		return nil, fmt.Errorf("get template: %w", err)
 	}
 
+	// Increment usage count
+	if err := s.repo.IncrementUsageCount(ctx, templateID); err != nil {
+		s.logger.Warn("failed to increment usage count",
+			"error", err,
+			"template_id", templateID)
+		// Don't fail the operation if usage count increment fails
+	}
+
 	result := &InstantiateTemplateResult{
 		WorkflowName: input.WorkflowName,
 		Definition:   template.Definition,

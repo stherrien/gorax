@@ -1,0 +1,36 @@
+{
+  "name": "Simple Transform Workflow",
+  "description": "Basic workflow for smoke testing",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "position": { "x": 100, "y": 100 },
+      "data": {
+        "name": "Manual Trigger",
+        "config": {
+          "type": "manual"
+        }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "action",
+      "position": { "x": 300, "y": 100 },
+      "data": {
+        "name": "Transform Data",
+        "config": {
+          "type": "transform",
+          "expression": "{\"result\": \"success\", \"message\": \"Smoke test passed\"}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "trigger-1",
+      "target": "action-1"
+    }
+  ]
+}

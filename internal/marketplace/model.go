@@ -10,23 +10,31 @@ import (
 
 // MarketplaceTemplate represents a template in the marketplace
 type MarketplaceTemplate struct {
-	ID              string          `db:"id" json:"id"`
-	Name            string          `db:"name" json:"name"`
-	Description     string          `db:"description" json:"description"`
-	Category        string          `db:"category" json:"category"`
-	Definition      json.RawMessage `db:"definition" json:"definition"`
-	Tags            pq.StringArray  `db:"tags" json:"tags"`
-	AuthorID        string          `db:"author_id" json:"author_id"`
-	AuthorName      string          `db:"author_name" json:"author_name"`
-	Version         string          `db:"version" json:"version"`
-	DownloadCount   int             `db:"download_count" json:"download_count"`
-	AverageRating   float64         `db:"average_rating" json:"average_rating"`
-	TotalRatings    int             `db:"total_ratings" json:"total_ratings"`
-	IsVerified      bool            `db:"is_verified" json:"is_verified"`
-	SourceTenantID  *string         `db:"source_tenant_id" json:"source_tenant_id,omitempty"`
-	SourceTemplateID *string        `db:"source_template_id" json:"source_template_id,omitempty"`
-	PublishedAt     time.Time       `db:"published_at" json:"published_at"`
-	UpdatedAt       time.Time       `db:"updated_at" json:"updated_at"`
+	ID               string          `db:"id" json:"id"`
+	Name             string          `db:"name" json:"name"`
+	Description      string          `db:"description" json:"description"`
+	Category         string          `db:"category" json:"category"`
+	Definition       json.RawMessage `db:"definition" json:"definition"`
+	Tags             pq.StringArray  `db:"tags" json:"tags"`
+	AuthorID         string          `db:"author_id" json:"author_id"`
+	AuthorName       string          `db:"author_name" json:"author_name"`
+	Version          string          `db:"version" json:"version"`
+	DownloadCount    int             `db:"download_count" json:"download_count"`
+	AverageRating    float64         `db:"average_rating" json:"average_rating"`
+	TotalRatings     int             `db:"total_ratings" json:"total_ratings"`
+	Rating1Count     int             `db:"rating_1_count" json:"rating_1_count"`
+	Rating2Count     int             `db:"rating_2_count" json:"rating_2_count"`
+	Rating3Count     int             `db:"rating_3_count" json:"rating_3_count"`
+	Rating4Count     int             `db:"rating_4_count" json:"rating_4_count"`
+	Rating5Count     int             `db:"rating_5_count" json:"rating_5_count"`
+	IsVerified       bool            `db:"is_verified" json:"is_verified"`
+	IsFeatured       bool            `db:"is_featured" json:"is_featured"`
+	FeaturedAt       *time.Time      `db:"featured_at" json:"featured_at,omitempty"`
+	FeaturedBy       *string         `db:"featured_by" json:"featured_by,omitempty"`
+	SourceTenantID   *string         `db:"source_tenant_id" json:"source_tenant_id,omitempty"`
+	SourceTemplateID *string         `db:"source_template_id" json:"source_template_id,omitempty"`
+	PublishedAt      time.Time       `db:"published_at" json:"published_at"`
+	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
 }
 
 // TemplateVersion represents a version of a marketplace template
@@ -42,15 +50,21 @@ type TemplateVersion struct {
 
 // TemplateReview represents a user review for a marketplace template
 type TemplateReview struct {
-	ID         string     `db:"id" json:"id"`
-	TemplateID string     `db:"template_id" json:"template_id"`
-	TenantID   string     `db:"tenant_id" json:"tenant_id"`
-	UserID     string     `db:"user_id" json:"user_id"`
-	UserName   string     `db:"user_name" json:"user_name"`
-	Rating     int        `db:"rating" json:"rating"`
-	Comment    string     `db:"comment" json:"comment"`
-	CreatedAt  time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time  `db:"updated_at" json:"updated_at"`
+	ID           string     `db:"id" json:"id"`
+	TemplateID   string     `db:"template_id" json:"template_id"`
+	TenantID     string     `db:"tenant_id" json:"tenant_id"`
+	UserID       string     `db:"user_id" json:"user_id"`
+	UserName     string     `db:"user_name" json:"user_name"`
+	Rating       int        `db:"rating" json:"rating"`
+	Comment      string     `db:"comment" json:"comment"`
+	HelpfulCount int        `db:"helpful_count" json:"helpful_count"`
+	IsHidden     bool       `db:"is_hidden" json:"is_hidden"`
+	HiddenReason *string    `db:"hidden_reason" json:"hidden_reason,omitempty"`
+	HiddenAt     *time.Time `db:"hidden_at" json:"hidden_at,omitempty"`
+	HiddenBy     *string    `db:"hidden_by" json:"hidden_by,omitempty"`
+	DeletedAt    *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 // TemplateInstallation tracks template installations
@@ -62,6 +76,46 @@ type TemplateInstallation struct {
 	WorkflowID       string    `db:"workflow_id" json:"workflow_id"`
 	InstalledVersion string    `db:"installed_version" json:"installed_version"`
 	InstalledAt      time.Time `db:"installed_at" json:"installed_at"`
+}
+
+// ReviewHelpfulVote tracks helpful votes for reviews
+type ReviewHelpfulVote struct {
+	ID       string    `db:"id" json:"id"`
+	ReviewID string    `db:"review_id" json:"review_id"`
+	TenantID string    `db:"tenant_id" json:"tenant_id"`
+	UserID   string    `db:"user_id" json:"user_id"`
+	VotedAt  time.Time `db:"voted_at" json:"voted_at"`
+}
+
+// ReviewReport represents a report of an inappropriate review
+type ReviewReport struct {
+	ID               string     `db:"id" json:"id"`
+	ReviewID         string     `db:"review_id" json:"review_id"`
+	ReporterTenantID string     `db:"reporter_tenant_id" json:"reporter_tenant_id"`
+	ReporterUserID   string     `db:"reporter_user_id" json:"reporter_user_id"`
+	Reason           string     `db:"reason" json:"reason"`
+	Details          string     `db:"details" json:"details"`
+	Status           string     `db:"status" json:"status"`
+	ResolvedAt       *time.Time `db:"resolved_at" json:"resolved_at,omitempty"`
+	ResolvedBy       *string    `db:"resolved_by" json:"resolved_by,omitempty"`
+	ResolutionNotes  *string    `db:"resolution_notes" json:"resolution_notes,omitempty"`
+	CreatedAt        time.Time  `db:"created_at" json:"created_at"`
+}
+
+// RatingDistribution represents the distribution of ratings for a template
+type RatingDistribution struct {
+	Rating1Count   int     `json:"rating_1_count"`
+	Rating2Count   int     `json:"rating_2_count"`
+	Rating3Count   int     `json:"rating_3_count"`
+	Rating4Count   int     `json:"rating_4_count"`
+	Rating5Count   int     `json:"rating_5_count"`
+	TotalRatings   int     `json:"total_ratings"`
+	AverageRating  float64 `json:"average_rating"`
+	Rating1Percent float64 `json:"rating_1_percent"`
+	Rating2Percent float64 `json:"rating_2_percent"`
+	Rating3Percent float64 `json:"rating_3_percent"`
+	Rating4Percent float64 `json:"rating_4_percent"`
+	Rating5Percent float64 `json:"rating_5_percent"`
 }
 
 // TemplateCategory represents marketplace template categories
@@ -111,16 +165,53 @@ type RateTemplateInput struct {
 	Comment string `json:"comment,omitempty" validate:"max=2000"`
 }
 
+// ReportReviewInput represents input for reporting a review
+type ReportReviewInput struct {
+	Reason  string `json:"reason" validate:"required,oneof=spam inappropriate offensive misleading other"`
+	Details string `json:"details,omitempty" validate:"max=1000"`
+}
+
+// ReviewSortOption represents sorting options for reviews
+type ReviewSortOption string
+
+const (
+	ReviewSortRecent  ReviewSortOption = "recent"
+	ReviewSortHelpful ReviewSortOption = "helpful"
+	ReviewSortRatingH ReviewSortOption = "rating_high"
+	ReviewSortRatingL ReviewSortOption = "rating_low"
+)
+
+// ReviewReportReason represents the reason for reporting a review
+type ReviewReportReason string
+
+const (
+	ReportReasonSpam          ReviewReportReason = "spam"
+	ReportReasonInappropriate ReviewReportReason = "inappropriate"
+	ReportReasonOffensive     ReviewReportReason = "offensive"
+	ReportReasonMisleading    ReviewReportReason = "misleading"
+	ReportReasonOther         ReviewReportReason = "other"
+)
+
+// ReviewReportStatus represents the status of a review report
+type ReviewReportStatus string
+
+const (
+	ReportStatusPending   ReviewReportStatus = "pending"
+	ReportStatusReviewed  ReviewReportStatus = "reviewed"
+	ReportStatusActioned  ReviewReportStatus = "actioned"
+	ReportStatusDismissed ReviewReportStatus = "dismissed"
+)
+
 // SearchFilter represents search filters for marketplace templates
 type SearchFilter struct {
-	Category      string   `json:"category,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	SearchQuery   string   `json:"search_query,omitempty"`
-	MinRating     *float64 `json:"min_rating,omitempty"`
-	IsVerified    *bool    `json:"is_verified,omitempty"`
-	SortBy        string   `json:"sort_by,omitempty"` // popular, recent, rating
-	Page          int      `json:"page,omitempty"`
-	Limit         int      `json:"limit,omitempty"`
+	Category    string   `json:"category,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	SearchQuery string   `json:"search_query,omitempty"`
+	MinRating   *float64 `json:"min_rating,omitempty"`
+	IsVerified  *bool    `json:"is_verified,omitempty"`
+	SortBy      string   `json:"sort_by,omitempty"` // popular, recent, rating
+	Page        int      `json:"page,omitempty"`
+	Limit       int      `json:"limit,omitempty"`
 }
 
 // InstallTemplateResult represents the result of template installation
@@ -176,6 +267,31 @@ func (i RateTemplateInput) Validate() error {
 	if len(i.Comment) > 2000 {
 		return errors.New("comment must be 2000 characters or less")
 	}
+	return nil
+}
+
+// Validate validates the report review input
+func (i ReportReviewInput) Validate() error {
+	if i.Reason == "" {
+		return errors.New("reason is required")
+	}
+
+	validReasons := map[string]bool{
+		string(ReportReasonSpam):          true,
+		string(ReportReasonInappropriate): true,
+		string(ReportReasonOffensive):     true,
+		string(ReportReasonMisleading):    true,
+		string(ReportReasonOther):         true,
+	}
+
+	if !validReasons[i.Reason] {
+		return errors.New("reason must be one of: spam, inappropriate, offensive, misleading, other")
+	}
+
+	if len(i.Details) > 1000 {
+		return errors.New("details must be 1000 characters or less")
+	}
+
 	return nil
 }
 

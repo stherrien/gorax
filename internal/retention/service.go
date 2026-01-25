@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	GetRetentionPolicy(ctx context.Context, tenantID string) (*RetentionPolicy, error)
 	DeleteOldExecutions(ctx context.Context, tenantID string, cutoffDate time.Time, batchSize int) (*CleanupResult, error)
+	ArchiveAndDeleteOldExecutions(ctx context.Context, tenantID string, cutoffDate time.Time, batchSize int) (*CleanupResult, error)
 	GetTenantsWithRetention(ctx context.Context) ([]string, error)
 	LogCleanup(ctx context.Context, log *CleanupLog) error
 }
@@ -69,6 +70,7 @@ func (s *Service) CleanupOldExecutions(ctx context.Context, tenantID string) (*C
 		return &CleanupResult{
 			ExecutionsDeleted:     0,
 			StepExecutionsDeleted: 0,
+			ExecutionsArchived:    0,
 			BatchesProcessed:      0,
 		}, nil
 	}
@@ -80,10 +82,16 @@ func (s *Service) CleanupOldExecutions(ctx context.Context, tenantID string) (*C
 		"tenant_id", tenantID,
 		"retention_days", policy.RetentionDays,
 		"cutoff_date", cutoffDate,
+		"archive_enabled", s.config.ArchiveBeforeDelete,
 	)
 
-	// Delete old executions
-	result, err := s.repo.DeleteOldExecutions(ctx, tenantID, cutoffDate, s.config.BatchSize)
+	// Archive and/or delete old executions based on configuration
+	var result *CleanupResult
+	if s.config.ArchiveBeforeDelete {
+		result, err = s.repo.ArchiveAndDeleteOldExecutions(ctx, tenantID, cutoffDate, s.config.BatchSize)
+	} else {
+		result, err = s.repo.DeleteOldExecutions(ctx, tenantID, cutoffDate, s.config.BatchSize)
+	}
 	if err != nil {
 		// Log failure
 		if s.config.EnableAuditLog {
@@ -92,6 +100,7 @@ func (s *Service) CleanupOldExecutions(ctx context.Context, tenantID string) (*C
 				ID:                    uuid.New().String(),
 				TenantID:              tenantID,
 				ExecutionsDeleted:     0,
+				ExecutionsArchived:    0,
 				StepExecutionsDeleted: 0,
 				RetentionDays:         policy.RetentionDays,
 				CutoffDate:            cutoffDate,
@@ -112,6 +121,7 @@ func (s *Service) CleanupOldExecutions(ctx context.Context, tenantID string) (*C
 	s.logger.Info("cleanup completed",
 		"tenant_id", tenantID,
 		"executions_deleted", result.ExecutionsDeleted,
+		"executions_archived", result.ExecutionsArchived,
 		"step_executions_deleted", result.StepExecutionsDeleted,
 		"batches_processed", result.BatchesProcessed,
 		"duration_ms", duration.Milliseconds(),
@@ -123,6 +133,7 @@ func (s *Service) CleanupOldExecutions(ctx context.Context, tenantID string) (*C
 			ID:                    uuid.New().String(),
 			TenantID:              tenantID,
 			ExecutionsDeleted:     result.ExecutionsDeleted,
+			ExecutionsArchived:    result.ExecutionsArchived,
 			StepExecutionsDeleted: result.StepExecutionsDeleted,
 			RetentionDays:         policy.RetentionDays,
 			CutoffDate:            cutoffDate,
@@ -154,6 +165,7 @@ func (s *Service) CleanupAllTenants(ctx context.Context) (*CleanupResult, error)
 	totalResult := &CleanupResult{
 		ExecutionsDeleted:     0,
 		StepExecutionsDeleted: 0,
+		ExecutionsArchived:    0,
 		BatchesProcessed:      0,
 	}
 
@@ -172,11 +184,13 @@ func (s *Service) CleanupAllTenants(ctx context.Context) (*CleanupResult, error)
 		// Aggregate results
 		totalResult.ExecutionsDeleted += result.ExecutionsDeleted
 		totalResult.StepExecutionsDeleted += result.StepExecutionsDeleted
+		totalResult.ExecutionsArchived += result.ExecutionsArchived
 		totalResult.BatchesProcessed += result.BatchesProcessed
 	}
 
 	s.logger.Info("completed cleanup for all tenants",
 		"total_executions_deleted", totalResult.ExecutionsDeleted,
+		"total_executions_archived", totalResult.ExecutionsArchived,
 		"total_step_executions_deleted", totalResult.StepExecutionsDeleted,
 		"total_batches", totalResult.BatchesProcessed,
 	)

@@ -32,22 +32,25 @@ const (
 
 // HumanTask represents a human approval/input task in a workflow
 type HumanTask struct {
-	ID           uuid.UUID       `json:"id" db:"id"`
-	TenantID     uuid.UUID       `json:"tenant_id" db:"tenant_id"`
-	ExecutionID  uuid.UUID       `json:"execution_id" db:"execution_id"`
-	StepID       string          `json:"step_id" db:"step_id"`
-	TaskType     string          `json:"task_type" db:"task_type"`
-	Title        string          `json:"title" db:"title"`
-	Description  string          `json:"description" db:"description"`
-	Assignees    json.RawMessage `json:"assignees" db:"assignees"`
-	Status       string          `json:"status" db:"status"`
-	DueDate      *time.Time      `json:"due_date" db:"due_date"`
-	CompletedAt  *time.Time      `json:"completed_at" db:"completed_at"`
-	CompletedBy  *uuid.UUID      `json:"completed_by" db:"completed_by"`
-	ResponseData json.RawMessage `json:"response_data" db:"response_data"`
-	Config       json.RawMessage `json:"config" db:"config"`
-	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at" db:"updated_at"`
+	ID                 uuid.UUID       `json:"id" db:"id"`
+	TenantID           uuid.UUID       `json:"tenant_id" db:"tenant_id"`
+	ExecutionID        uuid.UUID       `json:"execution_id" db:"execution_id"`
+	StepID             string          `json:"step_id" db:"step_id"`
+	TaskType           string          `json:"task_type" db:"task_type"`
+	Title              string          `json:"title" db:"title"`
+	Description        string          `json:"description" db:"description"`
+	Assignees          json.RawMessage `json:"assignees" db:"assignees"`
+	Status             string          `json:"status" db:"status"`
+	DueDate            *time.Time      `json:"due_date" db:"due_date"`
+	CompletedAt        *time.Time      `json:"completed_at" db:"completed_at"`
+	CompletedBy        *uuid.UUID      `json:"completed_by" db:"completed_by"`
+	ResponseData       json.RawMessage `json:"response_data" db:"response_data"`
+	Config             json.RawMessage `json:"config" db:"config"`
+	EscalationLevel    int             `json:"escalation_level" db:"escalation_level"`
+	MaxEscalationLevel int             `json:"max_escalation_level" db:"max_escalation_level"`
+	LastEscalatedAt    *time.Time      `json:"last_escalated_at" db:"last_escalated_at"`
+	CreatedAt          time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 // HumanTaskConfig holds configuration for a human task action
@@ -256,6 +259,44 @@ func (t *HumanTask) Cancel() error {
 	t.CompletedAt = &now
 
 	return nil
+}
+
+// Escalate updates the task to a new escalation level with new assignees
+func (t *HumanTask) Escalate(newAssignees []string, newDueDate *time.Time) error {
+	if !t.IsPending() {
+		return ErrTaskNotPending
+	}
+
+	assigneesJSON, err := json.Marshal(newAssignees)
+	if err != nil {
+		return err
+	}
+
+	t.Assignees = assigneesJSON
+	t.EscalationLevel++
+	now := time.Now()
+	t.LastEscalatedAt = &now
+
+	if newDueDate != nil {
+		t.DueDate = newDueDate
+	}
+
+	return nil
+}
+
+// SetMaxEscalationLevel sets the maximum escalation level for this task
+func (t *HumanTask) SetMaxEscalationLevel(maxLevel int) {
+	t.MaxEscalationLevel = maxLevel
+}
+
+// CanEscalate returns true if the task can be escalated to a higher level
+func (t *HumanTask) CanEscalate() bool {
+	return t.IsPending() && t.EscalationLevel < t.MaxEscalationLevel
+}
+
+// IsAtFinalEscalation returns true if the task is at its final escalation level
+func (t *HumanTask) IsAtFinalEscalation() bool {
+	return t.EscalationLevel >= t.MaxEscalationLevel && t.MaxEscalationLevel > 0
 }
 
 // ToResponse converts a HumanTask to a TaskResponse

@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -467,6 +468,278 @@ func TestSubWorkflowAction_MissingWorkflow(t *testing.T) {
 
 	// Assert
 	require.Error(t, err)
+}
+
+// TestSubWorkflowAction_InheritContext tests context inheritance
+func TestSubWorkflowAction_InheritContext(t *testing.T) {
+	mockRepo := NewMockWorkflowRepository()
+	mockExec := &MockWorkflowExecutor{
+		executeFunc: func(ctx context.Context, execution *workflow.Execution) error {
+			execution.Status = string(workflow.ExecutionStatusCompleted)
+			outputData := json.RawMessage(`{"result": "success"}`)
+			execution.OutputData = &outputData
+			mockRepo.executions[execution.ID] = execution
+			return nil
+		},
+	}
+
+	subWorkflowDef := workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{
+				ID:   "trigger-1",
+				Type: string(workflow.NodeTypeTriggerWebhook),
+			},
+		},
+	}
+	defBytes, _ := json.Marshal(subWorkflowDef)
+
+	mockRepo.workflows["sub-wf-1"] = &workflow.Workflow{
+		ID:         "sub-wf-1",
+		TenantID:   "tenant-1",
+		Name:       "Sub Workflow",
+		Definition: defBytes,
+		Status:     string(workflow.WorkflowStatusActive),
+		Version:    1,
+	}
+
+	config := &workflow.SubWorkflowConfig{
+		WorkflowID:     "sub-wf-1",
+		InheritContext: true,
+		WaitForResult:  true,
+		TimeoutMs:      5000,
+	}
+
+	ctxData := map[string]interface{}{
+		"trigger": map[string]interface{}{
+			"data": "parent-data",
+		},
+		"env": map[string]interface{}{
+			"tenant_id":    "tenant-1",
+			"execution_id": "parent-exec-1",
+			"workflow_id":  "parent-wf-1",
+		},
+	}
+
+	action := NewSubWorkflowAction(mockRepo, mockExec)
+	input := NewActionInput(config, ctxData)
+
+	// Execute
+	output, err := action.Execute(context.Background(), input)
+
+	// Assert
+	require.NoError(t, err)
+	assert.NotNil(t, output)
+
+	// Verify execution was created
+	assert.Equal(t, 1, len(mockRepo.executions))
+	for _, exec := range mockRepo.executions {
+		// Verify trigger data includes parent context metadata
+		var triggerData map[string]interface{}
+		err := json.Unmarshal(*exec.TriggerData, &triggerData)
+		require.NoError(t, err)
+		assert.Equal(t, "parent-exec-1", triggerData["_parent_execution_id"])
+		assert.Equal(t, "parent-wf-1", triggerData["_parent_workflow_id"])
+		assert.Equal(t, float64(1), triggerData["_depth"])
+	}
+}
+
+// TestSubWorkflowAction_InactiveWorkflow tests error when workflow is not active
+func TestSubWorkflowAction_InactiveWorkflow(t *testing.T) {
+	mockRepo := NewMockWorkflowRepository()
+
+	subWorkflowDef := workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{
+				ID:   "trigger-1",
+				Type: string(workflow.NodeTypeTriggerWebhook),
+			},
+		},
+	}
+	defBytes, _ := json.Marshal(subWorkflowDef)
+
+	mockRepo.workflows["sub-wf-1"] = &workflow.Workflow{
+		ID:         "sub-wf-1",
+		TenantID:   "tenant-1",
+		Name:       "Sub Workflow",
+		Definition: defBytes,
+		Status:     string(workflow.WorkflowStatusDraft), // Not active
+		Version:    1,
+	}
+
+	config := &workflow.SubWorkflowConfig{
+		WorkflowID:    "sub-wf-1",
+		WaitForResult: true,
+	}
+
+	ctxData := map[string]interface{}{
+		"env": map[string]interface{}{
+			"tenant_id":    "tenant-1",
+			"execution_id": "parent-exec-1",
+			"workflow_id":  "parent-wf-1",
+		},
+	}
+
+	action := NewSubWorkflowAction(mockRepo, nil)
+	input := NewActionInput(config, ctxData)
+
+	// Execute
+	_, err := action.Execute(context.Background(), input)
+
+	// Assert - should fail due to inactive workflow
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not active")
+}
+
+// TestSubWorkflowAction_NestedExecution tests multiple levels of nesting
+func TestSubWorkflowAction_NestedExecution(t *testing.T) {
+	mockRepo := NewMockWorkflowRepository()
+	mockExec := &MockWorkflowExecutor{
+		executeFunc: func(ctx context.Context, execution *workflow.Execution) error {
+			execution.Status = string(workflow.ExecutionStatusCompleted)
+			outputData := json.RawMessage(`{"result": "success"}`)
+			execution.OutputData = &outputData
+			mockRepo.executions[execution.ID] = execution
+			return nil
+		},
+	}
+
+	// Create three workflows for 3-level nesting
+	for i := 1; i <= 3; i++ {
+		wfID := fmt.Sprintf("wf-%d", i)
+		subWorkflowDef := workflow.WorkflowDefinition{
+			Nodes: []workflow.Node{
+				{
+					ID:   "trigger-1",
+					Type: string(workflow.NodeTypeTriggerWebhook),
+				},
+			},
+		}
+		defBytes, _ := json.Marshal(subWorkflowDef)
+
+		mockRepo.workflows[wfID] = &workflow.Workflow{
+			ID:         wfID,
+			TenantID:   "tenant-1",
+			Name:       fmt.Sprintf("Workflow %d", i),
+			Definition: defBytes,
+			Status:     string(workflow.WorkflowStatusActive),
+			Version:    1,
+		}
+	}
+
+	// Level 1: Execute wf-1 from root
+	config1 := &workflow.SubWorkflowConfig{
+		WorkflowID:    "wf-1",
+		WaitForResult: true,
+		TimeoutMs:     5000,
+	}
+
+	ctxData1 := map[string]interface{}{
+		"env": map[string]interface{}{
+			"tenant_id":    "tenant-1",
+			"execution_id": "exec-root",
+			"workflow_id":  "wf-root",
+		},
+		"_execution": map[string]interface{}{
+			"depth":          0,
+			"workflow_chain": []string{},
+		},
+	}
+
+	action := NewSubWorkflowAction(mockRepo, mockExec)
+	input1 := NewActionInput(config1, ctxData1)
+
+	output1, err := action.Execute(context.Background(), input1)
+	require.NoError(t, err)
+	assert.NotNil(t, output1)
+
+	// Verify depth was incremented
+	var exec1 *workflow.Execution
+	for _, exec := range mockRepo.executions {
+		if exec.WorkflowID == "wf-1" {
+			exec1 = exec
+			break
+		}
+	}
+	require.NotNil(t, exec1)
+	assert.Equal(t, 1, exec1.ExecutionDepth)
+}
+
+// TestSubWorkflowAction_ExecutionFailure tests error propagation from child
+func TestSubWorkflowAction_ExecutionFailure(t *testing.T) {
+	mockRepo := NewMockWorkflowRepository()
+	mockExec := &MockWorkflowExecutor{
+		executeFunc: func(ctx context.Context, execution *workflow.Execution) error {
+			return fmt.Errorf("execution failed: database connection error")
+		},
+	}
+
+	subWorkflowDef := workflow.WorkflowDefinition{
+		Nodes: []workflow.Node{
+			{
+				ID:   "trigger-1",
+				Type: string(workflow.NodeTypeTriggerWebhook),
+			},
+		},
+	}
+	defBytes, _ := json.Marshal(subWorkflowDef)
+
+	mockRepo.workflows["sub-wf-1"] = &workflow.Workflow{
+		ID:         "sub-wf-1",
+		TenantID:   "tenant-1",
+		Name:       "Sub Workflow",
+		Definition: defBytes,
+		Status:     string(workflow.WorkflowStatusActive),
+		Version:    1,
+	}
+
+	config := &workflow.SubWorkflowConfig{
+		WorkflowID:    "sub-wf-1",
+		WaitForResult: true,
+		TimeoutMs:     5000,
+	}
+
+	ctxData := map[string]interface{}{
+		"env": map[string]interface{}{
+			"tenant_id":    "tenant-1",
+			"execution_id": "parent-exec-1",
+			"workflow_id":  "parent-wf-1",
+		},
+	}
+
+	action := NewSubWorkflowAction(mockRepo, mockExec)
+	input := NewActionInput(config, ctxData)
+
+	// Execute
+	_, err := action.Execute(context.Background(), input)
+
+	// Assert - error should propagate from child
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sub-workflow execution failed")
+	assert.Contains(t, err.Error(), "database connection error")
+}
+
+// TestSubWorkflowAction_LiteralInputMapping tests literal values in mapping
+func TestSubWorkflowAction_LiteralInputMapping(t *testing.T) {
+	mockRepo := NewMockWorkflowRepository()
+	action := NewSubWorkflowAction(mockRepo, nil)
+
+	inputMapping := map[string]string{
+		"static_value": "hardcoded-string",
+		"number":       "123",
+		"dynamic":      "${trigger.data}",
+	}
+
+	ctxData := map[string]interface{}{
+		"trigger": map[string]interface{}{
+			"data": "dynamic-value",
+		},
+	}
+
+	result := action.mapInputs(inputMapping, ctxData)
+
+	assert.Equal(t, "hardcoded-string", result["static_value"])
+	assert.Equal(t, "123", result["number"])
+	assert.Equal(t, "dynamic-value", result["dynamic"])
 }
 
 // TestSubWorkflowAction_TenantIsolation tests that sub-workflows inherit tenant context

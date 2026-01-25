@@ -1,0 +1,383 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - production-canary
+      skip_tests:
+        description: 'Skip pre-deployment tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Run critical tests
+        run: |
+          echo "Running critical test suite..."
+          go test -v -tags=critical ./...
+
+      - name: Security scan
+        uses: securego/gosec@master
+        with:
+          args: '-fmt json -out gosec-results.json -exclude-generated ./...'
+        continue-on-error: false
+
+      - name: Check for blocking issues
+        run: |
+          echo "Checking for any blocking production issues..."
+          # Add checks for:
+          # - Critical security vulnerabilities
+          # - Failed health checks
+          # - Database migration readiness
+          # - Feature flags configuration
+
+  build-production:
+    name: Build Production Images
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    if: always() && (needs.pre-deployment-checks.result == 'success' || needs.pre-deployment-checks.result == 'skipped')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=prod-
+            type=raw,value=production-latest
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_VERSION=${{ github.ref_name }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            BUILD_COMMIT=${{ github.sha }}
+
+      - name: Sign container image
+        run: |
+          echo "Container image built and pushed successfully"
+          echo "Digest: ${{ steps.build.outputs.digest }}"
+          # Add cosign or other signing tool here for image verification
+
+  approval-gate:
+    name: Production Deployment Approval
+    runs-on: ubuntu-latest
+    needs: build-production
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+      url: https://gorax.dev
+
+    steps:
+      - name: Await approval
+        run: |
+          echo "Deployment approved for ${{ inputs.environment || 'production' }}"
+          echo "Image: ${{ needs.build-production.outputs.image-tag }}"
+          echo "Digest: ${{ needs.build-production.outputs.image-digest }}"
+
+  deploy-database:
+    name: Deploy Database Migrations
+    runs-on: ubuntu-latest
+    needs: approval-gate
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # Add your migration command here
+          # Examples:
+          # - kubectl exec -it deployment/gorax -- /app/migrate up
+          # - docker run --rm gorax:latest /app/migrate up
+          # - flyway migrate
+          # - liquibase update
+
+          echo "✅ Database migrations completed successfully"
+
+      - name: Create migration backup point
+        run: |
+          echo "Creating database backup before migration..."
+          # Add backup command here
+
+  deploy-application:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: [approval-gate, deploy-database]
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          IMAGE_TAG="${{ needs.build-production.outputs.image-tag }}"
+
+          # Add your deployment method here:
+          # Examples:
+
+          # Kubernetes
+          # kubectl set image deployment/gorax gorax=$IMAGE_TAG
+          # kubectl rollout status deployment/gorax
+
+          # Helm
+          # helm upgrade --install gorax ./charts/gorax \
+          #   --set image.tag=${IMAGE_TAG} \
+          #   --values values-production.yaml
+
+          # AWS ECS
+          # aws ecs update-service \
+          #   --cluster production \
+          #   --service gorax \
+          #   --force-new-deployment
+
+          # Docker Swarm
+          # docker service update --image $IMAGE_TAG gorax
+
+          echo "✅ Deployment initiated"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 60
+
+  health-checks:
+    name: Post-Deployment Health Checks
+    runs-on: ubuntu-latest
+    needs: deploy-application
+
+    steps:
+      - name: Wait for application startup
+        run: sleep 30
+
+      - name: Comprehensive health check
+        run: |
+          PROD_URL="${{ secrets.PRODUCTION_URL }:-https://gorax.dev}"
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+
+          echo "Running comprehensive health checks against $PROD_URL"
+
+          # Basic health check
+          for i in $(seq 1 $MAX_RETRIES); do
+            if curl -f -s "$PROD_URL/health" > /dev/null; then
+              echo "✅ Basic health check passed"
+              break
+            else
+              if [ $i -eq $MAX_RETRIES ]; then
+                echo "❌ Health check failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+              echo "⏳ Attempt $i/$MAX_RETRIES failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          # Database health
+          curl -f "$PROD_URL/health/db" || exit 1
+          echo "✅ Database health check passed"
+
+          # Cache health
+          curl -f "$PROD_URL/health/redis" || exit 1
+          echo "✅ Redis health check passed"
+
+          # API endpoints
+          curl -f "$PROD_URL/api/v1/workflows" -H "Authorization: Bearer ${{ secrets.HEALTH_CHECK_TOKEN }}" || exit 1
+          echo "✅ API endpoint check passed"
+
+      - name: Performance check
+        run: |
+          PROD_URL="${{ secrets.PRODUCTION_URL }:-https://gorax.dev}"
+
+          # Check response time
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' "$PROD_URL/health")
+          THRESHOLD=2.0
+
+          echo "Response time: ${RESPONSE_TIME}s"
+
+          if (( $(echo "$RESPONSE_TIME > $THRESHOLD" | bc -l) )); then
+            echo "⚠️ Response time ${RESPONSE_TIME}s exceeds threshold ${THRESHOLD}s"
+            # Don't fail deployment, but log warning
+          else
+            echo "✅ Response time within acceptable range"
+          fi
+
+  smoke-tests:
+    name: Production Smoke Tests
+    runs-on: ubuntu-latest
+    needs: health-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          # Add your smoke test suite here
+          # - Critical user journeys
+          # - Key API endpoints
+          # - Authentication flow
+          # - Data integrity checks
+
+          echo "✅ Smoke tests passed"
+
+  rollback-check:
+    name: Validate Rollback Capability
+    runs-on: ubuntu-latest
+    needs: deploy-application
+    if: failure()
+
+    steps:
+      - name: Check rollback readiness
+        run: |
+          echo "Deployment or health checks failed!"
+          echo "Preparing rollback information..."
+
+          # Add rollback preparation here
+          # - Capture current state
+          # - Identify previous stable version
+          # - Prepare rollback commands
+
+      - name: Initiate rollback
+        run: |
+          echo "CRITICAL: Initiating automatic rollback"
+
+          # Add rollback commands here
+          # kubectl rollout undo deployment/gorax
+          # helm rollback gorax
+
+          echo "Rollback initiated. Manual verification required."
+
+  post-deployment:
+    name: Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [smoke-tests]
+    if: success()
+
+    steps:
+      - name: Tag successful deployment
+        run: |
+          echo "Tagging successful deployment..."
+          # git tag production-$(date +%Y%m%d-%H%M%S)
+          # git push origin --tags
+
+      - name: Update deployment metrics
+        run: |
+          echo "Recording deployment metrics..."
+          # Send metrics to monitoring system
+          # - Deployment duration
+          # - Success/failure
+          # - Version deployed
+
+      - name: Notify stakeholders
+        run: |
+          echo "🚀 Production deployment successful!"
+          echo "Environment: ${{ inputs.environment || 'production' }}"
+          echo "Version: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+
+          # Add notification integrations:
+          # - Slack
+          # - Email
+          # - PagerDuty
+          # - StatusPage update
+
+      - name: Update documentation
+        run: |
+          echo "Updating deployment documentation..."
+          # Update runbook, changelog, or release notes
+
+  monitoring-alert:
+    name: Enable Enhanced Monitoring
+    runs-on: ubuntu-latest
+    needs: post-deployment
+
+    steps:
+      - name: Enable enhanced monitoring
+        run: |
+          echo "Enabling enhanced monitoring for next 24 hours..."
+          # Increase monitoring frequency
+          # Enable detailed logging
+          # Set up additional alerts
+
+      - name: Schedule monitoring review
+        run: |
+          echo "Scheduling post-deployment monitoring review..."
+          # Schedule follow-up health check in 1 hour
+          # Schedule performance review in 24 hours

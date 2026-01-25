@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gorax/gorax/internal/api/middleware"
+	"github.com/gorax/gorax/internal/api/response"
 	"github.com/gorax/gorax/internal/schedule"
 )
 
@@ -67,18 +68,18 @@ type BulkUpdateSchedulesInput struct {
 func (h *BulkHandler) BulkUpdateSchedules(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	var input BulkUpdateSchedulesInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if err := h.validateBulkScheduleInput(input); err != nil {
-		h.respondError(w, http.StatusBadRequest, err.Error())
+		_ = response.BadRequest(w, err.Error())
 		return
 	}
 
@@ -93,7 +94,7 @@ func (h *BulkHandler) BulkUpdateSchedules(w http.ResponseWriter, r *http.Request
 	case "delete":
 		success, failed = h.scheduleService.BulkDelete(r.Context(), tenantID, input.IDs)
 	default:
-		h.respondError(w, http.StatusBadRequest, "invalid action: must be enable, disable, or delete")
+		_ = response.BadRequest(w, "invalid action: must be enable, disable, or delete")
 		return
 	}
 
@@ -109,7 +110,7 @@ func (h *BulkHandler) BulkUpdateSchedules(w http.ResponseWriter, r *http.Request
 		"failed_count", len(failed),
 	)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BulkDeleteExecutionsInput represents input for bulk execution deletion
@@ -122,18 +123,18 @@ type BulkDeleteExecutionsInput struct {
 func (h *BulkHandler) BulkDeleteExecutions(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	var input BulkDeleteExecutionsInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if len(input.IDs) == 0 {
-		h.respondError(w, http.StatusBadRequest, "at least one execution ID is required")
+		_ = response.BadRequest(w, "at least one execution ID is required")
 		return
 	}
 
@@ -150,7 +151,7 @@ func (h *BulkHandler) BulkDeleteExecutions(w http.ResponseWriter, r *http.Reques
 		"failed_count", len(failed),
 	)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // BulkRetryExecutionsInput represents input for bulk execution retry
@@ -163,18 +164,18 @@ type BulkRetryExecutionsInput struct {
 func (h *BulkHandler) BulkRetryExecutions(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
 	var input BulkRetryExecutionsInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.respondError(w, http.StatusBadRequest, "invalid request body")
+		_ = response.BadRequest(w, "invalid request body")
 		return
 	}
 
 	if len(input.IDs) == 0 {
-		h.respondError(w, http.StatusBadRequest, "at least one execution ID is required")
+		_ = response.BadRequest(w, "at least one execution ID is required")
 		return
 	}
 
@@ -191,7 +192,7 @@ func (h *BulkHandler) BulkRetryExecutions(w http.ResponseWriter, r *http.Request
 		"failed_count", len(failed),
 	)
 
-	h.respondJSON(w, http.StatusOK, result)
+	_ = response.OK(w, result)
 }
 
 // ExportSchedules exports schedules as JSON
@@ -199,7 +200,7 @@ func (h *BulkHandler) BulkRetryExecutions(w http.ResponseWriter, r *http.Request
 func (h *BulkHandler) ExportSchedules(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r)
 	if tenantID == "" {
-		h.respondError(w, http.StatusInternalServerError, "tenant ID not found")
+		_ = response.InternalError(w, "tenant ID not found")
 		return
 	}
 
@@ -215,7 +216,7 @@ func (h *BulkHandler) ExportSchedules(w http.ResponseWriter, r *http.Request) {
 			"error", err,
 			"tenant_id", tenantID,
 		)
-		h.respondError(w, http.StatusInternalServerError, "failed to export schedules")
+		_ = response.InternalError(w, "failed to export schedules")
 		return
 	}
 
@@ -227,7 +228,7 @@ func (h *BulkHandler) ExportSchedules(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=schedules-export.json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(schedules)
+	_ = json.NewEncoder(w).Encode(schedules)
 }
 
 // validateBulkScheduleInput validates bulk schedule input
@@ -246,22 +247,6 @@ func (h *BulkHandler) validateBulkScheduleInput(input BulkUpdateSchedulesInput) 
 	}
 
 	return nil
-}
-
-// Helper methods
-
-func (h *BulkHandler) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("failed to encode response", "error", err)
-	}
-}
-
-func (h *BulkHandler) respondError(w http.ResponseWriter, status int, message string) {
-	h.respondJSON(w, status, map[string]string{
-		"error": message,
-	})
 }
 
 // ValidationError represents a validation error

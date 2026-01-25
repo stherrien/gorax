@@ -9,10 +9,17 @@ import { useWorkflows } from '../hooks/useWorkflows'
 vi.mock('../hooks/useWebhooks')
 vi.mock('../hooks/useWorkflows')
 
+// Valid RFC 4122 UUIDs (version 4, variant 1)
+const webhookId = '11111111-1111-4111-8111-111111111111'
+const tenantId = '22222222-2222-4222-8222-222222222222'
+const workflowId = '33333333-3333-4333-8333-333333333333'
+const eventId = '44444444-4444-4444-8444-444444444444'
+const executionId = '55555555-5555-4555-8555-555555555555'
+
 const mockWebhook = {
-  id: 'webhook-123',
-  tenantId: 'tenant-1',
-  workflowId: 'workflow-456',
+  id: webhookId,
+  tenantId: tenantId,
+  workflowId: workflowId,
   name: 'Test Webhook',
   path: '/api/test',
   authType: 'signature' as const,
@@ -27,9 +34,9 @@ const mockWebhook = {
 
 const mockEvents = [
   {
-    id: 'event-1',
-    webhookId: 'webhook-123',
-    executionId: 'exec-1',
+    id: eventId,
+    webhookId: webhookId,
+    executionId: executionId,
     requestMethod: 'POST',
     requestHeaders: { 'Content-Type': 'application/json' },
     requestBody: { test: 'data' },
@@ -41,12 +48,12 @@ const mockEvents = [
 ]
 
 const mockWorkflows = [
-  { id: 'workflow-456', name: 'My Workflow', status: 'active' },
+  { id: workflowId, name: 'My Workflow', status: 'active' },
 ]
 
-const renderWithRouter = (webhookId: string = 'webhook-123') => {
+const renderWithRouter = (id: string = webhookId) => {
   return render(
-    <MemoryRouter initialEntries={[`/webhooks/${webhookId}`]}>
+    <MemoryRouter initialEntries={[`/webhooks/${id}`]}>
       <Routes>
         <Route path="/webhooks/:id" element={<WebhookDetail />} />
       </Routes>
@@ -195,7 +202,7 @@ describe('WebhookDetail', () => {
       await user.click(screen.getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
-        expect(mockRegenerateSecret).toHaveBeenCalledWith('webhook-123')
+        expect(mockRegenerateSecret).toHaveBeenCalledWith(webhookId)
       })
     })
   })
@@ -211,7 +218,7 @@ describe('WebhookDetail', () => {
       await user.click(toggle)
 
       await waitFor(() => {
-        expect(mockUpdateWebhook).toHaveBeenCalledWith('webhook-123', { enabled: false })
+        expect(mockUpdateWebhook).toHaveBeenCalledWith(webhookId, { enabled: false })
       })
     })
   })
@@ -628,7 +635,7 @@ describe('WebhookDetail', () => {
       renderWithRouter()
       expect(screen.getByRole('link', { name: /edit webhook/i })).toHaveAttribute(
         'href',
-        '/webhooks/webhook-123/edit'
+        `/webhooks/${webhookId}/edit`
       )
     })
   })

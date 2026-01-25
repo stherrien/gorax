@@ -2,7 +2,10 @@ package tenant
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+
+	"github.com/gorax/gorax/internal/pkg/tenantctx"
 )
 
 // Service handles tenant business logic
@@ -112,4 +115,95 @@ func (s *Service) GetConcurrentExecutions(ctx context.Context, tenantID string) 
 // Count returns the total number of active tenants
 func (s *Service) Count(ctx context.Context) (int, error) {
 	return s.repo.Count(ctx)
+}
+
+// SwitchTenant switches the tenant context for an admin user
+// Returns a new context with the switched tenant ID
+func (s *Service) SwitchTenant(ctx context.Context, targetTenantID string) (context.Context, *Tenant, error) {
+	// Verify target tenant exists and is active
+	targetTenant, err := s.repo.GetByID(ctx, targetTenantID)
+	if err != nil {
+		if err == ErrNotFound {
+			return ctx, nil, fmt.Errorf("target tenant not found: %w", err)
+		}
+		return ctx, nil, fmt.Errorf("failed to get target tenant: %w", err)
+	}
+
+	if targetTenant.Status != string(StatusActive) {
+		return ctx, nil, fmt.Errorf("cannot switch to inactive tenant")
+	}
+
+	// Create new context with switched tenant
+	newCtx := tenantctx.WithSwitchedTenant(ctx, targetTenantID)
+
+	s.logger.Info("tenant context switched",
+		"original_tenant_id", tenantctx.GetOriginalTenantID(newCtx),
+		"target_tenant_id", targetTenantID,
+	)
+
+	return newCtx, targetTenant, nil
+}
+
+// GetOrCreateDefault gets the default tenant or creates one if it doesn't exist
+// This is used in single-tenant mode to ensure a default tenant always exists
+func (s *Service) GetOrCreateDefault(ctx context.Context) (*Tenant, error) {
+	// Try to get existing default tenant
+	tenant, err := s.repo.GetBySubdomain(ctx, DefaultTenantSubdomain)
+	if err == nil {
+		return tenant, nil
+	}
+
+	if err != ErrNotFound {
+		return nil, fmt.Errorf("failed to check for default tenant: %w", err)
+	}
+
+	// Create default tenant
+	input := CreateTenantInput{
+		Name:      DefaultTenantName,
+		Subdomain: DefaultTenantSubdomain,
+		Tier:      string(TierEnterprise), // Default tenant gets enterprise tier
+	}
+
+	tenant, err = s.Create(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default tenant: %w", err)
+	}
+
+	s.logger.Info("default tenant created", "tenant_id", tenant.ID)
+	return tenant, nil
+}
+
+// SetStatus updates the status of a tenant
+func (s *Service) SetStatus(ctx context.Context, id string, status TenantStatus) (*Tenant, error) {
+	if !IsValidStatus(string(status)) {
+		return nil, fmt.Errorf("invalid status: %s", status)
+	}
+
+	input := UpdateTenantInput{
+		Status: string(status),
+	}
+
+	tenant, err := s.repo.Update(ctx, id, input)
+	if err != nil {
+		s.logger.Error("failed to set tenant status", "error", err, "tenant_id", id, "status", status)
+		return nil, err
+	}
+
+	s.logger.Info("tenant status updated", "tenant_id", tenant.ID, "status", status)
+	return tenant, nil
+}
+
+// Activate activates a tenant
+func (s *Service) Activate(ctx context.Context, id string) (*Tenant, error) {
+	return s.SetStatus(ctx, id, StatusActive)
+}
+
+// Suspend suspends a tenant
+func (s *Service) Suspend(ctx context.Context, id string) (*Tenant, error) {
+	return s.SetStatus(ctx, id, StatusSuspended)
+}
+
+// Deactivate deactivates a tenant
+func (s *Service) Deactivate(ctx context.Context, id string) (*Tenant, error) {
+	return s.SetStatus(ctx, id, StatusInactive)
 }

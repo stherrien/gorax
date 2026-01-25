@@ -75,6 +75,19 @@ func (m *MockHumanTaskService) CancelTasksByExecution(ctx context.Context, tenan
 	return args.Error(0)
 }
 
+func (m *MockHumanTaskService) GetEscalationHistory(ctx context.Context, tenantID uuid.UUID, taskID uuid.UUID) (*humantask.EscalationHistory, error) {
+	args := m.Called(ctx, tenantID, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*humantask.EscalationHistory), args.Error(1)
+}
+
+func (m *MockHumanTaskService) UpdateEscalationConfig(ctx context.Context, tenantID uuid.UUID, taskID uuid.UUID, req humantask.UpdateEscalationRequest) error {
+	args := m.Called(ctx, tenantID, taskID, req)
+	return args.Error(0)
+}
+
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	return gin.New()
@@ -339,6 +352,172 @@ func TestHumanTaskHandler_SubmitTask(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	svc.AssertExpectations(t)
+}
+
+func TestHumanTaskHandler_GetEscalationHistory(t *testing.T) {
+	taskID := uuid.New()
+
+	tests := []struct {
+		name           string
+		taskID         string
+		setup          func(*MockHumanTaskService)
+		expectedStatus int
+	}{
+		{
+			name:   "get escalation history successfully",
+			taskID: taskID.String(),
+			setup: func(svc *MockHumanTaskService) {
+				history := &humantask.EscalationHistory{
+					TaskID:      taskID,
+					Escalations: []humantask.EscalationSummary{},
+				}
+				svc.On("GetEscalationHistory", mock.Anything, mock.Anything, taskID).Return(history, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:   "task not found",
+			taskID: uuid.New().String(),
+			setup: func(svc *MockHumanTaskService) {
+				svc.On("GetEscalationHistory", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, humantask.ErrTaskNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid task ID",
+			taskID:         "invalid",
+			setup:          func(svc *MockHumanTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := new(MockHumanTaskService)
+			tt.setup(svc)
+
+			router := setupTestRouter()
+			handler := NewHumanTaskHandler(svc)
+			router.GET("/api/v1/tasks/:id/escalations", setTestContext(), handler.GetEscalationHistory)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tasks/"+tt.taskID+"/escalations", nil)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			svc.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHumanTaskHandler_UpdateEscalationConfig(t *testing.T) {
+	taskID := uuid.New()
+
+	tests := []struct {
+		name           string
+		taskID         string
+		body           humantask.UpdateEscalationRequest
+		setup          func(*MockHumanTaskService)
+		expectedStatus int
+	}{
+		{
+			name:   "update escalation config successfully",
+			taskID: taskID.String(),
+			body: humantask.UpdateEscalationRequest{
+				Config: humantask.EscalationConfig{
+					Enabled: true,
+					Levels: []humantask.EscalationLevel{
+						{
+							Level:           1,
+							TimeoutMinutes:  60,
+							BackupApprovers: []string{"backup@example.com"},
+						},
+					},
+				},
+			},
+			setup: func(svc *MockHumanTaskService) {
+				svc.On("UpdateEscalationConfig", mock.Anything, mock.Anything, taskID, mock.Anything).Return(nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:   "task not found",
+			taskID: uuid.New().String(),
+			body: humantask.UpdateEscalationRequest{
+				Config: humantask.EscalationConfig{
+					Enabled: true,
+					Levels: []humantask.EscalationLevel{
+						{Level: 1, TimeoutMinutes: 60, BackupApprovers: []string{"backup@example.com"}},
+					},
+				},
+			},
+			setup: func(svc *MockHumanTaskService) {
+				svc.On("UpdateEscalationConfig", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(humantask.ErrTaskNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:   "task not pending",
+			taskID: taskID.String(),
+			body: humantask.UpdateEscalationRequest{
+				Config: humantask.EscalationConfig{
+					Enabled: true,
+					Levels: []humantask.EscalationLevel{
+						{Level: 1, TimeoutMinutes: 60, BackupApprovers: []string{"backup@example.com"}},
+					},
+				},
+			},
+			setup: func(svc *MockHumanTaskService) {
+				svc.On("UpdateEscalationConfig", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(humantask.ErrTaskNotPending)
+			},
+			expectedStatus: http.StatusConflict,
+		},
+		{
+			name:           "invalid task ID",
+			taskID:         "invalid",
+			body:           humantask.UpdateEscalationRequest{},
+			setup:          func(svc *MockHumanTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:   "enabled without levels",
+			taskID: taskID.String(),
+			body: humantask.UpdateEscalationRequest{
+				Config: humantask.EscalationConfig{
+					Enabled: true,
+					Levels:  []humantask.EscalationLevel{},
+				},
+			},
+			setup:          func(svc *MockHumanTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := new(MockHumanTaskService)
+			tt.setup(svc)
+
+			router := setupTestRouter()
+			handler := NewHumanTaskHandler(svc)
+			router.PUT("/api/v1/tasks/:id/escalation", setTestContext(), handler.UpdateEscalationConfig)
+
+			bodyBytes, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPut, "/api/v1/tasks/"+tt.taskID+"/escalation",
+				bytes.NewReader(bodyBytes))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			svc.AssertExpectations(t)
+		})
+	}
 }
 
 // Helper functions

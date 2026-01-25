@@ -1,10 +1,15 @@
 // k6 Load Test: Authentication Endpoints
 // Tests authentication performance under load
+//
+// NOTE: This test is designed for Kratos authentication mode.
+// In development mode (DevAuth), authentication is handled via headers,
+// so this test will be skipped.
 
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import { config, getScenario } from './config.js';
+import { setupAuth, getAuthHeaders } from './lib/auth.js';
 
 // Custom metrics
 const loginDuration = new Trend('login_duration', true);
@@ -29,16 +34,32 @@ export const options = {
   tags: config.options.tags,
 };
 
-// Setup: Create test users if needed
+// Setup: Determine if test should run
 export function setup() {
-  // For this test, we'll use the existing test user
+  const authData = setupAuth(config);
+
+  // Skip this test in dev mode since DevAuth doesn't use login endpoints
+  if (authData.mode === 'dev') {
+    console.log('⚠ Auth endpoints test skipped in DevAuth mode');
+    console.log('  DevAuth uses X-Tenant-ID and X-User-ID headers instead of login endpoints');
+    return { skip: true, mode: 'dev' };
+  }
+
+  console.log('✓ Running auth endpoints test in Kratos mode');
   return {
+    ...authData,
+    skip: false,
     testUser: config.testUser,
   };
 }
 
 // Main test function
 export default function (data) {
+  // Skip test in dev mode
+  if (data.skip) {
+    return;
+  }
+
   const headers = {
     'Content-Type': 'application/json',
   };

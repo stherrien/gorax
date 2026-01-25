@@ -154,13 +154,28 @@ func (e *filterEvaluator) EvaluateSingle(filter *WebhookFilter, payload map[stri
 		return evaluateRegex(value, filter.Value)
 	case OpGreaterThan:
 		return evaluateGreaterThan(value, filter.Value)
+	case OpGreaterThanOrEqual:
+		return evaluateGreaterThanOrEqual(value, filter.Value)
 	case OpLessThan:
 		return evaluateLessThan(value, filter.Value)
+	case OpLessThanOrEqual:
+		return evaluateLessThanOrEqual(value, filter.Value)
 	case OpIn:
 		return evaluateIn(value, filter.Value)
 	case OpNotIn:
 		result, err := evaluateIn(value, filter.Value)
 		return !result, err
+	case OpIsEmpty:
+		return evaluateIsEmpty(value)
+	case OpIsNotEmpty:
+		result, err := evaluateIsEmpty(value)
+		return !result, err
+	case OpBetween:
+		return evaluateBetween(value, filter.Value)
+	case OpMatchesAny:
+		return evaluateMatchesAny(value, filter.Value)
+	case OpMatchesAll:
+		return evaluateMatchesAll(value, filter.Value)
 	default:
 		return false, fmt.Errorf("unknown operator: %s", filter.Operator)
 	}
@@ -427,4 +442,136 @@ func evaluateIn(actual, expected interface{}) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// evaluateGreaterThanOrEqual checks if a number is greater than or equal to another
+func evaluateGreaterThanOrEqual(actual, expected interface{}) (bool, error) {
+	actualNum, ok := toFloat64(actual)
+	if !ok {
+		return false, fmt.Errorf("greater than or equal operator requires numeric value, got %T", actual)
+	}
+
+	expectedNum, ok := toFloat64(expected)
+	if !ok {
+		return false, fmt.Errorf("greater than or equal operator requires numeric comparison value, got %T", expected)
+	}
+
+	return actualNum >= expectedNum, nil
+}
+
+// evaluateLessThanOrEqual checks if a number is less than or equal to another
+func evaluateLessThanOrEqual(actual, expected interface{}) (bool, error) {
+	actualNum, ok := toFloat64(actual)
+	if !ok {
+		return false, fmt.Errorf("less than or equal operator requires numeric value, got %T", actual)
+	}
+
+	expectedNum, ok := toFloat64(expected)
+	if !ok {
+		return false, fmt.Errorf("less than or equal operator requires numeric comparison value, got %T", expected)
+	}
+
+	return actualNum <= expectedNum, nil
+}
+
+// evaluateIsEmpty checks if a value is empty (string, array, or map)
+func evaluateIsEmpty(actual interface{}) (bool, error) {
+	if actual == nil {
+		return true, nil
+	}
+
+	switch v := actual.(type) {
+	case string:
+		return v == "", nil
+	case []interface{}:
+		return len(v) == 0, nil
+	case map[string]interface{}:
+		return len(v) == 0, nil
+	default:
+		return false, fmt.Errorf("is_empty operator requires string, array, or object value, got %T", actual)
+	}
+}
+
+// evaluateBetween checks if a numeric value is within a range (inclusive)
+func evaluateBetween(actual, expected interface{}) (bool, error) {
+	actualNum, ok := toFloat64(actual)
+	if !ok {
+		return false, fmt.Errorf("between operator requires numeric value, got %T", actual)
+	}
+
+	rangeMap, ok := expected.(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("between operator requires range object with 'min' and 'max', got %T", expected)
+	}
+
+	minVal, minExists := rangeMap["min"]
+	maxVal, maxExists := rangeMap["max"]
+
+	if !minExists || !maxExists {
+		return false, fmt.Errorf("between operator requires both 'min' and 'max' values in range object")
+	}
+
+	minNum, ok := toFloat64(minVal)
+	if !ok {
+		return false, fmt.Errorf("between operator requires numeric 'min' value, got %T", minVal)
+	}
+
+	maxNum, ok := toFloat64(maxVal)
+	if !ok {
+		return false, fmt.Errorf("between operator requires numeric 'max' value, got %T", maxVal)
+	}
+
+	return actualNum >= minNum && actualNum <= maxNum, nil
+}
+
+// evaluateMatchesAny checks if an array contains any of the specified values
+func evaluateMatchesAny(actual, expected interface{}) (bool, error) {
+	actualArr, ok := actual.([]interface{})
+	if !ok {
+		return false, fmt.Errorf("matches_any operator requires array value, got %T", actual)
+	}
+
+	expectedArr, ok := expected.([]interface{})
+	if !ok {
+		return false, fmt.Errorf("matches_any operator requires array comparison value, got %T", expected)
+	}
+
+	for _, actualItem := range actualArr {
+		for _, expectedItem := range expectedArr {
+			if compareValues(actualItem, expectedItem) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// evaluateMatchesAll checks if an array contains all of the specified values
+func evaluateMatchesAll(actual, expected interface{}) (bool, error) {
+	actualArr, ok := actual.([]interface{})
+	if !ok {
+		return false, fmt.Errorf("matches_all operator requires array value, got %T", actual)
+	}
+
+	expectedArr, ok := expected.([]interface{})
+	if !ok {
+		return false, fmt.Errorf("matches_all operator requires array comparison value, got %T", expected)
+	}
+
+	// Check that every expected item is in the actual array
+	for _, expectedItem := range expectedArr {
+		found := false
+		for _, actualItem := range actualArr {
+			if compareValues(actualItem, expectedItem) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

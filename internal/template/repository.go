@@ -18,6 +18,7 @@ type Repository interface {
 	List(ctx context.Context, tenantID string, filter TemplateFilter) ([]*Template, error)
 	Update(ctx context.Context, tenantID, id string, input UpdateTemplateInput) error
 	Delete(ctx context.Context, tenantID, id string) error
+	IncrementUsageCount(ctx context.Context, id string) error
 }
 
 // PostgresRepository implements Repository using PostgreSQL
@@ -66,7 +67,7 @@ func (r *PostgresRepository) Create(ctx context.Context, tenantID string, templa
 func (r *PostgresRepository) GetByID(ctx context.Context, tenantID, id string) (*Template, error) {
 	query := `
 		SELECT id, tenant_id, name, description, category, definition,
-			   tags, is_public, created_by, created_at, updated_at
+			   tags, is_public, usage_count, created_by, created_at, updated_at
 		FROM workflow_templates
 		WHERE id = $1 AND (tenant_id = $2 OR is_public = true)
 	`
@@ -87,7 +88,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, tenantID, id string) (
 func (r *PostgresRepository) List(ctx context.Context, tenantID string, filter TemplateFilter) ([]*Template, error) {
 	query := `
 		SELECT id, tenant_id, name, description, category, definition,
-			   tags, is_public, created_by, created_at, updated_at
+			   tags, is_public, usage_count, created_by, created_at, updated_at
 		FROM workflow_templates
 		WHERE (tenant_id = $1 OR is_public = true)
 	`
@@ -221,6 +222,22 @@ func (r *PostgresRepository) Delete(ctx context.Context, tenantID, id string) er
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("template not found")
+	}
+
+	return nil
+}
+
+// IncrementUsageCount increments the usage count for a template
+func (r *PostgresRepository) IncrementUsageCount(ctx context.Context, id string) error {
+	query := `
+		UPDATE workflow_templates
+		SET usage_count = usage_count + 1
+		WHERE id = $1
+	`
+
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("increment usage count: %w", err)
 	}
 
 	return nil

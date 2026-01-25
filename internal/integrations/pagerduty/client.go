@@ -71,27 +71,29 @@ func (c *Client) CreateIncident(ctx context.Context, title, serviceID, urgency, 
 		urgency = "high"
 	}
 
-	payload := map[string]interface{}{
-		"incident": map[string]interface{}{
-			"type":  "incident",
-			"title": title,
-			"service": map[string]interface{}{
-				"id":   serviceID,
-				"type": "service_reference",
-			},
-			"urgency": urgency,
+	incident := map[string]interface{}{
+		"type":  "incident",
+		"title": title,
+		"service": map[string]interface{}{
+			"id":   serviceID,
+			"type": "service_reference",
 		},
+		"urgency": urgency,
 	}
 
 	if body != "" {
-		payload["incident"].(map[string]interface{})["body"] = map[string]interface{}{
+		incident["body"] = map[string]interface{}{
 			"type":    "incident_body",
 			"details": body,
 		}
 	}
 
 	if incidentKey != "" {
-		payload["incident"].(map[string]interface{})["incident_key"] = incidentKey
+		incident["incident_key"] = incidentKey
+	}
+
+	payload := map[string]interface{}{
+		"incident": incident,
 	}
 
 	var resp struct {

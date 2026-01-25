@@ -16,6 +16,11 @@ import {
 import '@xyflow/react/dist/style.css'
 import { nodeTypes } from '../nodes/nodeTypes'
 import { detectCycles, isValidDAG } from '../../utils/dagValidation'
+import { useFileUpload } from '../../hooks/useFileUpload'
+import { FileUploadZone, FileUploadButton } from '../workflow/FileUploadZone'
+import { UploadProgress } from '../workflow/UploadProgress'
+import { UploadErrorModal } from '../workflow/UploadErrorModal'
+import { containsFiles } from '../../utils/fileValidation'
 
 interface WorkflowCanvasProps {
   initialNodes?: Node[]
@@ -23,6 +28,8 @@ interface WorkflowCanvasProps {
   onSave?: (workflow: { nodes: Node[]; edges: Edge[] }) => void
   onChange?: (workflow: { nodes: Node[]; edges: Edge[] }) => void
   onNodeSelect?: (node: Node | null) => void
+  /** Callback when a workflow is imported from file */
+  onImport?: (workflow: { nodes: Node[]; edges: Edge[]; name?: string; description?: string }) => void
 }
 
 function WorkflowCanvasInner({
@@ -31,14 +38,57 @@ function WorkflowCanvasInner({
   onSave,
   onChange,
   onNodeSelect,
+  onImport,
 }: WorkflowCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [cycleError, setCycleError] = useState<string | null>(null)
   const [nodesInCycle, setNodesInCycle] = useState<Set<string>>(new Set())
+  const [showErrorModal, setShowErrorModal] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition } = useReactFlow()
+
+  // File upload hook
+  const {
+    uploadState,
+    isDragging,
+    handleDrop: handleFileDrop,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver: handleFileDragOver,
+    resetUpload,
+    acceptUpload,
+    fileInputRef,
+    handleFileInputChange,
+    openFilePicker,
+  } = useFileUpload({
+    onUploadError: () => setShowErrorModal(true),
+  })
+
+  // Sync nodes when initialNodes prop changes (e.g., after loading from backend)
+  // Use JSON comparison to detect actual data changes, not just reference changes
+  const initialNodesJson = JSON.stringify(initialNodes.map(n => n.id).sort())
+  const currentNodesJson = JSON.stringify(nodes.map(n => n.id).sort())
+
+  useEffect(() => {
+    // Only sync if the initial nodes are different from current nodes
+    if (initialNodesJson !== currentNodesJson && initialNodes.length > 0) {
+      console.log('[WorkflowCanvas] Syncing nodes from props:', initialNodes.length, 'nodes')
+      setNodes(initialNodes)
+    }
+  }, [initialNodesJson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync edges when initialEdges prop changes
+  const initialEdgesJson = JSON.stringify(initialEdges.map(e => e.id).sort())
+  const currentEdgesJson = JSON.stringify(edges.map(e => e.id).sort())
+
+  useEffect(() => {
+    if (initialEdgesJson !== currentEdgesJson && initialEdges.length > 0) {
+      console.log('[WorkflowCanvas] Syncing edges from props:', initialEdges.length, 'edges')
+      setEdges(initialEdges)
+    }
+  }, [initialEdgesJson]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Notify parent of changes
   useEffect(() => {
@@ -104,13 +154,25 @@ function WorkflowCanvasInner({
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }, [])
+    // Check if dragging files vs nodes from palette
+    if (containsFiles(event.dataTransfer)) {
+      handleFileDragOver(event)
+    } else {
+      event.dataTransfer.dropEffect = 'move'
+    }
+  }, [handleFileDragOver])
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
 
+      // Check if dropping files
+      if (containsFiles(event.dataTransfer)) {
+        handleFileDrop(event)
+        return
+      }
+
+      // Handle node drop from palette
       const data = event.dataTransfer.getData('application/reactflow')
       if (!data) return
 
@@ -132,7 +194,7 @@ function WorkflowCanvasInner({
 
       setNodes((nds) => [...nds, newNode])
     },
-    [screenToFlowPosition, setNodes]
+    [screenToFlowPosition, setNodes, handleFileDrop]
   )
 
   const handleAddNode = useCallback(() => {
@@ -145,7 +207,7 @@ function WorkflowCanvasInner({
     setNodes((nds) => [...nds, newNode])
   }, [setNodes])
 
-  const validateWorkflow = (): string | null => {
+  const validateWorkflow = useCallback((): string | null => {
     // Check if workflow has at least one node
     if (nodes.length === 0) {
       return 'Workflow must have at least one node'
@@ -164,7 +226,7 @@ function WorkflowCanvasInner({
     }
 
     return null
-  }
+  }, [nodes, edges])
 
   const handleSave = useCallback(() => {
     setValidationError(null)
@@ -178,7 +240,29 @@ function WorkflowCanvasInner({
     if (onSave) {
       onSave({ nodes, edges })
     }
-  }, [nodes, edges, onSave])
+  }, [nodes, edges, onSave, validateWorkflow])
+
+  // Handle accepting imported workflow
+  const handleAcceptImport = useCallback(() => {
+    const result = acceptUpload()
+    if (!result) return
+
+    // Update canvas with imported nodes and edges
+    setNodes(result.nodes)
+    setEdges(result.edges)
+
+    // Notify parent component
+    if (onImport) {
+      onImport(result)
+    }
+  }, [acceptUpload, setNodes, setEdges, onImport])
+
+  // Handle retrying file upload
+  const handleRetryUpload = useCallback(() => {
+    setShowErrorModal(false)
+    resetUpload()
+    openFilePicker()
+  }, [resetUpload, openFilePicker])
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -191,6 +275,10 @@ function WorkflowCanvasInner({
           >
             Add Node
           </button>
+          <FileUploadButton
+            onClick={openFilePicker}
+            disabled={uploadState.status !== 'idle' && uploadState.status !== 'success' && uploadState.status !== 'error'}
+          />
         </div>
 
         <div className="flex items-center space-x-2">
@@ -218,7 +306,12 @@ function WorkflowCanvasInner({
       )}
 
       {/* Canvas */}
-      <div className="flex-1" ref={reactFlowWrapper}>
+      <div
+        className="flex-1 relative"
+        ref={reactFlowWrapper}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -236,7 +329,39 @@ function WorkflowCanvasInner({
           <Controls />
           <MiniMap />
         </ReactFlow>
+
+        {/* File Upload Drop Zone Overlay */}
+        <FileUploadZone
+          isDragging={isDragging}
+          onDrop={handleFileDrop}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleFileDragOver}
+          fileInputRef={fileInputRef}
+          onFileInputChange={handleFileInputChange}
+          showUploadButton={true}
+          onOpenFilePicker={openFilePicker}
+        />
       </div>
+
+      {/* Upload Progress Indicator */}
+      <UploadProgress
+        uploadState={uploadState}
+        onCancel={resetUpload}
+        onAccept={handleAcceptImport}
+        onDismiss={resetUpload}
+        variant="floating"
+      />
+
+      {/* Error Modal */}
+      <UploadErrorModal
+        isOpen={showErrorModal}
+        error={uploadState.error || 'An error occurred'}
+        errorDetails={uploadState.errorDetails}
+        fileName={uploadState.fileName}
+        onClose={() => setShowErrorModal(false)}
+        onRetry={handleRetryUpload}
+      />
     </div>
   )
 }

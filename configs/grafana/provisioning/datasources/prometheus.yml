@@ -1,0 +1,27 @@
+# Grafana Data Source Provisioning for Prometheus
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#data-sources
+
+apiVersion: 1
+
+# List of data sources to insert/update depending on what's available in the database
+datasources:
+  # Prometheus data source
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      # Query timeout
+      queryTimeout: 60s
+      # Time interval for scraping
+      timeInterval: 15s
+      # Enable exemplars (requires Prometheus 2.26+)
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+      # Custom query parameters (optional)
+      # customQueryParameters: 'step=15'
+    version: 1

@@ -1,0 +1,8 @@
+# Test logs
+*.log
+
+# Test artifacts
+*.out
+
+# Go test cache
+go/go.sum

@@ -21,6 +21,13 @@ type Repository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetOverdueTasks(ctx context.Context, tenantID uuid.UUID) ([]*HumanTask, error)
 	CountPendingByAssignee(ctx context.Context, tenantID uuid.UUID, assignee string) (int, error)
+
+	// Escalation-related methods
+	CreateEscalation(ctx context.Context, escalation *TaskEscalation) error
+	GetEscalationsByTaskID(ctx context.Context, taskID uuid.UUID) ([]*TaskEscalation, error)
+	GetActiveEscalation(ctx context.Context, taskID uuid.UUID) (*TaskEscalation, error)
+	UpdateEscalation(ctx context.Context, escalation *TaskEscalation) error
+	CompleteEscalationsByTaskID(ctx context.Context, taskID uuid.UUID, completedBy *uuid.UUID) error
 }
 
 type repository struct {
@@ -69,7 +76,8 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*HumanTask, err
 	query := `
 		SELECT id, tenant_id, execution_id, step_id, task_type, title, description,
 			assignees, status, due_date, completed_at, completed_by, response_data,
-			config, created_at, updated_at
+			config, escalation_level, max_escalation_level, last_escalated_at,
+			created_at, updated_at
 		FROM human_tasks
 		WHERE id = $1
 	`
@@ -91,7 +99,8 @@ func (r *repository) List(ctx context.Context, filter TaskFilter) ([]*HumanTask,
 	query := `
 		SELECT id, tenant_id, execution_id, step_id, task_type, title, description,
 			assignees, status, due_date, completed_at, completed_by, response_data,
-			config, created_at, updated_at
+			config, escalation_level, max_escalation_level, last_escalated_at,
+			created_at, updated_at
 		FROM human_tasks
 		WHERE tenant_id = $1
 	`
@@ -120,7 +129,10 @@ func (r *repository) List(ctx context.Context, filter TaskFilter) ([]*HumanTask,
 
 	if filter.Assignee != nil {
 		query += fmt.Sprintf(" AND assignees @> $%d::jsonb", argPos)
-		assigneeJSON, _ := json.Marshal([]string{*filter.Assignee})
+		assigneeJSON, err := json.Marshal([]string{*filter.Assignee})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal assignee filter: %w", err)
+		}
 		args = append(args, assigneeJSON)
 		argPos++
 	}
@@ -168,8 +180,12 @@ func (r *repository) Update(ctx context.Context, task *HumanTask) error {
 			completed_by = $3,
 			response_data = $4,
 			due_date = $5,
-			config = $6
-		WHERE id = $7
+			config = $6,
+			assignees = $7,
+			escalation_level = $8,
+			max_escalation_level = $9,
+			last_escalated_at = $10
+		WHERE id = $11
 	`
 
 	result, err := r.db.ExecContext(
@@ -180,6 +196,10 @@ func (r *repository) Update(ctx context.Context, task *HumanTask) error {
 		task.ResponseData,
 		task.DueDate,
 		task.Config,
+		task.Assignees,
+		task.EscalationLevel,
+		task.MaxEscalationLevel,
+		task.LastEscalatedAt,
 		task.ID,
 	)
 	if err != nil {
@@ -224,7 +244,8 @@ func (r *repository) GetOverdueTasks(ctx context.Context, tenantID uuid.UUID) ([
 	query := `
 		SELECT id, tenant_id, execution_id, step_id, task_type, title, description,
 			assignees, status, due_date, completed_at, completed_by, response_data,
-			config, created_at, updated_at
+			config, escalation_level, max_escalation_level, last_escalated_at,
+			created_at, updated_at
 		FROM human_tasks
 		WHERE tenant_id = $1
 			AND status = $2
@@ -251,9 +272,12 @@ func (r *repository) CountPendingByAssignee(ctx context.Context, tenantID uuid.U
 			AND assignees @> $3::jsonb
 	`
 
-	assigneeJSON, _ := json.Marshal([]string{assignee})
+	assigneeJSON, err := json.Marshal([]string{assignee})
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal assignee: %w", err)
+	}
 
-	err := r.db.GetContext(ctx, &count, query, tenantID, StatusPending, assigneeJSON)
+	err = r.db.GetContext(ctx, &count, query, tenantID, StatusPending, assigneeJSON)
 	if err != nil {
 		return 0, fmt.Errorf("count pending tasks: %w", err)
 	}
@@ -262,7 +286,7 @@ func (r *repository) CountPendingByAssignee(ctx context.Context, tenantID uuid.U
 }
 
 // buildFilterQuery builds a SQL query with dynamic filters
-func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{}) {
+func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{}, error) {
 	var conditions []string
 	var args []interface{}
 	argPos := 1
@@ -291,7 +315,10 @@ func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{
 
 	if filter.Assignee != nil {
 		conditions = append(conditions, fmt.Sprintf("assignees @> $%d::jsonb", argPos))
-		assigneeJSON, _ := json.Marshal([]string{*filter.Assignee})
+		assigneeJSON, err := json.Marshal([]string{*filter.Assignee})
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to marshal assignee filter: %w", err)
+		}
 		args = append(args, assigneeJSON)
 		argPos++
 	}
@@ -312,5 +339,134 @@ func buildFilterQuery(baseQuery string, filter TaskFilter) (string, []interface{
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	return query, args
+	return query, args, nil
+}
+
+// Escalation repository methods
+
+func (r *repository) CreateEscalation(ctx context.Context, escalation *TaskEscalation) error {
+	query := `
+		INSERT INTO task_escalations (
+			task_id, escalation_level, escalated_from, escalated_to,
+			escalation_reason, timeout_minutes, auto_action_taken, status, metadata
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9
+		) RETURNING id, escalated_at, created_at
+	`
+
+	err := r.db.QueryRowxContext(
+		ctx, query,
+		escalation.TaskID,
+		escalation.EscalationLevel,
+		escalation.EscalatedFrom,
+		escalation.EscalatedTo,
+		escalation.EscalationReason,
+		escalation.TimeoutMinutes,
+		escalation.AutoActionTaken,
+		escalation.Status,
+		escalation.Metadata,
+	).Scan(&escalation.ID, &escalation.EscalatedAt, &escalation.CreatedAt)
+
+	if err != nil {
+		return fmt.Errorf("create task escalation: %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) GetEscalationsByTaskID(ctx context.Context, taskID uuid.UUID) ([]*TaskEscalation, error) {
+	var escalations []*TaskEscalation
+
+	query := `
+		SELECT id, task_id, escalation_level, escalated_at, escalated_from, escalated_to,
+			escalation_reason, timeout_minutes, auto_action_taken, status,
+			completed_at, completed_by, metadata, created_at
+		FROM task_escalations
+		WHERE task_id = $1
+		ORDER BY escalation_level ASC
+	`
+
+	err := r.db.SelectContext(ctx, &escalations, query, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("get escalations by task: %w", err)
+	}
+
+	return escalations, nil
+}
+
+func (r *repository) GetActiveEscalation(ctx context.Context, taskID uuid.UUID) (*TaskEscalation, error) {
+	var escalation TaskEscalation
+
+	query := `
+		SELECT id, task_id, escalation_level, escalated_at, escalated_from, escalated_to,
+			escalation_reason, timeout_minutes, auto_action_taken, status,
+			completed_at, completed_by, metadata, created_at
+		FROM task_escalations
+		WHERE task_id = $1 AND status = $2
+		ORDER BY escalation_level DESC
+		LIMIT 1
+	`
+
+	err := r.db.GetContext(ctx, &escalation, query, taskID, EscalationStatusActive)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get active escalation: %w", err)
+	}
+
+	return &escalation, nil
+}
+
+func (r *repository) UpdateEscalation(ctx context.Context, escalation *TaskEscalation) error {
+	query := `
+		UPDATE task_escalations
+		SET status = $1,
+			completed_at = $2,
+			completed_by = $3,
+			auto_action_taken = $4,
+			metadata = $5
+		WHERE id = $6
+	`
+
+	result, err := r.db.ExecContext(
+		ctx, query,
+		escalation.Status,
+		escalation.CompletedAt,
+		escalation.CompletedBy,
+		escalation.AutoActionTaken,
+		escalation.Metadata,
+		escalation.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update escalation: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("escalation not found")
+	}
+
+	return nil
+}
+
+func (r *repository) CompleteEscalationsByTaskID(ctx context.Context, taskID uuid.UUID, completedBy *uuid.UUID) error {
+	query := `
+		UPDATE task_escalations
+		SET status = $1,
+			completed_at = NOW(),
+			completed_by = $2
+		WHERE task_id = $3 AND status = $4
+	`
+
+	_, err := r.db.ExecContext(ctx, query, EscalationStatusCompleted, completedBy, taskID, EscalationStatusActive)
+	if err != nil {
+		return fmt.Errorf("complete escalations: %w", err)
+	}
+
+	return nil
 }

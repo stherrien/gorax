@@ -1,0 +1,99 @@
+{
+  "environment": {
+    "name": "staging",
+    "url": "https://staging.gorax.dev",
+    "description": "Staging environment for testing changes before production"
+  },
+  "protection_rules": {
+    "wait_timer": null,
+    "reviewers": [],
+    "deployment_branch_policy": {
+      "protected_branches": false,
+      "custom_branch_policies": true,
+      "allowed_branches": [
+        {
+          "name": "dev",
+          "type": "branch"
+        }
+      ]
+    }
+  },
+  "secrets": {
+    "STAGING_URL": {
+      "description": "Staging environment URL",
+      "required": true,
+      "example": "https://staging.gorax.dev"
+    },
+    "STAGING_DB_PASSWORD": {
+      "description": "Staging database password",
+      "required": true,
+      "generate_with": "openssl rand -base64 32"
+    },
+    "STAGING_REDIS_PASSWORD": {
+      "description": "Staging Redis password",
+      "required": false,
+      "generate_with": "openssl rand -base64 24"
+    },
+    "STAGING_HEALTH_CHECK_TOKEN": {
+      "description": "Bearer token for health check endpoints",
+      "required": false,
+      "generate_with": "openssl rand -hex 32"
+    }
+  },
+  "variables": {
+    "ENVIRONMENT": "staging",
+    "LOG_LEVEL": "debug",
+    "METRICS_ENABLED": "true",
+    "TRACING_ENABLED": "true"
+  },
+  "deployment_workflow": {
+    "workflow_file": ".github/workflows/deploy-staging.yml",
+    "trigger": "push to dev branch",
+    "approval_required": false,
+    "automatic": true
+  },
+  "usage_notes": [
+    "Automatically deploys when changes are pushed to dev branch",
+    "No approval required - suitable for rapid iteration",
+    "Should mirror production configuration as closely as possible",
+    "Use for testing before promoting to production",
+    "Monitor for issues before merging to main"
+  ],
+  "setup_instructions": {
+    "via_ui": [
+      "1. Navigate to Settings → Environments",
+      "2. Click 'New environment'",
+      "3. Name: staging",
+      "4. Configure deployment branches: dev only",
+      "5. No required reviewers",
+      "6. Add secrets from secrets.template.yml",
+      "7. Add environment variables"
+    ],
+    "via_cli": [
+      "# Create environment",
+      "gh api repos/{owner}/{repo}/environments/staging -X PUT \\",
+      "  -f 'deployment_branch_policy[protected_branches]=false' \\",
+      "  -f 'deployment_branch_policy[custom_branch_policies]=true'",
+      "",
+      "# Add branch policy",
+      "gh api repos/{owner}/{repo}/environments/staging/deployment-branch-policies -X POST \\",
+      "  -f 'name=dev' -f 'type=branch'",
+      "",
+      "# Add secrets",
+      "gh secret set STAGING_URL --env staging --body 'https://staging.gorax.dev'",
+      "gh secret set STAGING_DB_PASSWORD --env staging < /path/to/password"
+    ],
+    "via_terraform": [
+      "# See terraform/github/environments.tf",
+      "cd terraform/github",
+      "terraform init",
+      "terraform apply -target=github_repository_environment.staging"
+    ]
+  },
+  "verification": {
+    "check_environment_exists": "gh api repos/{owner}/{repo}/environments/staging",
+    "check_deployment_policy": "gh api repos/{owner}/{repo}/environments/staging | jq '.deployment_branch_policy'",
+    "list_secrets": "gh api repos/{owner}/{repo}/environments/staging/secrets | jq -r '.secrets[].name'",
+    "trigger_deployment": "git push origin dev"
+  }
+}
