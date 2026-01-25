@@ -10,10 +10,20 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// DBPinger defines the interface for database ping operations
+type DBPinger interface {
+	PingContext(ctx context.Context) error
+}
+
+// RedisPinger defines the interface for Redis ping operations
+type RedisPinger interface {
+	Ping(ctx context.Context) *redis.StatusCmd
+}
+
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
-	db    *sqlx.DB
-	redis *redis.Client
+	db    DBPinger
+	redis RedisPinger
 }
 
 // NewHealthHandler creates a new health handler

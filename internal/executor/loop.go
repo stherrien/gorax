@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/gorax/gorax/internal/executor/actions"
+	"github.com/gorax/gorax/internal/executor/expression"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -28,18 +32,38 @@ type LoopResult struct {
 
 // IterationResult represents the result of a single iteration
 type IterationResult struct {
-	Index  int                    `json:"index"`
-	Item   interface{}            `json:"item"`
-	Output map[string]interface{} `json:"output,omitempty"`
-	Error  *string                `json:"error,omitempty"`
+	Index   int                    `json:"index"`
+	Item    interface{}            `json:"item"`
+	Key     interface{}            `json:"key,omitempty"` // For object iteration
+	Output  map[string]interface{} `json:"output,omitempty"`
+	Error   *string                `json:"error,omitempty"`
+	IsFirst bool                   `json:"is_first"` // True if this is the first iteration
+	IsLast  bool                   `json:"is_last"`  // True if this is the last iteration (or break triggered)
+}
+
+// loopItem represents an item to iterate over (supports both arrays and objects)
+type loopItem struct {
+	Index int
+	Key   interface{} // string key for objects, nil for arrays
+	Value interface{}
 }
 
 // loopExecutor handles loop execution logic
 type loopExecutor struct {
-	mainExecutor *Executor
+	mainExecutor    *Executor
+	expressionEvalr *expression.Evaluator
+}
+
+// newLoopExecutor creates a new loop executor
+func newLoopExecutor(mainExec *Executor) *loopExecutor {
+	return &loopExecutor{
+		mainExecutor:    mainExec,
+		expressionEvalr: expression.NewEvaluator(),
+	}
 }
 
 // executeLoop executes a loop node with for-each semantics
+// Supports both arrays and objects, with configurable break conditions
 func (le *loopExecutor) executeLoop(
 	ctx context.Context,
 	config workflow.LoopActionConfig,
@@ -52,10 +76,10 @@ func (le *loopExecutor) executeLoop(
 		return nil, fmt.Errorf("invalid loop configuration: %w", err)
 	}
 
-	// Resolve source array from execution context
-	sourceArray, err := le.resolveSourceArray(config.Source, execCtx)
+	// Resolve source data (array or object) from execution context
+	loopItems, err := le.resolveSourceData(config.Source, execCtx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve source array: %w", err)
+		return nil, fmt.Errorf("failed to resolve source data: %w", err)
 	}
 
 	// Apply max iterations limit
@@ -64,10 +88,10 @@ func (le *loopExecutor) executeLoop(
 		maxIterations = DefaultMaxIterations
 	}
 
-	// Check if array exceeds max iterations
-	arrayLen := len(sourceArray)
-	if arrayLen > maxIterations {
-		return nil, fmt.Errorf("array length %d exceeds max iterations limit %d", arrayLen, maxIterations)
+	// Check if items exceed max iterations
+	itemCount := len(loopItems)
+	if itemCount > maxIterations {
+		return nil, fmt.Errorf("array length %d exceeds max iterations limit %d", itemCount, maxIterations)
 	}
 
 	// Determine error handling strategy
@@ -76,39 +100,79 @@ func (le *loopExecutor) executeLoop(
 		onError = ErrorStrategyStop
 	}
 
+	// Initialize expression evaluator if needed
+	if le.expressionEvalr == nil {
+		le.expressionEvalr = expression.NewEvaluator()
+	}
+
 	// Execute loop iterations
 	result := &LoopResult{
-		IterationCount: arrayLen,
-		Iterations:     make([]IterationResult, 0, arrayLen),
+		Iterations: make([]IterationResult, 0, itemCount),
 		Metadata: map[string]interface{}{
 			"item_variable":  config.ItemVariable,
 			"index_variable": config.IndexVariable,
+			"key_variable":   config.KeyVariable,
 			"on_error":       onError,
+			"total_items":    itemCount,
 		},
 	}
 
-	for i, item := range sourceArray {
-		iterationResult, err := le.executeIteration(
+	var breakTriggered bool
+	var breakAtIndex int
+
+	for i, loopItem := range loopItems {
+		isFirst := i == 0
+		isLast := i == itemCount-1
+
+		iterationResult, iterErr := le.executeIterationWithContext(
 			ctx,
-			i,
-			item,
+			loopItem,
+			isFirst,
+			isLast,
+			itemCount,
 			config,
 			execCtx,
 			bodyNodes,
 			bodyEdges,
 		)
 
-		if err != nil {
+		if iterErr != nil {
 			if onError == ErrorStrategyStop {
 				// Stop on first error
-				return nil, fmt.Errorf("loop iteration %d failed: %w", i, err)
+				return nil, fmt.Errorf("loop iteration %d failed: %w", i, iterErr)
 			}
 			// Continue on error - record error but continue
-			errMsg := err.Error()
+			errMsg := iterErr.Error()
 			iterationResult.Error = &errMsg
 		}
 
 		result.Iterations = append(result.Iterations, *iterationResult)
+
+		// Check break conditions after each iteration
+		if len(config.BreakConditions) > 0 {
+			shouldBreak, breakErr := le.evaluateBreakConditions(config.BreakConditions, loopItem, i, config, execCtx)
+			if breakErr != nil {
+				// Log the error but don't fail the loop
+				// Continue to next iteration
+				continue
+			}
+			if shouldBreak {
+				breakTriggered = true
+				breakAtIndex = i
+				// Mark this iteration as the last one
+				result.Iterations[len(result.Iterations)-1].IsLast = true
+				break
+			}
+		}
+	}
+
+	// Set the iteration count to actual iterations processed
+	result.IterationCount = len(result.Iterations)
+
+	// Add break metadata
+	if breakTriggered {
+		result.Metadata["break_triggered"] = true
+		result.Metadata["break_at_index"] = breakAtIndex
 	}
 
 	return result, nil
@@ -128,8 +192,9 @@ func (le *loopExecutor) validateConfig(config workflow.LoopActionConfig) error {
 	return nil
 }
 
-// resolveSourceArray resolves the source expression to an array
-func (le *loopExecutor) resolveSourceArray(source string, execCtx *ExecutionContext) ([]interface{}, error) {
+// resolveSourceData resolves the source expression to a slice of loopItems
+// Supports both arrays and objects (maps)
+func (le *loopExecutor) resolveSourceData(source string, execCtx *ExecutionContext) ([]loopItem, error) {
 	// Build context for path resolution
 	contextData := buildInterpolationContext(execCtx)
 
@@ -145,35 +210,200 @@ func (le *loopExecutor) resolveSourceArray(source string, execCtx *ExecutionCont
 		return nil, fmt.Errorf("source path not found: %w", err)
 	}
 
-	// Ensure value is an array
-	array, ok := value.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("source is not an array, got %T", value)
-	}
-
-	return array, nil
+	// Try to convert to loop items based on type
+	return le.valueToLoopItems(value)
 }
 
-// executeIteration executes a single loop iteration
-func (le *loopExecutor) executeIteration(
-	ctx context.Context,
+// valueToLoopItems converts a value (array or object) to a slice of loopItems
+func (le *loopExecutor) valueToLoopItems(value interface{}) ([]loopItem, error) {
+	// Handle array/slice
+	if arr, ok := value.([]interface{}); ok {
+		items := make([]loopItem, len(arr))
+		for i, v := range arr {
+			items[i] = loopItem{Index: i, Key: nil, Value: v}
+		}
+		return items, nil
+	}
+
+	// Handle map/object
+	if obj, ok := value.(map[string]interface{}); ok {
+		// Get sorted keys for deterministic iteration order
+		keys := make([]string, 0, len(obj))
+		for k := range obj {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		items := make([]loopItem, len(keys))
+		for i, k := range keys {
+			items[i] = loopItem{Index: i, Key: k, Value: obj[k]}
+		}
+		return items, nil
+	}
+
+	// Check for other slice types using reflection
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Slice {
+		items := make([]loopItem, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			items[i] = loopItem{Index: i, Key: nil, Value: rv.Index(i).Interface()}
+		}
+		return items, nil
+	}
+
+	return nil, fmt.Errorf("source is not an array or object, got %T", value)
+}
+
+// evaluateBreakConditions evaluates all break conditions and returns true if any match
+func (le *loopExecutor) evaluateBreakConditions(
+	conditions []workflow.BreakCondition,
+	item loopItem,
 	index int,
-	item interface{},
+	config workflow.LoopActionConfig,
+	execCtx *ExecutionContext,
+) (bool, error) {
+	// Build the evaluation context with loop variables
+	evalContext := le.buildEvaluationContext(item, index, config, execCtx)
+
+	// Evaluate each condition - any true condition triggers break
+	for _, cond := range conditions {
+		matched, err := le.evaluateSingleBreakCondition(cond, evalContext)
+		if err != nil {
+			// Return error but don't break on evaluation errors
+			return false, err
+		}
+		if matched {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// evaluateSingleBreakCondition evaluates a single break condition
+func (le *loopExecutor) evaluateSingleBreakCondition(
+	cond workflow.BreakCondition,
+	evalContext map[string]interface{},
+) (bool, error) {
+	// If a full expression is provided, use the expression evaluator
+	if cond.Condition != "" {
+		if le.expressionEvalr == nil {
+			le.expressionEvalr = expression.NewEvaluator()
+		}
+		return le.expressionEvalr.EvaluateCondition(cond.Condition, evalContext)
+	}
+
+	// Otherwise, use operator-based evaluation
+	if cond.Operator != "" && cond.Field != "" {
+		return le.evaluateOperatorCondition(cond, evalContext)
+	}
+
+	return false, fmt.Errorf("break condition requires either 'condition' expression or 'operator' with 'field'")
+}
+
+// evaluateOperatorCondition evaluates a break condition using operator syntax
+func (le *loopExecutor) evaluateOperatorCondition(
+	cond workflow.BreakCondition,
+	evalContext map[string]interface{},
+) (bool, error) {
+	// Resolve the field value from context
+	fieldValue, err := actions.GetValueByPath(evalContext, cond.Field)
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve field '%s': %w", cond.Field, err)
+	}
+
+	// Evaluate based on operator
+	switch cond.Operator {
+	case "equals", "==":
+		return reflect.DeepEqual(fieldValue, cond.Value), nil
+
+	case "not_equals", "!=":
+		return !reflect.DeepEqual(fieldValue, cond.Value), nil
+
+	case "greater_than", ">":
+		return compareNumeric(fieldValue, cond.Value, func(a, b float64) bool { return a > b })
+
+	case "less_than", "<":
+		return compareNumeric(fieldValue, cond.Value, func(a, b float64) bool { return a < b })
+
+	case "greater_or_equal", ">=":
+		return compareNumeric(fieldValue, cond.Value, func(a, b float64) bool { return a >= b })
+
+	case "less_or_equal", "<=":
+		return compareNumeric(fieldValue, cond.Value, func(a, b float64) bool { return a <= b })
+
+	case "contains":
+		return containsString(fieldValue, cond.Value)
+
+	case "starts_with":
+		return startsWithString(fieldValue, cond.Value)
+
+	case "ends_with":
+		return endsWithString(fieldValue, cond.Value)
+
+	default:
+		return false, fmt.Errorf("unsupported operator: %s", cond.Operator)
+	}
+}
+
+// buildEvaluationContext builds the context map for break condition evaluation
+func (le *loopExecutor) buildEvaluationContext(
+	item loopItem,
+	index int,
+	config workflow.LoopActionConfig,
+	execCtx *ExecutionContext,
+) map[string]interface{} {
+	ctx := buildInterpolationContext(execCtx)
+
+	// Add loop variables
+	ctx[config.ItemVariable] = item.Value
+	if config.IndexVariable != "" {
+		ctx[config.IndexVariable] = index
+	}
+	if config.KeyVariable != "" && item.Key != nil {
+		ctx[config.KeyVariable] = item.Key
+	}
+
+	// Also add them to a "loop" namespace for convenience
+	ctx["loop"] = map[string]interface{}{
+		"index": index,
+		"item":  item.Value,
+		"key":   item.Key,
+	}
+
+	return ctx
+}
+
+// executeIterationWithContext executes a single loop iteration with enhanced context
+func (le *loopExecutor) executeIterationWithContext(
+	ctx context.Context,
+	item loopItem,
+	isFirst bool,
+	isLast bool,
+	totalItems int,
 	config workflow.LoopActionConfig,
 	execCtx *ExecutionContext,
 	bodyNodes []workflow.Node,
 	bodyEdges []workflow.Edge,
 ) (*IterationResult, error) {
 	// Create iteration-specific execution context
-	iterationCtx := le.createIterationContext(index, item, config, execCtx)
+	iterationCtx := le.createIterationContextWithKey(item, totalItems, isFirst, isLast, config, execCtx)
 
-	// Execute body nodes for this iteration
-	outputs, err := le.executeBodyNodes(ctx, bodyNodes, bodyEdges, iterationCtx)
+	// Execute body nodes for this iteration with tracing
+	var outputs map[string]interface{}
+	_, err := tracing.TraceLoopIteration(ctx, item.Index, config.ItemVariable, func(tracedCtx context.Context) (interface{}, error) {
+		var innerErr error
+		outputs, innerErr = le.executeBodyNodes(tracedCtx, bodyNodes, bodyEdges, iterationCtx)
+		return outputs, innerErr
+	})
 
 	result := &IterationResult{
-		Index:  index,
-		Item:   item,
-		Output: outputs,
+		Index:   item.Index,
+		Item:    item.Value,
+		Key:     item.Key,
+		Output:  outputs,
+		IsFirst: isFirst,
+		IsLast:  isLast,
 	}
 
 	if err != nil {
@@ -183,10 +413,12 @@ func (le *loopExecutor) executeIteration(
 	return result, nil
 }
 
-// createIterationContext creates an execution context for a single iteration
-func (le *loopExecutor) createIterationContext(
-	index int,
-	item interface{},
+// createIterationContextWithKey creates an execution context for a single iteration with key support
+func (le *loopExecutor) createIterationContextWithKey(
+	item loopItem,
+	totalItems int,
+	isFirst bool,
+	isLast bool,
 	config workflow.LoopActionConfig,
 	parentCtx *ExecutionContext,
 ) *ExecutionContext {
@@ -197,9 +429,22 @@ func (le *loopExecutor) createIterationContext(
 	}
 
 	// Add loop variables to the context
-	stepOutputs[config.ItemVariable] = item
+	stepOutputs[config.ItemVariable] = item.Value
 	if config.IndexVariable != "" {
-		stepOutputs[config.IndexVariable] = index
+		stepOutputs[config.IndexVariable] = item.Index
+	}
+	if config.KeyVariable != "" && item.Key != nil {
+		stepOutputs[config.KeyVariable] = item.Key
+	}
+
+	// Add enhanced loop context variables
+	stepOutputs["_loop"] = map[string]interface{}{
+		"index":       item.Index,
+		"item":        item.Value,
+		"key":         item.Key,
+		"total_items": totalItems,
+		"is_first":    isFirst,
+		"is_last":     isLast,
 	}
 
 	return &ExecutionContext{
@@ -209,6 +454,81 @@ func (le *loopExecutor) createIterationContext(
 		TriggerData: parentCtx.TriggerData,
 		StepOutputs: stepOutputs,
 	}
+}
+
+// compareNumeric compares two values numerically using the provided comparison function
+func compareNumeric(left, right interface{}, cmp func(a, b float64) bool) (bool, error) {
+	leftNum, err := toFloat64Value(left)
+	if err != nil {
+		return false, fmt.Errorf("left operand: %w", err)
+	}
+	rightNum, err := toFloat64Value(right)
+	if err != nil {
+		return false, fmt.Errorf("right operand: %w", err)
+	}
+	return cmp(leftNum, rightNum), nil
+}
+
+// toFloat64Value converts a value to float64
+func toFloat64Value(v interface{}) (float64, error) {
+	switch val := v.(type) {
+	case float64:
+		return val, nil
+	case float32:
+		return float64(val), nil
+	case int:
+		return float64(val), nil
+	case int8:
+		return float64(val), nil
+	case int16:
+		return float64(val), nil
+	case int32:
+		return float64(val), nil
+	case int64:
+		return float64(val), nil
+	case uint:
+		return float64(val), nil
+	case uint8:
+		return float64(val), nil
+	case uint16:
+		return float64(val), nil
+	case uint32:
+		return float64(val), nil
+	case uint64:
+		return float64(val), nil
+	default:
+		return 0, fmt.Errorf("cannot convert %T to number", v)
+	}
+}
+
+// containsString checks if left contains right (as strings)
+func containsString(left, right interface{}) (bool, error) {
+	leftStr, ok := left.(string)
+	if !ok {
+		return false, fmt.Errorf("contains operator requires string, got %T", left)
+	}
+	rightStr := fmt.Sprintf("%v", right)
+	return strings.Contains(leftStr, rightStr), nil
+}
+
+// startsWithString checks if left starts with right
+func startsWithString(left, right interface{}) (bool, error) {
+	leftStr, ok := left.(string)
+	if !ok {
+		return false, fmt.Errorf("starts_with operator requires string, got %T", left)
+	}
+	rightStr := fmt.Sprintf("%v", right)
+	return strings.HasPrefix(leftStr, rightStr), nil
+}
+
+// endsWithString checks if left ends with right
+func endsWithString(left, right interface{}) (bool, error) {
+	leftStr, ok := left.(string)
+	if !ok {
+		return false, fmt.Errorf("ends_with operator requires string, got %T", left)
+	}
+	rightStr := fmt.Sprintf("%v", right)
+	return strings.HasSuffix(leftStr, rightStr), nil
 }
 
 // executeBodyNodes executes all nodes in the loop body
@@ -282,9 +602,7 @@ func (e *Executor) executeLoopAction(
 	bodyNodes, bodyEdges := e.findLoopBody(node.ID, definition)
 
 	// Create loop executor with reference to main executor
-	loopExec := &loopExecutor{
-		mainExecutor: e,
-	}
+	loopExec := newLoopExecutor(e)
 
 	// Execute the loop
 	result, err := loopExec.executeLoop(ctx, config, execCtx, bodyNodes, bodyEdges)

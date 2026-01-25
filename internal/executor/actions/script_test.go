@@ -3,12 +3,17 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorax/gorax/internal/executor/javascript"
 )
 
 func TestScriptAction_Execute_BasicScript(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
+
 	config := ScriptActionConfig{
 		Script:  "return 42;",
 		Timeout: 30,
@@ -37,7 +42,9 @@ func TestScriptAction_Execute_BasicScript(t *testing.T) {
 }
 
 func TestScriptAction_Execute_StringReturn(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
+
 	config := ScriptActionConfig{
 		Script:  `return "Hello, World!";`,
 		Timeout: 30,
@@ -57,7 +64,8 @@ func TestScriptAction_Execute_StringReturn(t *testing.T) {
 }
 
 func TestScriptAction_Execute_ObjectReturn(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			var obj = {
@@ -97,7 +105,8 @@ func TestScriptAction_Execute_ObjectReturn(t *testing.T) {
 }
 
 func TestScriptAction_Execute_ArrayReturn(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			return [1, 2, 3, 4, 5];
@@ -129,7 +138,8 @@ func TestScriptAction_Execute_ArrayReturn(t *testing.T) {
 }
 
 func TestScriptAction_Execute_WithContextAccess(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Access trigger data
@@ -187,7 +197,8 @@ func TestScriptAction_Execute_WithContextAccess(t *testing.T) {
 }
 
 func TestScriptAction_Execute_WithEnvAccess(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			return {
@@ -234,7 +245,8 @@ func TestScriptAction_Execute_WithEnvAccess(t *testing.T) {
 }
 
 func TestScriptAction_Execute_ComplexLogic(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Calculate sum of array
@@ -299,7 +311,8 @@ func TestScriptAction_Execute_ComplexLogic(t *testing.T) {
 }
 
 func TestScriptAction_Execute_Timeout(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Infinite loop to trigger timeout
@@ -327,7 +340,8 @@ func TestScriptAction_Execute_Timeout(t *testing.T) {
 }
 
 func TestScriptAction_Execute_ContextTimeout(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Script that takes longer than context timeout
@@ -353,7 +367,8 @@ func TestScriptAction_Execute_ContextTimeout(t *testing.T) {
 }
 
 func TestScriptAction_Execute_SyntaxError(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			return {
@@ -372,7 +387,8 @@ func TestScriptAction_Execute_SyntaxError(t *testing.T) {
 }
 
 func TestScriptAction_Execute_RuntimeError(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Try to access undefined variable
@@ -390,7 +406,8 @@ func TestScriptAction_Execute_RuntimeError(t *testing.T) {
 }
 
 func TestScriptAction_Execute_NoReturn(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Script with no return statement
@@ -416,7 +433,8 @@ func TestScriptAction_Execute_NoReturn(t *testing.T) {
 }
 
 func TestScriptAction_Execute_MissingScript(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script:  "",
 		Timeout: 30,
@@ -431,7 +449,8 @@ func TestScriptAction_Execute_MissingScript(t *testing.T) {
 }
 
 func TestScriptAction_Execute_DefaultTimeout(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script:  "return 42;",
 		Timeout: 0, // Should use default timeout
@@ -451,7 +470,8 @@ func TestScriptAction_Execute_DefaultTimeout(t *testing.T) {
 }
 
 func TestScriptAction_Execute_JSONFunctions(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			var data = {
@@ -502,7 +522,8 @@ func TestScriptAction_Execute_JSONFunctions(t *testing.T) {
 }
 
 func TestScriptAction_Execute_MathOperations(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			return {
@@ -558,7 +579,8 @@ func TestScriptAction_Execute_MathOperations(t *testing.T) {
 }
 
 func TestScriptAction_Execute_InvalidConfig(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 
 	// Pass invalid config type
 	input := NewActionInput("invalid", nil)
@@ -570,7 +592,8 @@ func TestScriptAction_Execute_InvalidConfig(t *testing.T) {
 }
 
 func TestScriptAction_Execute_WithMetadata(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script:  "return 42;",
 		Timeout: 30,
@@ -595,7 +618,8 @@ func TestScriptAction_Execute_WithMetadata(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkScriptAction_Execute_Simple(b *testing.B) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script:  "return 42;",
 		Timeout: 30,
@@ -613,7 +637,8 @@ func BenchmarkScriptAction_Execute_Simple(b *testing.B) {
 }
 
 func BenchmarkScriptAction_Execute_WithContext(b *testing.B) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			var sum = 0;
@@ -645,7 +670,8 @@ func BenchmarkScriptAction_Execute_WithContext(b *testing.B) {
 
 // Test security: script should not have access to file system
 func TestScriptAction_Execute_NoFileSystemAccess(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Try to access file system (should fail in sandbox)
@@ -666,7 +692,8 @@ func TestScriptAction_Execute_NoFileSystemAccess(t *testing.T) {
 
 // Test security: script should not have access to network
 func TestScriptAction_Execute_NoNetworkAccess(t *testing.T) {
-	action := &ScriptAction{}
+	action := NewScriptAction()
+	defer action.Close()
 	config := ScriptActionConfig{
 		Script: `
 			// Try to access network (should fail in sandbox)
@@ -710,5 +737,304 @@ func TestScriptActionConfigFromJSON(t *testing.T) {
 
 	if config.MemoryLimit != 128 {
 		t.Errorf("MemoryLimit = %d, want 128", config.MemoryLimit)
+	}
+}
+
+// Additional security tests for sandbox restrictions
+
+func TestScriptAction_Execute_NoEval(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `eval("return 1")`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because eval is blocked
+	if err == nil {
+		t.Error("Expected error for eval access, got nil")
+	}
+
+	if err != nil && !strings.Contains(err.Error(), "forbidden") {
+		// The sandbox should block eval via validation
+		t.Logf("Error message: %v", err)
+	}
+}
+
+func TestScriptAction_Execute_NoNewFunction(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `new Function("return 1")()`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because new Function is blocked
+	if err == nil {
+		t.Error("Expected error for new Function access, got nil")
+	}
+}
+
+func TestScriptAction_Execute_NoProcess(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `return process.env`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because process is not available
+	if err == nil {
+		t.Error("Expected error for process access, got nil")
+	}
+}
+
+func TestScriptAction_Execute_NoGlobal(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `return global.setTimeout`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because global is not available
+	if err == nil {
+		t.Error("Expected error for global access, got nil")
+	}
+}
+
+func TestScriptAction_Execute_NoGlobalThis(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `return globalThis.setTimeout`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because globalThis is blocked
+	if err == nil {
+		t.Error("Expected error for globalThis access, got nil")
+	}
+}
+
+func TestScriptAction_Execute_NoProtoAccess(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  `var obj = {}; return obj.__proto__`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail because __proto__ access is blocked via script validation
+	if err == nil {
+		t.Error("Expected error for __proto__ access, got nil")
+	}
+}
+
+func TestScriptAction_Execute_StackOverflowProtection(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script: `
+			function recurse(n) {
+				return recurse(n + 1);
+			}
+			return recurse(0);
+		`,
+		Timeout: 5,
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	// Should fail due to stack overflow protection
+	if err == nil {
+		t.Error("Expected error for stack overflow, got nil")
+	}
+}
+
+func TestScriptAction_Execute_ConsoleLogging(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script: `
+			console.log("Hello from script");
+			console.warn("Warning message");
+			console.error("Error message");
+			return 42;
+		`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	output, err := action.Execute(context.Background(), input)
+
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	result := output.Data.(*ScriptActionResult)
+
+	// Check that console logs were captured
+	if len(result.ConsoleLogs) != 3 {
+		t.Errorf("Expected 3 console logs, got %d", len(result.ConsoleLogs))
+	}
+
+	// Check log levels
+	if len(result.ConsoleLogs) >= 1 && result.ConsoleLogs[0].Level != "info" {
+		t.Errorf("Expected first log level 'info', got '%s'", result.ConsoleLogs[0].Level)
+	}
+
+	if len(result.ConsoleLogs) >= 2 && result.ConsoleLogs[1].Level != "warn" {
+		t.Errorf("Expected second log level 'warn', got '%s'", result.ConsoleLogs[1].Level)
+	}
+
+	if len(result.ConsoleLogs) >= 3 && result.ConsoleLogs[2].Level != "error" {
+		t.Errorf("Expected third log level 'error', got '%s'", result.ConsoleLogs[2].Level)
+	}
+}
+
+func TestScriptAction_Execute_ExecutionMetadata(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	execContext := map[string]interface{}{
+		"env": map[string]interface{}{
+			"tenant_id":    "tenant-123",
+			"workflow_id":  "wf-456",
+			"node_id":      "node-789",
+			"execution_id": "exec-abc",
+		},
+	}
+
+	config := ScriptActionConfig{
+		Script:  "return 42;",
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, execContext)
+	output, err := action.Execute(context.Background(), input)
+
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	// Check metadata
+	if output.Metadata["execution_id"] != "exec-abc" {
+		t.Errorf("Expected execution_id 'exec-abc', got '%v'", output.Metadata["execution_id"])
+	}
+
+	if _, exists := output.Metadata["execution_time_ms"]; !exists {
+		t.Error("Expected execution_time_ms in metadata")
+	}
+
+	if _, exists := output.Metadata["console_log_count"]; !exists {
+		t.Error("Expected console_log_count in metadata")
+	}
+}
+
+func TestScriptAction_Execute_TimeoutError(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script: `
+			while (true) {
+				// Infinite loop
+			}
+		`,
+		Timeout: 1, // 1 second
+	}
+
+	input := NewActionInput(config, nil)
+	_, err := action.Execute(context.Background(), input)
+
+	if err == nil {
+		t.Error("Expected timeout error, got nil")
+	}
+
+	if err != nil && !javascript.IsTimeout(err) && !strings.Contains(err.Error(), "timeout") {
+		t.Errorf("Expected timeout error, got: %v", err)
+	}
+}
+
+func TestScriptAction_Execute_CtxAlias(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	execContext := map[string]interface{}{
+		"trigger": map[string]interface{}{
+			"value": 42,
+		},
+	}
+
+	config := ScriptActionConfig{
+		Script: `
+			// Test that ctx is available as alias for context
+			return ctx.trigger.value;
+		`,
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, execContext)
+	output, err := action.Execute(context.Background(), input)
+
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	result := output.Data.(*ScriptActionResult)
+	if val, ok := result.Result.(int64); !ok || val != 42 {
+		t.Errorf("Result = %v (%T), want 42", result.Result, result.Result)
+	}
+}
+
+func TestScriptAction_Execute_DurationTracking(t *testing.T) {
+	action := NewScriptAction()
+	defer action.Close()
+
+	config := ScriptActionConfig{
+		Script:  "return 42;",
+		Timeout: 30,
+	}
+
+	input := NewActionInput(config, nil)
+	output, err := action.Execute(context.Background(), input)
+
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	result := output.Data.(*ScriptActionResult)
+
+	// Duration should be positive and non-zero
+	if result.Duration <= 0 {
+		t.Errorf("Expected positive duration, got %v", result.Duration)
 	}
 }

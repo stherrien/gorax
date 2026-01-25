@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,16 +36,22 @@ func (r *Repository) Create(ctx context.Context, tenantID, workflowID, createdBy
 		timezone = "UTC"
 	}
 
+	// Default overlap policy to skip if not provided
+	overlapPolicy := input.OverlapPolicy
+	if overlapPolicy == "" {
+		overlapPolicy = OverlapPolicySkip
+	}
+
 	query := `
-		INSERT INTO schedules (id, tenant_id, workflow_id, name, cron_expression, timezone, enabled, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO schedules (id, tenant_id, workflow_id, name, cron_expression, timezone, overlap_policy, enabled, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING *
 	`
 
 	var schedule Schedule
 	err := r.db.QueryRowxContext(
 		ctx, query,
-		id, tenantID, workflowID, input.Name, input.CronExpression, timezone, input.Enabled, createdBy, now, now,
+		id, tenantID, workflowID, input.Name, input.CronExpression, timezone, overlapPolicy, input.Enabled, createdBy, now, now,
 	).StructScan(&schedule)
 
 	if err != nil {
@@ -93,8 +100,9 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input Upda
 		SET name = COALESCE($3, name),
 		    cron_expression = COALESCE($4, cron_expression),
 		    timezone = COALESCE($5, timezone),
-		    enabled = COALESCE($6, enabled),
-		    updated_at = $7
+		    overlap_policy = COALESCE($6, overlap_policy),
+		    enabled = COALESCE($7, enabled),
+		    updated_at = $8
 		WHERE id = $1 AND tenant_id = $2
 		RETURNING *
 	`
@@ -102,7 +110,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input Upda
 	var schedule Schedule
 	err := r.db.QueryRowxContext(
 		ctx, query,
-		id, tenantID, input.Name, input.CronExpression, input.Timezone, input.Enabled, time.Now(),
+		id, tenantID, input.Name, input.CronExpression, input.Timezone, input.OverlapPolicy, input.Enabled, time.Now(),
 	).StructScan(&schedule)
 
 	if err != nil {
@@ -248,4 +256,216 @@ func (r *Repository) CountAll(ctx context.Context, tenantID string) (int, error)
 	}
 
 	return count, nil
+}
+
+// SetRunningExecution marks a schedule as having a running execution
+func (r *Repository) SetRunningExecution(ctx context.Context, scheduleID, executionID string) error {
+	query := `
+		UPDATE schedules
+		SET running_execution_id = $2,
+		    updated_at = $3
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, scheduleID, executionID, time.Now())
+	return err
+}
+
+// ClearRunningExecution clears the running execution for a schedule
+func (r *Repository) ClearRunningExecution(ctx context.Context, scheduleID string) error {
+	query := `
+		UPDATE schedules
+		SET running_execution_id = NULL,
+		    updated_at = $2
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, scheduleID, time.Now())
+	return err
+}
+
+// HasRunningExecution checks if a schedule has a running execution
+func (r *Repository) HasRunningExecution(ctx context.Context, scheduleID string) (bool, *string, error) {
+	query := `SELECT running_execution_id FROM schedules WHERE id = $1`
+
+	var runningID *string
+	err := r.db.GetContext(ctx, &runningID, query, scheduleID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil, ErrNotFound
+		}
+		return false, nil, err
+	}
+
+	return runningID != nil, runningID, nil
+}
+
+// CreateExecutionLog creates a new execution log entry
+func (r *Repository) CreateExecutionLog(ctx context.Context, tenantID, scheduleID string, triggerTime time.Time) (*ExecutionLog, error) {
+	id := uuid.New().String()
+	now := time.Now()
+
+	query := `
+		INSERT INTO schedule_execution_logs (id, tenant_id, schedule_id, status, trigger_time, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING *
+	`
+
+	var log ExecutionLog
+	err := r.db.QueryRowxContext(
+		ctx, query,
+		id, tenantID, scheduleID, ExecutionLogStatusPending, triggerTime, now, now,
+	).StructScan(&log)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &log, nil
+}
+
+// UpdateExecutionLogStarted marks an execution log as started
+func (r *Repository) UpdateExecutionLogStarted(ctx context.Context, logID, executionID string) error {
+	now := time.Now()
+	query := `
+		UPDATE schedule_execution_logs
+		SET status = $2,
+		    execution_id = $3,
+		    started_at = $4,
+		    updated_at = $5
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, logID, ExecutionLogStatusRunning, executionID, now, now)
+	return err
+}
+
+// UpdateExecutionLogCompleted marks an execution log as completed
+func (r *Repository) UpdateExecutionLogCompleted(ctx context.Context, logID string) error {
+	now := time.Now()
+	query := `
+		UPDATE schedule_execution_logs
+		SET status = $2,
+		    completed_at = $3,
+		    updated_at = $4
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, logID, ExecutionLogStatusCompleted, now, now)
+	return err
+}
+
+// UpdateExecutionLogFailed marks an execution log as failed
+func (r *Repository) UpdateExecutionLogFailed(ctx context.Context, logID string, errorMsg string) error {
+	now := time.Now()
+	query := `
+		UPDATE schedule_execution_logs
+		SET status = $2,
+		    error_message = $3,
+		    completed_at = $4,
+		    updated_at = $5
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, logID, ExecutionLogStatusFailed, errorMsg, now, now)
+	return err
+}
+
+// UpdateExecutionLogSkipped marks an execution log as skipped
+func (r *Repository) UpdateExecutionLogSkipped(ctx context.Context, logID string, reason string) error {
+	now := time.Now()
+	query := `
+		UPDATE schedule_execution_logs
+		SET status = $2,
+		    skipped_reason = $3,
+		    completed_at = $4,
+		    updated_at = $5
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, logID, ExecutionLogStatusSkipped, reason, now, now)
+	return err
+}
+
+// UpdateExecutionLogTerminated marks an execution log as terminated
+func (r *Repository) UpdateExecutionLogTerminated(ctx context.Context, logID string) error {
+	now := time.Now()
+	query := `
+		UPDATE schedule_execution_logs
+		SET status = $2,
+		    completed_at = $3,
+		    updated_at = $4
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, logID, ExecutionLogStatusTerminated, now, now)
+	return err
+}
+
+// GetExecutionLog retrieves an execution log by ID
+func (r *Repository) GetExecutionLog(ctx context.Context, tenantID, logID string) (*ExecutionLog, error) {
+	query := `SELECT * FROM schedule_execution_logs WHERE id = $1 AND tenant_id = $2`
+
+	var log ExecutionLog
+	err := r.db.GetContext(ctx, &log, query, logID, tenantID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return &log, nil
+}
+
+// ListExecutionLogs retrieves execution logs for a schedule
+func (r *Repository) ListExecutionLogs(ctx context.Context, tenantID string, params ExecutionLogListParams) ([]*ExecutionLog, error) {
+	query := `
+		SELECT * FROM schedule_execution_logs
+		WHERE tenant_id = $1 AND schedule_id = $2
+	`
+	args := []interface{}{tenantID, params.ScheduleID}
+
+	if params.Status != nil {
+		query += ` AND status = $3`
+		args = append(args, *params.Status)
+	}
+
+	query += ` ORDER BY trigger_time DESC LIMIT $` + fmt.Sprintf("%d", len(args)+1) + ` OFFSET $` + fmt.Sprintf("%d", len(args)+2)
+	args = append(args, params.Limit, params.Offset)
+
+	var logs []*ExecutionLog
+	err := r.db.SelectContext(ctx, &logs, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return logs, nil
+}
+
+// CountExecutionLogs returns the count of execution logs for a schedule
+func (r *Repository) CountExecutionLogs(ctx context.Context, tenantID, scheduleID string) (int, error) {
+	query := `SELECT COUNT(*) FROM schedule_execution_logs WHERE tenant_id = $1 AND schedule_id = $2`
+
+	var count int
+	err := r.db.GetContext(ctx, &count, query, tenantID, scheduleID)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// GetRunningExecutionLogBySchedule retrieves the current running execution log for a schedule
+func (r *Repository) GetRunningExecutionLogBySchedule(ctx context.Context, scheduleID string) (*ExecutionLog, error) {
+	query := `
+		SELECT * FROM schedule_execution_logs
+		WHERE schedule_id = $1 AND status = $2
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+
+	var log ExecutionLog
+	err := r.db.GetContext(ctx, &log, query, scheduleID, ExecutionLogStatusRunning)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &log, nil
 }

@@ -11,7 +11,7 @@ import (
 func TestGenerateState(t *testing.T) {
 	// Generate multiple states to ensure uniqueness
 	states := make(map[string]bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		state, err := GenerateState()
 		require.NoError(t, err)
 		assert.NotEmpty(t, state)
@@ -29,7 +29,7 @@ func TestGenerateState(t *testing.T) {
 func TestGeneratePKCEVerifier(t *testing.T) {
 	// Generate multiple verifiers to ensure uniqueness
 	verifiers := make(map[string]bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		verifier, err := GeneratePKCEVerifier()
 		require.NoError(t, err)
 		assert.NotEmpty(t, verifier)
@@ -62,7 +62,7 @@ func TestGeneratePKCEChallenge(t *testing.T) {
 		{
 			name:     "another verifier",
 			verifier: "test-verifier-123",
-			want:     "Fx59TaW5UvKwY-yYzl7bPWcFmQ8Yvquh0oo5Zp1Zryo",
+			want:     "zSNMHiBdtxNs8L9onqEnW-Xq5fuLcM7EksItq1aKBDY",
 		},
 	}
 

@@ -33,7 +33,60 @@ const (
 	EventTypeImport           EventType = "import"
 	EventTypeAccess           EventType = "access"
 	EventTypeConfigure        EventType = "configure"
+	EventTypePause            EventType = "pause"
+	EventTypeResume           EventType = "resume"
+	EventTypeStart            EventType = "start"
+	EventTypeComplete         EventType = "complete"
+	EventTypeFailed           EventType = "failed"
+	EventTypeGrant            EventType = "grant"
+	EventTypeRevoke           EventType = "revoke"
+	EventTypeEscalate         EventType = "escalate"
+	EventTypeAutoApprove      EventType = "auto_approve"
+	EventTypeAutoReject       EventType = "auto_reject"
+	EventTypeTimeout          EventType = "timeout"
 )
+
+// String returns the string representation of the EventType
+func (et EventType) String() string {
+	return string(et)
+}
+
+// Valid returns true if the EventType is a known valid type
+func (et EventType) Valid() bool {
+	switch et {
+	case EventTypeCreate, EventTypeRead, EventTypeUpdate, EventTypeDelete,
+		EventTypeExecute, EventTypeLogin, EventTypeLogout, EventTypePermissionChange,
+		EventTypeExport, EventTypeImport, EventTypeAccess, EventTypeConfigure,
+		EventTypePause, EventTypeResume, EventTypeStart, EventTypeComplete,
+		EventTypeFailed, EventTypeGrant, EventTypeRevoke, EventTypeEscalate,
+		EventTypeAutoApprove, EventTypeAutoReject, EventTypeTimeout:
+		return true
+	}
+	return false
+}
+
+// ResourceType represents the type of resource being audited
+type ResourceType string
+
+const (
+	ResourceTypeWorkflow    ResourceType = "workflow"
+	ResourceTypeExecution   ResourceType = "execution"
+	ResourceTypeCredential  ResourceType = "credential"
+	ResourceTypeUser        ResourceType = "user"
+	ResourceTypeRole        ResourceType = "role"
+	ResourceTypeIntegration ResourceType = "integration"
+	ResourceTypeTenant      ResourceType = "tenant"
+	ResourceTypeWebhook     ResourceType = "webhook"
+	ResourceTypeSchedule    ResourceType = "schedule"
+	ResourceTypeTemplate    ResourceType = "template"
+	ResourceTypeHumanTask   ResourceType = "human_task"
+	ResourceTypeEscalation  ResourceType = "escalation"
+)
+
+// String returns the string representation of the ResourceType
+func (rt ResourceType) String() string {
+	return string(rt)
+}
 
 // Severity represents the severity level of an audit event
 type Severity string
@@ -60,6 +113,9 @@ type AuditEvent struct {
 	TenantID     string                 `db:"tenant_id" json:"tenantId"`
 	UserID       string                 `db:"user_id" json:"userId"`
 	UserEmail    string                 `db:"user_email" json:"userEmail"`
+	SessionID    string                 `db:"session_id" json:"sessionId,omitempty"`
+	WorkflowID   *string                `db:"workflow_id" json:"workflowId,omitempty"`
+	ExecutionID  *string                `db:"execution_id" json:"executionId,omitempty"`
 	Category     Category               `db:"category" json:"category"`
 	EventType    EventType              `db:"event_type" json:"eventType"`
 	Action       string                 `db:"action" json:"action"`
@@ -71,6 +127,9 @@ type AuditEvent struct {
 	Severity     Severity               `db:"severity" json:"severity"`
 	Status       Status                 `db:"status" json:"status"`
 	ErrorMessage string                 `db:"error_message" json:"errorMessage,omitempty"`
+	OldValues    map[string]interface{} `db:"old_values" json:"oldValues,omitempty"`
+	NewValues    map[string]interface{} `db:"new_values" json:"newValues,omitempty"`
+	Details      map[string]interface{} `db:"details" json:"details,omitempty"`
 	Metadata     map[string]interface{} `db:"metadata" json:"metadata"`
 	CreatedAt    time.Time              `db:"created_at" json:"createdAt"`
 }

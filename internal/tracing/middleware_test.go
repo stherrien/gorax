@@ -7,20 +7,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/gorax/gorax/internal/config"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestHTTPMiddleware_Disabled(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled: false,
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
-	defer cleanup()
+	// Reset global tracer to NoOp
+	otel.SetTracerProvider(noop.NewTracerProvider())
 
 	// Create test handler
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,15 +37,7 @@ func TestHTTPMiddleware_Disabled(t *testing.T) {
 }
 
 func TestHTTPMiddleware_Enabled(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled:     true,
-		TracingEndpoint:    "localhost:4317",
-		TracingSampleRate:  1.0,
-		TracingServiceName: "gorax-test",
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
+	_, _, cleanup := setupTestTracerProvider()
 	defer cleanup()
 
 	// Create test handler
@@ -73,16 +60,14 @@ func TestHTTPMiddleware_Enabled(t *testing.T) {
 }
 
 func TestHTTPMiddleware_PropagatesContext(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled:     true,
-		TracingEndpoint:    "localhost:4317",
-		TracingSampleRate:  1.0,
-		TracingServiceName: "gorax-test",
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
+	_, _, cleanup := setupTestTracerProvider()
 	defer cleanup()
+
+	// Set up propagator for trace context
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	// Create parent span
 	parentCtx, parentSpan := StartSpan(context.Background(), "parent")
@@ -118,21 +103,13 @@ func TestHTTPMiddleware_PropagatesContext(t *testing.T) {
 }
 
 func TestHTTPMiddleware_SetsAttributes(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled:     true,
-		TracingEndpoint:    "localhost:4317",
-		TracingSampleRate:  1.0,
-		TracingServiceName: "gorax-test",
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
+	_, _, cleanup := setupTestTracerProvider()
 	defer cleanup()
 
 	// Create test handler
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test response"))
+		_, _ = w.Write([]byte("test response"))
 	})
 
 	// Wrap with tracing middleware
@@ -149,21 +126,13 @@ func TestHTTPMiddleware_SetsAttributes(t *testing.T) {
 }
 
 func TestHTTPMiddleware_HandlesErrors(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled:     true,
-		TracingEndpoint:    "localhost:4317",
-		TracingSampleRate:  1.0,
-		TracingServiceName: "gorax-test",
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
+	_, _, cleanup := setupTestTracerProvider()
 	defer cleanup()
 
 	// Create test handler that returns an error
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("internal error"))
+		_, _ = w.Write([]byte("internal error"))
 	})
 
 	// Wrap with tracing middleware
@@ -179,15 +148,7 @@ func TestHTTPMiddleware_HandlesErrors(t *testing.T) {
 }
 
 func TestHTTPMiddleware_MultipleRequests(t *testing.T) {
-	cfg := &config.ObservabilityConfig{
-		TracingEnabled:     true,
-		TracingEndpoint:    "localhost:4317",
-		TracingSampleRate:  1.0,
-		TracingServiceName: "gorax-test",
-	}
-
-	cleanup, err := InitGlobalTracer(context.Background(), cfg)
-	require.NoError(t, err)
+	_, _, cleanup := setupTestTracerProvider()
 	defer cleanup()
 
 	// Track trace IDs
@@ -205,7 +166,7 @@ func TestHTTPMiddleware_MultipleRequests(t *testing.T) {
 	wrappedHandler := middleware(handler)
 
 	// Make multiple requests
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		req := httptest.NewRequest("GET", "/test", nil)
 		w := httptest.NewRecorder()
 		wrappedHandler.ServeHTTP(w, req)

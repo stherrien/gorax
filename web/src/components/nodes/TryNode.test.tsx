@@ -61,7 +61,9 @@ describe('TryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Try Nodes: 2/)).toBeInTheDocument()
+    // Text is split across elements, use container query
+    const tryNodesLabel = screen.getByText(/Try Nodes:/)
+    expect(tryNodesLabel.closest('div')).toHaveTextContent('2')
   })
 
   it('displays catch nodes count when expanded', () => {
@@ -69,7 +71,8 @@ describe('TryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Catch Nodes: 1/)).toBeInTheDocument()
+    const catchNodesLabel = screen.getByText(/Catch Nodes:/)
+    expect(catchNodesLabel.closest('div')).toHaveTextContent('1')
   })
 
   it('displays finally nodes count when expanded', () => {
@@ -77,7 +80,8 @@ describe('TryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Finally Nodes: 1/)).toBeInTheDocument()
+    const finallyNodesLabel = screen.getByText(/Finally Nodes:/)
+    expect(finallyNodesLabel.closest('div')).toHaveTextContent('1')
   })
 
   it('displays error binding when configured', () => {
@@ -85,7 +89,8 @@ describe('TryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Error Var: error/)).toBeInTheDocument()
+    const errorVarLabel = screen.getByText(/Error Var:/)
+    expect(errorVarLabel.closest('div')).toHaveTextContent('error')
   })
 
   it('displays retry config when configured', () => {
@@ -105,7 +110,9 @@ describe('TryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Retry: exponential \(max: 3\)/)).toBeInTheDocument()
+    const retryLabel = screen.getByText(/Retry:/)
+    expect(retryLabel.closest('div')).toHaveTextContent('exponential')
+    expect(retryLabel.closest('div')).toHaveTextContent('max: 3')
   })
 
   it('does not show catch section when no catch nodes', () => {

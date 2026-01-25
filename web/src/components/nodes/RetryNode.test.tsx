@@ -124,7 +124,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Max Delay: 30.0s/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Max Delay:</strong> 30.0s
+    const maxDelayLabel = screen.getByText(/Max Delay:/)
+    expect(maxDelayLabel.closest('div')).toHaveTextContent('30.0s')
   })
 
   it('displays multiplier when configured', () => {
@@ -132,7 +134,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Multiplier: 2x/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Multiplier:</strong> 2x
+    const multiplierLabel = screen.getByText(/Multiplier:/)
+    expect(multiplierLabel.closest('div')).toHaveTextContent('2x')
   })
 
   it('displays jitter when enabled', () => {
@@ -145,7 +149,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Jitter: Enabled/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Jitter:</strong> Enabled
+    const jitterLabel = screen.getByText(/Jitter:/)
+    expect(jitterLabel.closest('div')).toHaveTextContent('Enabled')
   })
 
   it('displays retryable errors when configured', () => {
@@ -161,7 +167,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Retry On: timeout, connection/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Retry On:</strong> timeout, connection
+    const retryOnLabel = screen.getByText(/Retry On:/)
+    expect(retryOnLabel.closest('div')).toHaveTextContent('timeout, connection')
   })
 
   it('displays non-retryable errors when configured', () => {
@@ -177,7 +185,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Don't Retry: invalid, forbidden/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Don't Retry:</strong> invalid, forbidden
+    const dontRetryLabel = screen.getByText(/Don't Retry:/)
+    expect(dontRetryLabel.closest('div')).toHaveTextContent('invalid, forbidden')
   })
 
   it('displays retryable status codes when configured', () => {
@@ -193,7 +203,9 @@ describe('RetryNode', () => {
 
     fireEvent.click(screen.getByText('▶'))
 
-    expect(screen.getByText(/Status Codes: 408, 429, 500, 502, 503, 504/)).toBeInTheDocument()
+    // Text is split across elements: <strong>Status Codes:</strong> 408, 429, 500, 502, 503, 504
+    const statusCodesLabel = screen.getByText(/Status Codes:/)
+    expect(statusCodesLabel.closest('div')).toHaveTextContent('408, 429, 500, 502, 503, 504')
   })
 
   it('shows success and failed branch indicators', () => {

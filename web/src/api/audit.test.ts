@@ -9,6 +9,7 @@ import {
   ExportFormat,
 } from '../types/audit'
 
+import { createQueryWrapper } from "../test/test-utils"
 vi.mock('./client', () => ({
   apiClient: {
     get: vi.fn(),
@@ -55,7 +56,7 @@ describe('auditAPI', () => {
         offset: 10,
       })
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/audit/events', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/admin/audit/events', {
         params: expect.objectContaining({
           user_id: 'user1',
           categories: 'authentication',
@@ -76,7 +77,7 @@ describe('auditAPI', () => {
 
       const result = await auditAPI.queryAuditEvents({})
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/audit/events', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/admin/audit/events', {
         params: {},
       })
 
@@ -95,7 +96,7 @@ describe('auditAPI', () => {
         statuses: [AuditStatus.Success, AuditStatus.Failure],
       })
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/audit/events', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/admin/audit/events', {
         params: {
           categories: 'authentication,authorization',
           event_types: 'login,logout',
@@ -143,7 +144,7 @@ describe('auditAPI', () => {
 
       const result = await auditAPI.getAuditEvent('event1')
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/audit/events/event1')
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/admin/audit/events/event1')
       expect(result).toEqual(mockEvent)
     })
   })
@@ -182,7 +183,7 @@ describe('auditAPI', () => {
         endDate: '2024-01-31T23:59:59Z',
       })
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/audit/stats', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/admin/audit/stats', {
         params: {
           start_date: '2024-01-01T00:00:00Z',
           end_date: '2024-01-31T23:59:59Z',

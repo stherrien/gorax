@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -301,6 +302,22 @@ func (m *MockRepository) LogAccess(ctx context.Context, log *AccessLog) error {
 }
 
 func (m *MockRepository) GetAccessLogs(ctx context.Context, credentialID string, limit, offset int) ([]*AccessLog, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) ListWithPagination(ctx context.Context, tenantID string, filter CredentialListFilter, limit, offset int) ([]*Credential, int, error) {
+	return nil, 0, nil
+}
+
+func (m *MockRepository) RotateCredential(ctx context.Context, tenantID, credentialID, userID string, newCred *Credential, reason string) (*Credential, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) GetVersions(ctx context.Context, tenantID, credentialID string) ([]*CredentialVersion, error) {
+	return nil, nil
+}
+
+func (m *MockRepository) GetExpiredCredentials(ctx context.Context, tenantID string, withinDuration time.Duration) ([]*Credential, error) {
 	return nil, nil
 }
 

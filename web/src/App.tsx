@@ -19,6 +19,9 @@ import { OAuthConnections } from './pages/OAuthConnections'
 import { OAuthCallback } from './components/oauth/OAuthCallback'
 import { SSOSettings } from './pages/admin/SSOSettings'
 import { AuditLogs } from './pages/admin/AuditLogs'
+import Monitoring from './pages/Monitoring'
+import { UserManagementPage } from './pages/admin/UserManagementPage'
+import { TenantManagementPage } from './pages/admin/TenantManagementPage'
 
 function App() {
   return (
@@ -50,9 +53,12 @@ function App() {
         <Route path="ai/builder" element={<AIWorkflowBuilder />} />
         <Route path="marketplace" element={<Marketplace />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="monitoring" element={<Monitoring />} />
         <Route path="docs" element={<Documentation />} />
 
         {/* Admin routes */}
+        <Route path="admin/users" element={<UserManagementPage />} />
+        <Route path="admin/tenants" element={<TenantManagementPage />} />
         <Route path="admin/sso" element={<SSOSettings />} />
         <Route path="admin/audit-logs" element={<AuditLogs />} />
       </Route>

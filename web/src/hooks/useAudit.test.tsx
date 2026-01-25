@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
@@ -200,20 +200,55 @@ describe('useAuditStats', () => {
 })
 
 describe('useExportAudit', () => {
+  let mockLink: { click: ReturnType<typeof vi.fn>; href: string; download: string }
+  let createElementSpy: ReturnType<typeof vi.spyOn>
+  let appendChildSpy: ReturnType<typeof vi.spyOn>
+  let removeChildSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Mock DOM methods
-    const mockLink = {
+    // Create mock link element
+    mockLink = {
       click: vi.fn(),
       href: '',
       download: '',
     }
-    vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
-    vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any)
-    vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any)
+
+    // Only mock createElement for 'a' elements, let others through
+    const originalCreateElement = document.createElement.bind(document)
+    createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        return mockLink as any
+      }
+      return originalCreateElement(tagName)
+    })
+
+    // Only mock appendChild/removeChild for our mock link
+    const originalAppendChild = document.body.appendChild.bind(document.body)
+    appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+      if (node === mockLink) {
+        return mockLink as any
+      }
+      return originalAppendChild(node)
+    })
+
+    const originalRemoveChild = document.body.removeChild.bind(document.body)
+    removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node: Node) => {
+      if (node === mockLink) {
+        return mockLink as any
+      }
+      return originalRemoveChild(node)
+    })
+
     vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:mock-url')
     vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    createElementSpy?.mockRestore()
+    appendChildSpy?.mockRestore()
+    removeChildSpy?.mockRestore()
   })
 
   it('should export audit events and trigger download', async () => {
@@ -243,12 +278,10 @@ describe('useExportAudit', () => {
     const mockBlob = new Blob(['json data'], { type: 'application/json' })
     vi.mocked(auditAPI.exportAuditEvents).mockResolvedValue(mockBlob)
 
-    const mockLink = {
-      click: vi.fn(),
-      href: '',
-      download: '',
-    }
-    vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+    // Use the shared mockLink from beforeEach
+    mockLink.click = vi.fn()
+    mockLink.href = ''
+    mockLink.download = ''
 
     const { result } = renderHook(() => useExportAudit(), {
       wrapper: createWrapper(),
@@ -274,7 +307,7 @@ describe('useAuditCategories', () => {
       'credential',
     ])
 
-    const { result } = renderHook(() => useAuditCategories())
+    const { result } = renderHook(() => useAuditCategories(), { wrapper: createWrapper() })
 
     expect(result.current.data).toContain('authentication')
     expect(result.current.data).toContain('workflow')
@@ -290,7 +323,7 @@ describe('useAuditEventTypes', () => {
       'execute',
     ])
 
-    const { result } = renderHook(() => useAuditEventTypes())
+    const { result } = renderHook(() => useAuditEventTypes(), { wrapper: createWrapper() })
 
     expect(result.current.data).toContain('create')
     expect(result.current.data).toContain('login')

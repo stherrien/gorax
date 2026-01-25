@@ -145,11 +145,27 @@ type ConditionalActionConfig struct {
 
 // LoopActionConfig represents loop (for-each) action configuration
 type LoopActionConfig struct {
-	Source        string `json:"source"`                   // JSONPath to array (e.g., ${steps.node1.output.items})
-	ItemVariable  string `json:"item_variable"`            // Variable name for current item (e.g., "item")
-	IndexVariable string `json:"index_variable,omitempty"` // Variable name for current index (e.g., "index")
-	MaxIterations int    `json:"max_iterations,omitempty"` // Safety limit (default 1000)
-	OnError       string `json:"on_error,omitempty"`       // "continue" or "stop" (default "stop")
+	Source          string           `json:"source"`                     // JSONPath to array or object (e.g., ${steps.node1.output.items})
+	ItemVariable    string           `json:"item_variable"`              // Variable name for current item (e.g., "item")
+	IndexVariable   string           `json:"index_variable,omitempty"`   // Variable name for current index (e.g., "index")
+	KeyVariable     string           `json:"key_variable,omitempty"`     // Variable name for object key when iterating objects (e.g., "key")
+	MaxIterations   int              `json:"max_iterations,omitempty"`   // Safety limit (default 1000)
+	OnError         string           `json:"on_error,omitempty"`         // "continue" or "stop" (default "stop")
+	BreakConditions []BreakCondition `json:"break_conditions,omitempty"` // Conditions to exit loop early
+}
+
+// BreakCondition represents a condition that can exit a loop early
+type BreakCondition struct {
+	// Condition is an expression to evaluate (e.g., "item.status == 'error'")
+	// Supports the same expression syntax as conditional nodes
+	Condition string `json:"condition"`
+	// Operator is an alternative way to specify the comparison (equals, contains, greater_than, less_than, custom)
+	// If Condition is set, Operator is ignored
+	Operator string `json:"operator,omitempty"`
+	// Field is the field to compare when using Operator (e.g., "item.count")
+	Field string `json:"field,omitempty"`
+	// Value is the value to compare against when using Operator
+	Value interface{} `json:"value,omitempty"`
 }
 
 // ParallelConfig represents parallel execution configuration

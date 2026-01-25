@@ -16,6 +16,7 @@ func TestNewMetrics(t *testing.T) {
 	assert.NotNil(t, m)
 	assert.NotNil(t, m.WorkflowExecutionsTotal)
 	assert.NotNil(t, m.WorkflowExecutionDuration)
+	assert.NotNil(t, m.WorkflowExecutionsActive)
 	assert.NotNil(t, m.StepExecutionsTotal)
 	assert.NotNil(t, m.StepExecutionDuration)
 	assert.NotNil(t, m.QueueDepth)
@@ -307,4 +308,75 @@ func TestRecordDBQuery(t *testing.T) {
 	}
 	assert.True(t, foundCounter, "db queries counter should be present")
 	assert.True(t, foundHistogram, "db query duration histogram should be present")
+}
+
+func TestIncActiveWorkflowExecutions(t *testing.T) {
+	// Given: metrics initialized
+	m := NewMetrics()
+	registry := prometheus.NewRegistry()
+	m.Register(registry)
+
+	// When: incrementing active workflow executions
+	m.IncActiveWorkflowExecutions("tenant1", "workflow1", "webhook")
+
+	// Then: gauge should be set to 1
+	metrics, err := registry.Gather()
+	assert.NoError(t, err)
+
+	found := false
+	for _, metric := range metrics {
+		if metric.GetName() == "gorax_workflow_executions_active" {
+			found = true
+			assert.Equal(t, 1, len(metric.GetMetric()))
+			assert.Equal(t, float64(1), metric.GetMetric()[0].GetGauge().GetValue())
+		}
+	}
+	assert.True(t, found, "workflow executions active gauge should be present")
+}
+
+func TestDecActiveWorkflowExecutions(t *testing.T) {
+	// Given: metrics initialized with active execution
+	m := NewMetrics()
+	registry := prometheus.NewRegistry()
+	m.Register(registry)
+	m.IncActiveWorkflowExecutions("tenant1", "workflow1", "webhook")
+
+	// When: decrementing active workflow executions
+	m.DecActiveWorkflowExecutions("tenant1", "workflow1", "webhook")
+
+	// Then: gauge should be back to 0
+	metrics, err := registry.Gather()
+	assert.NoError(t, err)
+
+	found := false
+	for _, metric := range metrics {
+		if metric.GetName() == "gorax_workflow_executions_active" {
+			found = true
+			assert.Equal(t, 1, len(metric.GetMetric()))
+			assert.Equal(t, float64(0), metric.GetMetric()[0].GetGauge().GetValue())
+		}
+	}
+	assert.True(t, found, "workflow executions active gauge should be present")
+}
+
+func TestActiveWorkflowExecutionsMultipleWorkflows(t *testing.T) {
+	// Given: metrics initialized
+	m := NewMetrics()
+	registry := prometheus.NewRegistry()
+	m.Register(registry)
+
+	// When: starting multiple workflow executions
+	m.IncActiveWorkflowExecutions("tenant1", "workflow1", "webhook")
+	m.IncActiveWorkflowExecutions("tenant1", "workflow2", "schedule")
+	m.IncActiveWorkflowExecutions("tenant2", "workflow1", "webhook")
+
+	// Then: should have 3 separate gauge metrics
+	metrics, err := registry.Gather()
+	assert.NoError(t, err)
+
+	for _, metric := range metrics {
+		if metric.GetName() == "gorax_workflow_executions_active" {
+			assert.Equal(t, 3, len(metric.GetMetric()), "should have 3 separate metrics for different label combinations")
+		}
+	}
 }

@@ -1,0 +1,3830 @@
+basePath: /api/v1
+definitions:
+  github_com_gorax_gorax_internal_aibuilder.BuildConstraints:
+    properties:
+      allowed_types:
+        items:
+          type: string
+        type: array
+      forbidden_types:
+        items:
+          type: string
+        type: array
+      max_nodes:
+        type: integer
+      require_trigger:
+        type: boolean
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.BuildContext:
+    properties:
+      available_credentials:
+        items:
+          type: string
+        type: array
+      available_integrations:
+        items:
+          type: string
+        type: array
+      custom_data:
+        additionalProperties: true
+        type: object
+      existing_workflows:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.BuildRequest:
+    properties:
+      constraints:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.BuildConstraints'
+      context:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.BuildContext'
+      description:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.BuildResult:
+    properties:
+      completion_tokens:
+        type: integer
+      conversation_id:
+        type: string
+      explanation:
+        type: string
+      prompt_tokens:
+        type: integer
+      suggestions:
+        items:
+          type: string
+        type: array
+      warnings:
+        items:
+          type: string
+        type: array
+      workflow:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.GeneratedWorkflow'
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.Conversation:
+    properties:
+      created_at:
+        type: string
+      current_workflow:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.GeneratedWorkflow'
+      id:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.ConversationMessage'
+        type: array
+      status:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.ConversationStatus'
+      tenant_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.ConversationMessage:
+    properties:
+      completion_tokens:
+        type: integer
+      content:
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      prompt_tokens:
+        type: integer
+      role:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.MessageRole'
+      workflow:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.GeneratedWorkflow'
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.ConversationStatus:
+    enum:
+    - active
+    - completed
+    - abandoned
+    type: string
+    x-enum-varnames:
+    - ConversationStatusActive
+    - ConversationStatusCompleted
+    - ConversationStatusAbandoned
+  github_com_gorax_gorax_internal_aibuilder.GeneratedEdge:
+    properties:
+      id:
+        type: string
+      label:
+        type: string
+      source:
+        type: string
+      sourceHandle:
+        type: string
+      target:
+        type: string
+      targetHandle:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.GeneratedNode:
+    properties:
+      config:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      position:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.NodePosition'
+      type:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.GeneratedWorkflow:
+    properties:
+      definition:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.WorkflowDefinition'
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.MessageRole:
+    enum:
+    - user
+    - assistant
+    - system
+    type: string
+    x-enum-varnames:
+    - MessageRoleUser
+    - MessageRoleAssistant
+    - MessageRoleSystem
+  github_com_gorax_gorax_internal_aibuilder.NodePosition:
+    properties:
+      x:
+        type: number
+      "y":
+        type: number
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.RefineRequest:
+    properties:
+      conversation_id:
+        type: string
+      message:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_aibuilder.WorkflowDefinition:
+    properties:
+      edges:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.GeneratedEdge'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.GeneratedNode'
+        type: array
+    type: object
+  github_com_gorax_gorax_internal_analytics.ErrorBreakdown:
+    properties:
+      errorsByType:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.ErrorInfo'
+        type: array
+      totalErrors:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_analytics.ErrorInfo:
+    properties:
+      errorCount:
+        type: integer
+      errorMessage:
+        type: string
+      lastOccurrence:
+        type: string
+      percentage:
+        type: number
+      workflowId:
+        type: string
+      workflowName:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_analytics.ExecutionTrends:
+    properties:
+      dataPoints:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.TimeSeriesPoint'
+        type: array
+      endDate:
+        type: string
+      granularity:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.Granularity'
+      startDate:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_analytics.Granularity:
+    enum:
+    - hour
+    - day
+    - week
+    - month
+    type: string
+    x-enum-varnames:
+    - GranularityHour
+    - GranularityDay
+    - GranularityWeek
+    - GranularityMonth
+  github_com_gorax_gorax_internal_analytics.NodePerformance:
+    properties:
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.NodeStats'
+        type: array
+      workflowId:
+        type: string
+      workflowName:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_analytics.NodeStats:
+    properties:
+      avgDurationMs:
+        type: integer
+      executionCount:
+        type: integer
+      failureCount:
+        type: integer
+      maxDurationMs:
+        type: integer
+      minDurationMs:
+        type: integer
+      nodeId:
+        type: string
+      nodeType:
+        type: string
+      successCount:
+        type: integer
+      successRate:
+        type: number
+    type: object
+  github_com_gorax_gorax_internal_analytics.TenantOverview:
+    properties:
+      activeWorkflows:
+        type: integer
+      avgDurationMs:
+        type: integer
+      cancelledExecutions:
+        type: integer
+      failedExecutions:
+        type: integer
+      pendingExecutions:
+        type: integer
+      runningExecutions:
+        type: integer
+      successRate:
+        type: number
+      successfulExecutions:
+        type: integer
+      totalExecutions:
+        type: integer
+      totalWorkflows:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_analytics.TimeSeriesPoint:
+    properties:
+      avgDurationMs:
+        type: integer
+      executionCount:
+        type: integer
+      failureCount:
+        type: integer
+      successCount:
+        type: integer
+      successRate:
+        type: number
+      timestamp:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_analytics.TopWorkflow:
+    properties:
+      avgDurationMs:
+        type: integer
+      executionCount:
+        type: integer
+      lastExecutedAt:
+        type: string
+      successRate:
+        type: number
+      workflowId:
+        type: string
+      workflowName:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_analytics.TopWorkflows:
+    properties:
+      total:
+        type: integer
+      workflows:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.TopWorkflow'
+        type: array
+    type: object
+  github_com_gorax_gorax_internal_analytics.WorkflowStats:
+    properties:
+      avgDurationMs:
+        type: integer
+      cancelledCount:
+        type: integer
+      executionCount:
+        type: integer
+      failureCount:
+        type: integer
+      lastExecutedAt:
+        type: string
+      maxDurationMs:
+        type: integer
+      minDurationMs:
+        type: integer
+      pendingCount:
+        type: integer
+      runningCount:
+        type: integer
+      successCount:
+        type: integer
+      successRate:
+        type: number
+      totalDurationMs:
+        type: integer
+      workflowId:
+        type: string
+      workflowName:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_humantask.ApproveTaskRequest:
+    properties:
+      comment:
+        type: string
+      data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_humantask.RejectTaskRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      reason:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_humantask.SubmitTaskRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_humantask.TaskResponse:
+    properties:
+      assignees:
+        items:
+          type: integer
+        type: array
+      assignees_list:
+        items:
+          type: string
+        type: array
+      completed_at:
+        type: string
+      completed_by:
+        type: string
+      config:
+        items:
+          type: integer
+        type: array
+      config_data:
+        additionalProperties: true
+        type: object
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      execution_id:
+        type: string
+      id:
+        type: string
+      response_data:
+        items:
+          type: integer
+        type: array
+      response_map:
+        additionalProperties: true
+        type: object
+      status:
+        type: string
+      step_id:
+        type: string
+      task_type:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_marketplace.Category:
+    properties:
+      children:
+        description: Populated for hierarchical queries
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.Category'
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      display_order:
+        type: integer
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+      template_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_marketplace.CreateCategoryInput:
+    properties:
+      description:
+        type: string
+      display_order:
+        type: integer
+      icon:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      parent_id:
+        type: string
+      slug:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    - slug
+    type: object
+  github_com_gorax_gorax_internal_marketplace.InstallTemplateInput:
+    properties:
+      workflow_name:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - workflow_name
+    type: object
+  github_com_gorax_gorax_internal_marketplace.InstallTemplateResult:
+    properties:
+      definition:
+        items:
+          type: integer
+        type: array
+      workflow_id:
+        type: string
+      workflow_name:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate:
+    properties:
+      author_id:
+        type: string
+      author_name:
+        type: string
+      average_rating:
+        type: number
+      category:
+        type: string
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      download_count:
+        type: integer
+      featured_at:
+        type: string
+      featured_by:
+        type: string
+      id:
+        type: string
+      is_featured:
+        type: boolean
+      is_verified:
+        type: boolean
+      name:
+        type: string
+      published_at:
+        type: string
+      rating_1_count:
+        type: integer
+      rating_2_count:
+        type: integer
+      rating_3_count:
+        type: integer
+      rating_4_count:
+        type: integer
+      rating_5_count:
+        type: integer
+      source_template_id:
+        type: string
+      source_tenant_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      total_ratings:
+        type: integer
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_marketplace.PublishTemplateInput:
+    properties:
+      category:
+        maxLength: 100
+        type: string
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        maxLength: 5000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      source_template_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      version:
+        type: string
+    required:
+    - category
+    - definition
+    - description
+    - name
+    - version
+    type: object
+  github_com_gorax_gorax_internal_marketplace.RateTemplateInput:
+    properties:
+      comment:
+        maxLength: 2000
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+    required:
+    - rating
+    type: object
+  github_com_gorax_gorax_internal_marketplace.RatingDistribution:
+    properties:
+      average_rating:
+        type: number
+      rating_1_count:
+        type: integer
+      rating_1_percent:
+        type: number
+      rating_2_count:
+        type: integer
+      rating_2_percent:
+        type: number
+      rating_3_count:
+        type: integer
+      rating_3_percent:
+        type: number
+      rating_4_count:
+        type: integer
+      rating_4_percent:
+        type: number
+      rating_5_count:
+        type: integer
+      rating_5_percent:
+        type: number
+      total_ratings:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_marketplace.ReportReviewInput:
+    properties:
+      details:
+        maxLength: 1000
+        type: string
+      reason:
+        enum:
+        - spam
+        - inappropriate
+        - offensive
+        - misleading
+        - other
+        type: string
+    required:
+    - reason
+    type: object
+  github_com_gorax_gorax_internal_marketplace.ReviewReport:
+    properties:
+      created_at:
+        type: string
+      details:
+        type: string
+      id:
+        type: string
+      reason:
+        type: string
+      reporter_tenant_id:
+        type: string
+      reporter_user_id:
+        type: string
+      resolution_notes:
+        type: string
+      resolved_at:
+        type: string
+      resolved_by:
+        type: string
+      review_id:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_marketplace.TemplateReview:
+    properties:
+      comment:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      helpful_count:
+        type: integer
+      hidden_at:
+        type: string
+      hidden_by:
+        type: string
+      hidden_reason:
+        type: string
+      id:
+        type: string
+      is_hidden:
+        type: boolean
+      rating:
+        type: integer
+      template_id:
+        type: string
+      tenant_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_rbac.AssignRolesRequest:
+    properties:
+      role_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - role_ids
+    type: object
+  github_com_gorax_gorax_internal_rbac.AuditLog:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      id:
+        type: string
+      target_id:
+        type: string
+      target_type:
+        type: string
+      tenant_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_rbac.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
+  github_com_gorax_gorax_internal_rbac.Permission:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      resource:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_rbac.Role:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_system:
+        type: boolean
+      name:
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.Permission'
+        type: array
+      tenant_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_rbac.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_gorax_gorax_internal_workflow.BulkOperationFailure:
+    properties:
+      error:
+        type: string
+      workflow_id:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_workflow.BulkOperationResult:
+    properties:
+      failures:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.BulkOperationFailure'
+        type: array
+      success_count:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_workflow.CreateWorkflowInput:
+    properties:
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - definition
+    - name
+    type: object
+  github_com_gorax_gorax_internal_workflow.DryRunInput:
+    properties:
+      test_data:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_gorax_gorax_internal_workflow.Execution:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error_message:
+        type: string
+      execution_depth:
+        type: integer
+      id:
+        type: string
+      output_data:
+        items:
+          type: integer
+        type: array
+      parent_execution_id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+      trigger_data:
+        items:
+          type: integer
+        type: array
+      trigger_type:
+        type: string
+      workflow_id:
+        type: string
+      workflow_version:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_workflow.ExecutionListResult:
+    properties:
+      cursor:
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.Execution'
+        type: array
+      has_more:
+        type: boolean
+      total_count:
+        type: integer
+    type: object
+  github_com_gorax_gorax_internal_workflow.ExecutionWithSteps:
+    properties:
+      execution:
+        $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.Execution'
+      steps:
+        items:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.StepExecution'
+        type: array
+    type: object
+  github_com_gorax_gorax_internal_workflow.StepExecution:
+    properties:
+      completed_at:
+        type: string
+      duration_ms:
+        type: integer
+      error_message:
+        type: string
+      execution_id:
+        type: string
+      id:
+        type: string
+      input_data:
+        items:
+          type: integer
+        type: array
+      node_id:
+        type: string
+      node_type:
+        type: string
+      output_data:
+        items:
+          type: integer
+        type: array
+      retry_count:
+        type: integer
+      started_at:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_gorax_gorax_internal_workflow.UpdateWorkflowInput:
+    properties:
+      definition:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  internal_api_handlers.AnalyzeRequest:
+    properties:
+      error_code:
+        type: string
+      error_message:
+        type: string
+      http_status:
+        type: integer
+      input_data:
+        additionalProperties: true
+        type: object
+      node_config:
+        additionalProperties: true
+        type: object
+      node_id:
+        type: string
+      node_type:
+        type: string
+      retry_count:
+        type: integer
+      workflow_id:
+        type: string
+    type: object
+  internal_api_handlers.BulkOperationRequest:
+    properties:
+      workflow_ids:
+        items:
+          type: string
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - workflow_ids
+    type: object
+  internal_api_handlers.CreateWebhookRequest:
+    properties:
+      authType:
+        enum:
+        - none
+        - signature
+        - basic
+        - api_key
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      priority:
+        maximum: 3
+        minimum: 0
+        type: integer
+      workflowId:
+        type: string
+    required:
+    - name
+    - path
+    - workflowId
+    type: object
+  internal_api_handlers.ErrorResponse:
+    description: API error response
+    properties:
+      code:
+        description: HTTP status code
+        example: 400
+        type: integer
+      details:
+        additionalProperties: true
+        description: Additional details about the error
+        type: object
+      error:
+        description: Error message
+        example: workflow must have at least one trigger
+        type: string
+    type: object
+  internal_api_handlers.HealthResponse:
+    description: Health check response
+    properties:
+      status:
+        description: Service status
+        example: healthy
+        type: string
+      uptime:
+        description: Uptime in seconds
+        example: 3600
+        type: integer
+      version:
+        description: Service version
+        example: 1.0.0
+        type: string
+    type: object
+  internal_api_handlers.HideReviewInput:
+    properties:
+      reason:
+        maxLength: 500
+        minLength: 1
+        type: string
+    required:
+    - reason
+    type: object
+  internal_api_handlers.ResolveReviewReportInput:
+    properties:
+      notes:
+        type: string
+      status:
+        enum:
+        - reviewed
+        - actioned
+        - dismissed
+        type: string
+    required:
+    - status
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@gorax.io
+    name: Gorax Support
+    url: https://github.com/gorax/gorax
+  description: |-
+    REST API for Gorax - a powerful workflow automation platform with webhooks, scheduling, and real-time execution monitoring.
+
+    ## Authentication
+    All API endpoints (except /health, /ready, and webhook triggers) require authentication.
+    In development mode, use the X-User-ID header. In production, use Ory Kratos session cookies.
+
+    ## Multi-tenancy
+    All authenticated endpoints require a valid X-Tenant-ID header to identify the tenant context.
+
+    ## Rate Limiting
+    API requests are rate-limited based on tenant quotas. Check response headers for limit information.
+
+    ## Error Handling
+    Errors follow a consistent format with appropriate HTTP status codes and error messages.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Gorax Workflow Automation API
+  version: "1.0"
+paths:
+  /api/v1/ai/workflows/conversations:
+    get:
+      description: Lists all conversations for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: List conversations
+      tags:
+      - ai-builder
+  /api/v1/ai/workflows/conversations/{id}:
+    get:
+      description: Gets a conversation by ID
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.Conversation'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Get a conversation
+      tags:
+      - ai-builder
+  /api/v1/ai/workflows/conversations/{id}/abandon:
+    post:
+      description: Marks a conversation as abandoned
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Abandon a conversation
+      tags:
+      - ai-builder
+  /api/v1/ai/workflows/conversations/{id}/apply:
+    post:
+      description: Creates an actual workflow from the generated workflow
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Apply a generated workflow
+      tags:
+      - ai-builder
+  /api/v1/ai/workflows/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new workflow from a natural language description
+      parameters:
+      - description: Build request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.BuildRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.BuildResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Generate a workflow from description
+      tags:
+      - ai-builder
+  /api/v1/ai/workflows/refine:
+    post:
+      consumes:
+      - application/json
+      description: Refines an existing workflow based on user feedback
+      parameters:
+      - description: Refine request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.RefineRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_aibuilder.BuildResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Refine an existing workflow
+      tags:
+      - ai-builder
+  /api/v1/analytics/errors:
+    get:
+      consumes:
+      - application/json
+      description: Returns categorized error data including error types, frequencies,
+        and affected workflows
+      parameters:
+      - description: Start date (RFC3339 format)
+        example: "2024-01-01T00:00:00Z"
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: "2024-01-31T23:59:59Z"
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Error breakdown data
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.ErrorBreakdown'
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get error breakdown and analysis
+      tags:
+      - Analytics
+  /api/v1/analytics/overview:
+    get:
+      consumes:
+      - application/json
+      description: Returns aggregated analytics data for the tenant including total
+        executions, success rates, and trends
+      parameters:
+      - description: Start date (RFC3339 format)
+        example: "2024-01-01T00:00:00Z"
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: "2024-01-31T23:59:59Z"
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tenant analytics overview
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.TenantOverview'
+        "400":
+          description: Invalid time range
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get tenant analytics overview
+      tags:
+      - Analytics
+  /api/v1/analytics/top-workflows:
+    get:
+      consumes:
+      - application/json
+      description: Returns the most frequently executed workflows ordered by execution
+        count
+      parameters:
+      - description: Start date (RFC3339 format)
+        example: "2024-01-01T00:00:00Z"
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: "2024-01-31T23:59:59Z"
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - default: 10
+        description: Maximum number of workflows to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Top workflows
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.TopWorkflows'
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get top workflows by execution count
+      tags:
+      - Analytics
+  /api/v1/analytics/trends:
+    get:
+      consumes:
+      - application/json
+      description: Returns time-series data showing execution trends with configurable
+        granularity (hour, day, week, month)
+      parameters:
+      - description: Start date (RFC3339 format)
+        example: "2024-01-01T00:00:00Z"
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: "2024-01-31T23:59:59Z"
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - default: day
+        description: Time granularity (hour, day, week, month)
+        enum:
+        - hour
+        - day
+        - week
+        - month
+        in: query
+        name: granularity
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Execution trends data
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.ExecutionTrends'
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get execution trends
+      tags:
+      - Analytics
+  /api/v1/analytics/workflows/{workflowID}:
+    get:
+      consumes:
+      - application/json
+      description: Returns detailed analytics for a specific workflow including execution
+        counts, success rate, and average duration
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Start date (RFC3339 format)
+        example: "2024-01-01T00:00:00Z"
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        example: "2024-01-31T23:59:59Z"
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workflow analytics
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.WorkflowStats'
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get workflow-specific analytics
+      tags:
+      - Analytics
+  /api/v1/analytics/workflows/{workflowID}/nodes:
+    get:
+      consumes:
+      - application/json
+      description: Returns performance statistics for individual nodes within a workflow
+        including execution time and success rate
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Node performance metrics
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_analytics.NodePerformance'
+        "400":
+          description: Invalid workflow ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get node performance metrics
+      tags:
+      - Analytics
+  /api/v1/audit-logs:
+    get:
+      consumes:
+      - application/json
+      description: Returns paginated audit logs of role and permission changes
+      parameters:
+      - default: 50
+        description: Maximum results (max 100)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of audit logs
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.AuditLog'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get RBAC audit logs
+      tags:
+      - RBAC
+  /api/v1/executions:
+    get:
+      consumes:
+      - application/json
+      description: Returns paginated workflow executions with support for filtering
+        by status, trigger type, workflow, and date range
+      parameters:
+      - description: Filter by workflow ID
+        in: query
+        name: workflow_id
+        type: string
+      - description: Filter by status (pending, running, completed, failed)
+        enum:
+        - pending
+        - running
+        - completed
+        - failed
+        in: query
+        name: status
+        type: string
+      - description: Filter by trigger type (manual, webhook, schedule)
+        enum:
+        - manual
+        - webhook
+        - schedule
+        in: query
+        name: trigger_type
+        type: string
+      - description: Start date (RFC3339 format)
+        in: query
+        name: from
+        type: string
+      - description: End date (RFC3339 format)
+        in: query
+        name: to
+        type: string
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: string
+      - default: 20
+        description: Maximum results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of executions with cursor
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.ExecutionListResult'
+        "400":
+          description: Invalid filter parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List workflow executions with advanced filtering
+      tags:
+      - Executions
+  /api/v1/executions/{executionID}/steps:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves complete execution details including all step executions,
+        inputs, outputs, and errors
+      parameters:
+      - description: Execution ID
+        in: path
+        name: executionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Execution with step details
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.ExecutionWithSteps'
+        "400":
+          description: Invalid execution ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Execution not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get execution with detailed steps
+      tags:
+      - Executions
+  /api/v1/marketplace/admin/review-reports:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of review reports for moderation
+      parameters:
+      - description: 'Filter by status: pending, reviewed, actioned, dismissed'
+        in: query
+        name: status
+        type: string
+      - default: 20
+        description: Maximum results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of reports
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.ReviewReport'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get review reports (admin only)
+      tags:
+      - Marketplace
+  /api/v1/marketplace/admin/review-reports/{reportId}:
+    put:
+      consumes:
+      - application/json
+      description: Resolves a review report with a status and optional notes
+      parameters:
+      - description: Report ID
+        in: path
+        name: reportId
+        required: true
+        type: string
+      - description: Resolution details
+        in: body
+        name: resolution
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.ResolveReviewReportInput'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Report resolved successfully
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Resolve review report (admin only)
+      tags:
+      - Marketplace
+  /api/v1/marketplace/admin/reviews/{reviewId}/hide:
+    put:
+      consumes:
+      - application/json
+      description: Hides a review from public view
+      parameters:
+      - description: Review ID
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      - description: Hide reason
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.HideReviewInput'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Review hidden successfully
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Hide review (admin only)
+      tags:
+      - Marketplace
+  /api/v1/marketplace/categories:
+    get:
+      consumes:
+      - application/json
+      description: Returns the list of all available template categories with hierarchy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories with hierarchy
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get template categories
+      tags:
+      - Marketplace
+    post:
+      consumes:
+      - application/json
+      description: Creates a new marketplace category
+      parameters:
+      - description: Category data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.CreateCategoryInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created category
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.Category'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Category already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create category
+      tags:
+      - Marketplace
+  /api/v1/marketplace/categories/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a single category by ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category details
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.Category'
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get category
+      tags:
+      - Marketplace
+  /api/v1/marketplace/popular:
+    get:
+      consumes:
+      - application/json
+      description: Returns the most popular templates based on total installs and
+        ratings
+      parameters:
+      - default: 10
+        description: Maximum results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Popular templates
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get popular templates
+      tags:
+      - Marketplace
+  /api/v1/marketplace/reviews/{reviewId}/helpful:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the current user's helpful vote from a review
+      parameters:
+      - description: Review ID
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Vote removed successfully
+        "404":
+          description: Vote not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Remove helpful vote
+      tags:
+      - Marketplace
+    post:
+      consumes:
+      - application/json
+      description: Marks a review as helpful by the current user
+      parameters:
+      - description: Review ID
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Vote recorded successfully
+        "409":
+          description: Already voted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Vote review as helpful
+      tags:
+      - Marketplace
+  /api/v1/marketplace/reviews/{reviewId}/report:
+    post:
+      consumes:
+      - application/json
+      description: Reports a review for inappropriate content or behavior
+      parameters:
+      - description: Review ID
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      - description: Report details
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.ReportReviewInput'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Review reported successfully
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Report review
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates:
+    get:
+      consumes:
+      - application/json
+      description: Search and filter marketplace templates by category, tags, rating,
+        and verification status
+      parameters:
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Search query for template name or description
+        in: query
+        name: search
+        type: string
+      - description: Comma-separated list of tags
+        in: query
+        name: tags
+        type: string
+      - description: Minimum rating (0-5)
+        in: query
+        name: min_rating
+        type: number
+      - description: Filter by verification status
+        in: query
+        name: is_verified
+        type: boolean
+      - description: Sort field (created_at, updated_at, rating, installs)
+        enum:
+        - created_at
+        - updated_at
+        - rating
+        - installs
+        in: query
+        name: sort_by
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Results per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of templates
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List marketplace templates
+      tags:
+      - Marketplace
+    post:
+      consumes:
+      - application/json
+      description: Publishes a workflow as a reusable template in the marketplace
+      parameters:
+      - description: Template publication data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.PublishTemplateInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Published template
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate'
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Template already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Publish template to marketplace
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves detailed information about a specific marketplace template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Template details
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate'
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get marketplace template
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}/install:
+    post:
+      consumes:
+      - application/json
+      description: Installs a marketplace template as a workflow in the tenant's account
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Installation configuration
+        in: body
+        name: installation
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.InstallTemplateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Installation result with workflow ID
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.InstallTemplateResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Template already installed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Install marketplace template
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}/rate:
+    post:
+      consumes:
+      - application/json
+      description: Submits or updates a rating and review for a marketplace template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Rating data (1-5 stars and optional comment)
+        in: body
+        name: rating
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.RateTemplateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Submitted review
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.TemplateReview'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Rate marketplace template
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}/rating-distribution:
+    get:
+      consumes:
+      - application/json
+      description: Returns the distribution of ratings (1-5 stars) for a template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rating distribution
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.RatingDistribution'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get rating distribution
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}/reviews:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves paginated reviews and ratings for a marketplace template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: recent
+        description: 'Sort by: recent, helpful, rating_high, rating_low'
+        in: query
+        name: sort
+        type: string
+      - default: 10
+        description: Maximum results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of reviews
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.TemplateReview'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get template reviews
+      tags:
+      - Marketplace
+  /api/v1/marketplace/templates/{id}/reviews/{reviewId}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a review (only allowed for review author or admin)
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Review ID
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Review deleted successfully
+        "404":
+          description: Review not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Delete template review
+      tags:
+      - Marketplace
+  /api/v1/marketplace/trending:
+    get:
+      consumes:
+      - application/json
+      description: Returns templates that are currently trending based on recent installs
+        and views
+      parameters:
+      - default: 10
+        description: Maximum results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Trending templates
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_marketplace.MarketplaceTemplate'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get trending templates
+      tags:
+      - Marketplace
+  /api/v1/permissions:
+    get:
+      consumes:
+      - application/json
+      description: Returns all available permissions in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of permissions
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.Permission'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all permissions
+      tags:
+      - RBAC
+  /api/v1/roles:
+    get:
+      consumes:
+      - application/json
+      description: Returns all roles configured for the tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of roles
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.Role'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List roles
+      tags:
+      - RBAC
+    post:
+      consumes:
+      - application/json
+      description: Creates a new custom role with specified permissions
+      parameters:
+      - description: Role creation data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created role
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.Role'
+        "400":
+          description: Invalid request or role name
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Role already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Create role
+      tags:
+      - RBAC
+  /api/v1/roles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a custom role (system roles cannot be deleted)
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Role deleted successfully
+        "403":
+          description: System role cannot be deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Delete role
+      tags:
+      - RBAC
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role details
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.Role'
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get role
+      tags:
+      - RBAC
+    put:
+      consumes:
+      - application/json
+      description: Updates a role's name and description (system roles cannot be modified)
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role update data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Role updated successfully
+        "400":
+          description: Invalid request or role name
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: System role cannot be modified
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Update role
+      tags:
+      - RBAC
+  /api/v1/tasks:
+    get:
+      consumes:
+      - application/json
+      description: List human tasks with optional filters
+      parameters:
+      - description: Task status
+        in: query
+        name: status
+        type: string
+      - description: Task type
+        in: query
+        name: task_type
+        type: string
+      - description: Assignee user ID or role
+        in: query
+        name: assignee
+        type: string
+      - description: Execution ID
+        in: query
+        name: execution_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List human tasks
+      tags:
+      - tasks
+  /api/v1/tasks/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a human task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a human task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approve a human task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Approve request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.ApproveTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Approve a task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Reject a human task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reject request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.RejectTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reject a task
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: Submit data for an input task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submit request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_humantask.SubmitTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit an input task
+      tags:
+      - tasks
+  /api/v1/users/{id}/roles:
+    put:
+      consumes:
+      - application/json
+      description: Assigns one or more roles to a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role assignment data
+        in: body
+        name: roles
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_rbac.AssignRolesRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Roles assigned successfully
+        "400":
+          description: Invalid request or no roles provided
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Assign roles to user
+      tags:
+      - RBAC
+  /executions/{executionID}/analyze:
+    post:
+      consumes:
+      - application/json
+      description: Analyzes an execution error and generates fix suggestions
+      parameters:
+      - description: Execution ID
+        in: path
+        name: executionID
+        required: true
+        type: string
+      - description: Error context for analysis
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.AnalyzeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Generated suggestions
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      summary: Analyze error
+      tags:
+      - Suggestions
+  /executions/{executionID}/suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Returns all suggestions for a specific execution
+      parameters:
+      - description: Execution ID
+        in: path
+        name: executionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of suggestions
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      summary: List suggestions
+      tags:
+      - Suggestions
+  /health:
+    get:
+      description: Returns basic health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+      summary: Health check
+      tags:
+      - Health
+  /ready:
+    get:
+      description: Returns readiness status including database and Redis health checks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All dependencies healthy
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+        "503":
+          description: One or more dependencies unhealthy
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+      summary: Readiness check
+      tags:
+      - Health
+  /suggestions/{suggestionID}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a single suggestion by ID
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: suggestionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Suggestion details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      summary: Get suggestion
+      tags:
+      - Suggestions
+  /suggestions/{suggestionID}/apply:
+    post:
+      consumes:
+      - application/json
+      description: Marks a suggestion as applied (user accepted the fix)
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: suggestionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      summary: Apply suggestion
+      tags:
+      - Suggestions
+  /suggestions/{suggestionID}/dismiss:
+    post:
+      consumes:
+      - application/json
+      description: Marks a suggestion as dismissed (user rejected the fix)
+      parameters:
+      - description: Suggestion ID
+        in: path
+        name: suggestionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      summary: Dismiss suggestion
+      tags:
+      - Suggestions
+  /webhooks:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of webhooks for the authenticated tenant
+      parameters:
+      - default: 20
+        description: Maximum number of results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of webhooks
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Creates a new webhook endpoint for a workflow
+      parameters:
+      - description: Webhook creation request
+        in: body
+        name: webhook
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created webhook
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Create webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}/regenerate-secret:
+    post:
+      consumes:
+      - application/json
+      description: Regenerates the secret key for webhook signature verification
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook with new secret
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Regenerate webhook secret
+      tags:
+      - Webhooks
+  /workflows:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of workflows for the authenticated tenant
+      parameters:
+      - default: 20
+        description: Maximum number of results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workflows
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: List workflows
+      tags:
+      - Workflows
+    post:
+      consumes:
+      - application/json
+      description: Creates a new workflow with the provided configuration
+      parameters:
+      - description: Workflow creation input
+        in: body
+        name: workflow
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.CreateWorkflowInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created workflow
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Create workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a workflow by ID
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Workflow deleted successfully
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Delete workflow
+      tags:
+      - Workflows
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a workflow by ID
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workflow details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Get workflow
+      tags:
+      - Workflows
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Workflow update input
+        in: body
+        name: workflow
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.UpdateWorkflowInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated workflow
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Update workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}/dry-run:
+    post:
+      consumes:
+      - application/json
+      description: Validates a workflow without executing it, useful for testing
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Dry-run input with test data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.DryRunInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dry-run result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Dry-run workflow
+      tags:
+      - Workflows
+  /workflows/{workflowID}/execute:
+    post:
+      consumes:
+      - application/json
+      description: Triggers a manual execution of a workflow
+      parameters:
+      - description: Workflow ID
+        in: path
+        name: workflowID
+        required: true
+        type: string
+      - description: Optional trigger data
+        in: body
+        name: triggerData
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Execution started
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Execute workflow
+      tags:
+      - Workflows
+  /workflows/bulk/clone:
+    post:
+      consumes:
+      - application/json
+      description: Clones multiple workflows in a single operation
+      parameters:
+      - description: Bulk clone request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cloned workflows and result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Bulk clone workflows
+      tags:
+      - Workflows
+  /workflows/bulk/delete:
+    post:
+      consumes:
+      - application/json
+      description: Deletes multiple workflows in a single operation
+      parameters:
+      - description: Bulk delete request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Bulk delete workflows
+      tags:
+      - Workflows
+  /workflows/bulk/disable:
+    post:
+      consumes:
+      - application/json
+      description: Disables multiple workflows in a single operation
+      parameters:
+      - description: Bulk disable request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Bulk disable workflows
+      tags:
+      - Workflows
+  /workflows/bulk/enable:
+    post:
+      consumes:
+      - application/json
+      description: Enables multiple workflows in a single operation
+      parameters:
+      - description: Bulk enable request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_gorax_gorax_internal_workflow.BulkOperationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Bulk enable workflows
+      tags:
+      - Workflows
+  /workflows/bulk/export:
+    post:
+      consumes:
+      - application/json
+      description: Exports multiple workflows as JSON in a single operation
+      parameters:
+      - description: Bulk export request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api_handlers.BulkOperationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Export data and result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TenantID: []
+      - UserID: []
+      summary: Bulk export workflows
+      tags:
+      - Workflows
+securityDefinitions:
+  SessionCookie:
+    description: Ory Kratos session cookie (production mode)
+    in: cookie
+    name: ory_kratos_session
+    type: apiKey
+  TenantID:
+    description: Tenant identifier for multi-tenant isolation
+    in: header
+    name: X-Tenant-ID
+    type: apiKey
+  UserID:
+    description: User identifier (development mode only)
+    in: header
+    name: X-User-ID
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Health check and readiness endpoints
+  name: Health
+- description: Workflow management and execution
+  name: Workflows
+- description: Webhook configuration and management
+  name: Webhooks
+- description: Workflow execution history and monitoring
+  name: Executions
+- description: Scheduled workflow triggers
+  name: Schedules
+- description: Secure credential management
+  name: Credentials
+- description: Tenant administration (admin only)
+  name: Tenants
+- description: Execution metrics and analytics
+  name: Metrics
+- description: Real-time execution updates
+  name: WebSocket
+- description: Event type registry for webhooks
+  name: Event Types
+- description: Workflow execution analytics and reporting
+  name: Analytics
+- description: Template marketplace for sharing and installing workflows
+  name: Marketplace
+- description: Role-based access control and permissions management
+  name: RBAC

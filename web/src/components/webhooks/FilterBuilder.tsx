@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { webhookAPI } from '../../api/webhooks'
 import type {
   FilterOperator,
@@ -192,11 +192,7 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
   const [testError, setTestError] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
 
-  useEffect(() => {
-    loadFilters()
-  }, [webhookId])
-
-  const loadFilters = async () => {
+  const loadFilters = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -215,7 +211,11 @@ export default function FilterBuilder({ webhookId }: FilterBuilderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [webhookId])
+
+  useEffect(() => {
+    loadFilters()
+  }, [loadFilters])
 
   const addFilter = () => {
     const newFilter: FilterRule = {

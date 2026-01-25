@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useSchedules, useSchedule, useScheduleMutations } from './useSchedules'
 import { scheduleAPI } from '../api/schedules'
+import { createQueryWrapper } from '../test/test-utils'
 
 vi.mock('../api/schedules', () => ({
   scheduleAPI: {
@@ -34,7 +35,7 @@ describe('useSchedules', () => {
       total: 1,
     })
 
-    const { result } = renderHook(() => useSchedules())
+    const { result } = renderHook(() => useSchedules(), { wrapper: createQueryWrapper() })
 
     expect(result.current.loading).toBe(true)
 
@@ -51,7 +52,7 @@ describe('useSchedules', () => {
     const error = new Error('Fetch failed')
     vi.mocked(scheduleAPI.list).mockRejectedValue(error)
 
-    const { result } = renderHook(() => useSchedules())
+    const { result } = renderHook(() => useSchedules(), { wrapper: createQueryWrapper() })
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
@@ -69,7 +70,7 @@ describe('useSchedules', () => {
 
     const { rerender } = renderHook(
       ({ params }) => useSchedules(params),
-      { initialProps: { params: { page: 1 } } }
+      { initialProps: { params: { page: 1 } }, wrapper: createQueryWrapper() }
     )
 
     await waitFor(() => {
@@ -85,13 +86,16 @@ describe('useSchedules', () => {
 })
 
 describe('useSchedule', () => {
+  // Valid RFC 4122 UUID (version 4, variant 1)
+  const validUUID = '12345678-1234-4234-8234-123456789abc'
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('should fetch single schedule', async () => {
     const mockSchedule = {
-      id: 'sched-1',
+      id: validUUID,
       name: 'Daily Backup',
       cronExpression: '0 0 * * *',
       enabled: true,
@@ -99,7 +103,7 @@ describe('useSchedule', () => {
 
     vi.mocked(scheduleAPI.get).mockResolvedValue(mockSchedule)
 
-    const { result } = renderHook(() => useSchedule('sched-1'))
+    const { result } = renderHook(() => useSchedule(validUUID), { wrapper: createQueryWrapper() })
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
@@ -110,7 +114,7 @@ describe('useSchedule', () => {
   })
 
   it('should not fetch when id is null', () => {
-    const { result } = renderHook(() => useSchedule(null))
+    const { result } = renderHook(() => useSchedule(null), { wrapper: createQueryWrapper() })
 
     expect(result.current.loading).toBe(false)
     expect(result.current.schedule).toBeNull()
@@ -133,7 +137,7 @@ describe('useScheduleMutations', () => {
     const mockSchedule = { id: 'sched-new', ...input }
     vi.mocked(scheduleAPI.create).mockResolvedValue(mockSchedule)
 
-    const { result } = renderHook(() => useScheduleMutations())
+    const { result } = renderHook(() => useScheduleMutations(), { wrapper: createQueryWrapper() })
 
     expect(result.current.creating).toBe(false)
 
@@ -153,7 +157,7 @@ describe('useScheduleMutations', () => {
 
     vi.mocked(scheduleAPI.update).mockResolvedValue(mockSchedule)
 
-    const { result } = renderHook(() => useScheduleMutations())
+    const { result } = renderHook(() => useScheduleMutations(), { wrapper: createQueryWrapper() })
 
     const updated = await result.current.updateSchedule('sched-1', updates)
 
@@ -163,7 +167,7 @@ describe('useScheduleMutations', () => {
   it('should delete schedule', async () => {
     vi.mocked(scheduleAPI.delete).mockResolvedValue(undefined)
 
-    const { result } = renderHook(() => useScheduleMutations())
+    const { result } = renderHook(() => useScheduleMutations(), { wrapper: createQueryWrapper() })
 
     await result.current.deleteSchedule('sched-1')
 
@@ -174,7 +178,7 @@ describe('useScheduleMutations', () => {
     const mockSchedule = { id: 'sched-1', enabled: false }
     vi.mocked(scheduleAPI.toggle).mockResolvedValue(mockSchedule)
 
-    const { result } = renderHook(() => useScheduleMutations())
+    const { result } = renderHook(() => useScheduleMutations(), { wrapper: createQueryWrapper() })
 
     const toggled = await result.current.toggleSchedule('sched-1', false)
 

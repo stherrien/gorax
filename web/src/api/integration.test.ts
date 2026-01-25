@@ -11,7 +11,7 @@ import { ssoApi } from './sso'
  * communicate with backend endpoints.
  *
  * NOTE: These tests require a running backend server.
- * Run with: npm test -- integration.test.ts
+ * Run with: INTEGRATION_TEST=true npm test -- integration.test.ts
  *
  * Prerequisites:
  * - Backend server running on http://localhost:8181
@@ -19,7 +19,10 @@ import { ssoApi } from './sso'
  * - Test user authenticated (dev mode)
  */
 
-describe('API Integration Tests', () => {
+// Skip integration tests unless INTEGRATION_TEST env var is set
+const runIntegrationTests = process.env.INTEGRATION_TEST === 'true'
+
+describe.skipIf(!runIntegrationTests)('API Integration Tests', () => {
   beforeAll(() => {
     // Set up dev mode tenant header
     localStorage.setItem('auth_token', '')

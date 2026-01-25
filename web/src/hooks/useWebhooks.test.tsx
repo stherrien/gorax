@@ -6,6 +6,7 @@ import { useWebhooks, useWebhook, useWebhookEvents, useWebhookMutations } from '
 import type { Webhook, WebhookEvent } from '../api/webhooks'
 
 // Mock the webhook API
+import { createQueryWrapper } from "../test/test-utils"
 vi.mock('../api/webhooks', () => ({
   webhookAPI: {
     list: vi.fn(),
@@ -39,25 +40,33 @@ function createWrapper() {
 }
 
 describe('useWebhooks', () => {
+  // Valid RFC 4122 UUIDs (version 4, variant 1)
+  const webhookId = '11111111-1111-4111-8111-111111111111'
+  const webhookId2 = '22222222-2222-4222-8222-222222222222'
+  const tenantId = '33333333-3333-4333-8333-333333333333'
+  const workflowId = '44444444-4444-4444-8444-444444444444'
+  const eventId = '55555555-5555-4555-8555-555555555555'
+  const executionId = '66666666-6666-4666-8666-666666666666'
+
   const mockWebhook: Webhook = {
-    id: 'wh-123',
-    tenantId: 'tenant-1',
-    workflowId: 'wf-123',
+    id: webhookId,
+    tenantId: tenantId,
+    workflowId: workflowId,
     name: 'Test Webhook',
-    path: '/webhooks/wf-123/wh-123',
+    path: `/webhooks/${workflowId}/${webhookId}`,
     authType: 'signature',
     enabled: true,
     priority: 1,
     triggerCount: 0,
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z',
-    url: 'http://localhost:8080/webhooks/wf-123/wh-123',
+    url: `http://localhost:8080/webhooks/${workflowId}/${webhookId}`,
   }
 
   const mockWebhookEvent: WebhookEvent = {
-    id: 'evt-123',
-    webhookId: 'wh-123',
-    executionId: 'exec-123',
+    id: eventId,
+    webhookId: webhookId,
+    executionId: executionId,
     requestMethod: 'POST',
     requestHeaders: { 'content-type': 'application/json' },
     requestBody: { data: 'test' },
@@ -221,7 +230,7 @@ describe('useWebhooks', () => {
     it('should handle multiple webhooks', async () => {
       const secondWebhook: Webhook = {
         ...mockWebhook,
-        id: 'wh-456',
+        id: webhookId2,
         name: 'Second Webhook',
       }
 
@@ -238,8 +247,8 @@ describe('useWebhooks', () => {
 
       expect(result.current.webhooks).toHaveLength(2)
       expect(result.current.total).toBe(2)
-      expect(result.current.webhooks[0].id).toBe('wh-123')
-      expect(result.current.webhooks[1].id).toBe('wh-456')
+      expect(result.current.webhooks[0].id).toBe(webhookId)
+      expect(result.current.webhooks[1].id).toBe(webhookId2)
     })
 
     it('should pass pagination params', async () => {
@@ -260,7 +269,7 @@ describe('useWebhooks', () => {
     it('should load webhook by ID on mount', async () => {
       (webhookAPI.get as any).mockResolvedValueOnce(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook(webhookId), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -270,7 +279,7 @@ describe('useWebhooks', () => {
 
       expect(result.current.webhook).toEqual(mockWebhook)
       expect(result.current.error).toBeNull()
-      expect(webhookAPI.get).toHaveBeenCalledWith('wh-123')
+      expect(webhookAPI.get).toHaveBeenCalledWith(webhookId)
     })
 
     it('should not load if ID is null', () => {
@@ -287,7 +296,7 @@ describe('useWebhooks', () => {
       error.name = 'NotFoundError'
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('invalid-id'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook('99999999-9999-4999-8999-999999999999'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -301,7 +310,7 @@ describe('useWebhooks', () => {
       const error = new Error('Network timeout')
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -315,7 +324,7 @@ describe('useWebhooks', () => {
       const error = new Error('Initial error')
       ;(webhookAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.error).toBe(error)
@@ -335,7 +344,7 @@ describe('useWebhooks', () => {
     it('should refetch webhook', async () => {
       (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -351,7 +360,7 @@ describe('useWebhooks', () => {
     it('should show loading state during refetch', async () => {
       (webhookAPI.get as any).mockResolvedValue(mockWebhook)
 
-      const { result } = renderHook(() => useWebhook('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhook(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -369,7 +378,7 @@ describe('useWebhooks', () => {
     it('should update when ID changes', async () => {
       const secondWebhook: Webhook = {
         ...mockWebhook,
-        id: 'wh-456',
+        id: webhookId2,
         name: 'Second Webhook',
       }
 
@@ -377,25 +386,25 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ id }) => useWebhook(id),
-        { initialProps: { id: 'wh-123' }, wrapper: createWrapper() }
+        { initialProps: { id: webhookId }, wrapper: createWrapper() }
       )
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(result.current.webhook?.id).toBe('wh-123')
+      expect(result.current.webhook?.id).toBe(webhookId)
 
       ;(webhookAPI.get as any).mockResolvedValueOnce(secondWebhook)
-      rerender({ id: 'wh-456' })
+      rerender({ id: webhookId2 })
 
       await waitFor(() => {
-        expect(result.current.webhook?.id).toBe('wh-456')
+        expect(result.current.webhook?.id).toBe(webhookId2)
       })
 
       expect(webhookAPI.get).toHaveBeenCalledTimes(2)
-      expect(webhookAPI.get).toHaveBeenCalledWith('wh-123')
-      expect(webhookAPI.get).toHaveBeenCalledWith('wh-456')
+      expect(webhookAPI.get).toHaveBeenCalledWith(webhookId)
+      expect(webhookAPI.get).toHaveBeenCalledWith(webhookId2)
     })
 
     it('should handle transition from null to valid ID', async () => {
@@ -409,14 +418,14 @@ describe('useWebhooks', () => {
       expect(result.current.loading).toBe(false)
       expect(webhookAPI.get).not.toHaveBeenCalled()
 
-      rerender({ id: 'wh-123' })
+      rerender({ id: webhookId })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
       expect(result.current.webhook).toEqual(mockWebhook)
-      expect(webhookAPI.get).toHaveBeenCalledWith('wh-123')
+      expect(webhookAPI.get).toHaveBeenCalledWith(webhookId)
     })
   })
 
@@ -427,7 +436,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
       expect(result.current.events).toEqual([])
@@ -439,7 +448,7 @@ describe('useWebhooks', () => {
       expect(result.current.events).toEqual([mockWebhookEvent])
       expect(result.current.total).toBe(1)
       expect(result.current.error).toBeNull()
-      expect(webhookAPI.getEvents).toHaveBeenCalledWith('wh-123', undefined)
+      expect(webhookAPI.getEvents).toHaveBeenCalledWith(webhookId, undefined)
     })
 
     it('should not load if webhook ID is null', () => {
@@ -457,7 +466,7 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -473,10 +482,10 @@ describe('useWebhooks', () => {
         total: 0,
       })
 
-      renderHook(() => useWebhookEvents('wh-123', { page: 2, limit: 50 }), { wrapper: createWrapper() })
+      renderHook(() => useWebhookEvents(webhookId, { page: 2, limit: 50 }), { wrapper: createWrapper() })
 
       await waitFor(() => {
-        expect(webhookAPI.getEvents).toHaveBeenCalledWith('wh-123', { page: 2, limit: 50 })
+        expect(webhookAPI.getEvents).toHaveBeenCalledWith(webhookId, { page: 2, limit: 50 })
       })
     })
 
@@ -484,7 +493,7 @@ describe('useWebhooks', () => {
       const error = new Error('Failed to load events')
       ;(webhookAPI.getEvents as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -499,7 +508,7 @@ describe('useWebhooks', () => {
       const error = new Error('Failed to load')
       ;(webhookAPI.getEvents as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.error).toBe(error)
@@ -526,7 +535,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -547,7 +556,7 @@ describe('useWebhooks', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -575,7 +584,7 @@ describe('useWebhooks', () => {
         total: 2,
       })
 
-      const { result } = renderHook(() => useWebhookEvents('wh-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWebhookEvents(webhookId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -591,7 +600,7 @@ describe('useWebhooks', () => {
       const webhook2Event: WebhookEvent = {
         ...mockWebhookEvent,
         id: 'evt-999',
-        webhookId: 'wh-456',
+        webhookId: webhookId2,
       }
 
       ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
@@ -601,24 +610,24 @@ describe('useWebhooks', () => {
 
       const { result, rerender } = renderHook(
         ({ webhookId }) => useWebhookEvents(webhookId),
-        { initialProps: { webhookId: 'wh-123' }, wrapper: createWrapper() }
+        { initialProps: { webhookId: webhookId }, wrapper: createWrapper() }
       )
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(result.current.events[0].webhookId).toBe('wh-123')
+      expect(result.current.events[0].webhookId).toBe(webhookId)
 
       ;(webhookAPI.getEvents as any).mockResolvedValueOnce({
         events: [webhook2Event],
         total: 1,
       })
 
-      rerender({ webhookId: 'wh-456' })
+      rerender({ webhookId: webhookId2 })
 
       await waitFor(() => {
-        expect(result.current.events[0]?.webhookId).toBe('wh-456')
+        expect(result.current.events[0]?.webhookId).toBe(webhookId2)
       })
 
       expect(webhookAPI.getEvents).toHaveBeenCalledTimes(2)
@@ -638,14 +647,14 @@ describe('useWebhooks', () => {
       expect(result.current.loading).toBe(false)
       expect(webhookAPI.getEvents).not.toHaveBeenCalled()
 
-      rerender({ webhookId: 'wh-123' })
+      rerender({ webhookId: webhookId })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
 
       expect(result.current.events).toEqual([mockWebhookEvent])
-      expect(webhookAPI.getEvents).toHaveBeenCalledWith('wh-123', undefined)
+      expect(webhookAPI.getEvents).toHaveBeenCalledWith(webhookId, undefined)
     })
   })
 
@@ -728,12 +737,12 @@ describe('useWebhooks', () => {
 
       let updated: Webhook
       await act(async () => {
-        updated = await result.current.updateWebhook('wh-123', updates)
+        updated = await result.current.updateWebhook(webhookId, updates)
       })
 
       expect(result.current.updating).toBe(false)
       expect(updated!.enabled).toBe(false)
-      expect(webhookAPI.update).toHaveBeenCalledWith('wh-123', updates)
+      expect(webhookAPI.update).toHaveBeenCalledWith(webhookId, updates)
     })
 
     it('should handle update error', async () => {
@@ -743,7 +752,7 @@ describe('useWebhooks', () => {
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
       await expect(
-        result.current.updateWebhook('wh-123', { name: 'Updated' })
+        result.current.updateWebhook(webhookId, { name: 'Updated' })
       ).rejects.toThrow('Update failed')
 
       expect(result.current.updating).toBe(false)
@@ -757,11 +766,11 @@ describe('useWebhooks', () => {
       expect(result.current.deleting).toBe(false)
 
       await act(async () => {
-        await result.current.deleteWebhook('wh-123')
+        await result.current.deleteWebhook(webhookId)
       })
 
       expect(result.current.deleting).toBe(false)
-      expect(webhookAPI.delete).toHaveBeenCalledWith('wh-123')
+      expect(webhookAPI.delete).toHaveBeenCalledWith(webhookId)
     })
 
     it('should handle delete error', async () => {
@@ -770,7 +779,7 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      await expect(result.current.deleteWebhook('wh-123')).rejects.toThrow('Delete failed')
+      await expect(result.current.deleteWebhook(webhookId)).rejects.toThrow('Delete failed')
 
       expect(result.current.deleting).toBe(false)
     })
@@ -785,12 +794,12 @@ describe('useWebhooks', () => {
 
       let response: { secret: string }
       await act(async () => {
-        response = await result.current.regenerateSecret('wh-123')
+        response = await result.current.regenerateSecret(webhookId)
       })
 
       expect(result.current.regenerating).toBe(false)
       expect(response!.secret).toBe('new-secret-key')
-      expect(webhookAPI.regenerateSecret).toHaveBeenCalledWith('wh-123')
+      expect(webhookAPI.regenerateSecret).toHaveBeenCalledWith(webhookId)
     })
 
     it('should handle regenerate error', async () => {
@@ -799,7 +808,7 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      await expect(result.current.regenerateSecret('wh-123')).rejects.toThrow(
+      await expect(result.current.regenerateSecret(webhookId)).rejects.toThrow(
         'Regenerate failed'
       )
 
@@ -822,13 +831,13 @@ describe('useWebhooks', () => {
       const testData = { method: 'POST', body: { test: 'data' } }
       let response: any
       await act(async () => {
-        response = await result.current.testWebhook('wh-123', testData)
+        response = await result.current.testWebhook(webhookId, testData)
       })
 
       expect(result.current.testing).toBe(false)
       expect(response.success).toBe(true)
       expect(response.executionId).toBe('exec-123')
-      expect(webhookAPI.test).toHaveBeenCalledWith('wh-123', testData)
+      expect(webhookAPI.test).toHaveBeenCalledWith(webhookId, testData)
     })
 
     it('should test webhook without payload', async () => {
@@ -842,9 +851,9 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      await result.current.testWebhook('wh-123')
+      await result.current.testWebhook(webhookId)
 
-      expect(webhookAPI.test).toHaveBeenCalledWith('wh-123', {})
+      expect(webhookAPI.test).toHaveBeenCalledWith(webhookId, {})
     })
 
     it('should handle test error', async () => {
@@ -853,7 +862,7 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      await expect(result.current.testWebhook('wh-123')).rejects.toThrow('Test failed')
+      await expect(result.current.testWebhook(webhookId)).rejects.toThrow('Test failed')
 
       expect(result.current.testing).toBe(false)
     })
@@ -869,7 +878,7 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      const response = await result.current.testWebhook('wh-123')
+      const response = await result.current.testWebhook(webhookId)
 
       expect(response.success).toBe(false)
       expect(response.statusCode).toBe(500)
@@ -892,9 +901,9 @@ describe('useWebhooks', () => {
 
       const { result } = renderHook(() => useWebhookMutations(), { wrapper: createWrapper() })
 
-      await result.current.testWebhook('wh-123', testData)
+      await result.current.testWebhook(webhookId, testData)
 
-      expect(webhookAPI.test).toHaveBeenCalledWith('wh-123', testData)
+      expect(webhookAPI.test).toHaveBeenCalledWith(webhookId, testData)
     })
 
     it('should maintain independent loading states for all mutations', async () => {
@@ -915,7 +924,7 @@ describe('useWebhooks', () => {
           authType: 'signature',
         })
 
-        const updatePromise = result.current.updateWebhook('wh-123', { name: 'Updated' })
+        const updatePromise = result.current.updateWebhook(webhookId, { name: 'Updated' })
 
         await Promise.all([createPromise, updatePromise])
       })

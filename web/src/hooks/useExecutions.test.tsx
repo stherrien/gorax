@@ -38,8 +38,8 @@ function createWrapper() {
 
 describe('useExecutions', () => {
   const mockExecution: Execution = {
-    id: 'exec-123',
-    workflowId: 'wf-123',
+    id: '12345678-1234-4234-8234-123456789abc',
+    workflowId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     workflowName: 'Test Workflow',
     status: 'completed',
     trigger: {
@@ -87,7 +87,7 @@ describe('useExecutions', () => {
         total: 0,
       })
 
-      const { result } = renderHook(() => useExecutions())
+      const { result } = renderHook(() => useExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -101,7 +101,7 @@ describe('useExecutions', () => {
       const error = new Error('Failed to load executions')
       ;(executionAPI.list as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useExecutions())
+      const { result } = renderHook(() => useExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -117,7 +117,7 @@ describe('useExecutions', () => {
         total: 1,
       })
 
-      const { result } = renderHook(() => useExecutions())
+      const { result } = renderHook(() => useExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -139,11 +139,11 @@ describe('useExecutions', () => {
         total: 0,
       })
 
-      renderHook(() => useExecutions({ workflowId: 'wf-123', status: 'failed' }))
+      renderHook(() => useExecutions({ workflowId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', status: 'failed' }), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(executionAPI.list).toHaveBeenCalledWith({
-          workflowId: 'wf-123',
+          workflowId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           status: 'failed',
         })
       })
@@ -154,7 +154,7 @@ describe('useExecutions', () => {
     it('should load execution by ID on mount', async () => {
       (executionAPI.get as any).mockResolvedValueOnce(mockExecution)
 
-      const { result } = renderHook(() => useExecution('exec-123'))
+      const { result } = renderHook(() => useExecution('12345678-1234-4234-8234-123456789abc'), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -167,7 +167,7 @@ describe('useExecutions', () => {
     })
 
     it('should not load if ID is null', () => {
-      const { result } = renderHook(() => useExecution(null))
+      const { result } = renderHook(() => useExecution(null), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(false)
       expect(result.current.execution).toBeNull()
@@ -178,7 +178,7 @@ describe('useExecutions', () => {
       const error = new Error('Execution not found')
       ;(executionAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useExecution('invalid-id'))
+      const { result } = renderHook(() => useExecution('99999999-9999-4999-8999-999999999999'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -191,7 +191,7 @@ describe('useExecutions', () => {
     it('should refetch execution', async () => {
       (executionAPI.get as any).mockResolvedValue(mockExecution)
 
-      const { result } = renderHook(() => useExecution('exec-123'))
+      const { result } = renderHook(() => useExecution('12345678-1234-4234-8234-123456789abc'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -218,7 +218,7 @@ describe('useExecutions', () => {
     it('should load dashboard stats on mount', async () => {
       (executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
 
-      const { result } = renderHook(() => useDashboardStats())
+      const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -234,7 +234,7 @@ describe('useExecutions', () => {
       const error = new Error('Failed to load stats')
       ;(executionAPI.getDashboardStats as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useDashboardStats())
+      const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -247,7 +247,7 @@ describe('useExecutions', () => {
     it('should support refetch', async () => {
       (executionAPI.getDashboardStats as any).mockResolvedValue(mockStats)
 
-      const { result } = renderHook(() => useDashboardStats())
+      const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -264,7 +264,8 @@ describe('useExecutions', () => {
       (executionAPI.getDashboardStats as any).mockResolvedValueOnce(mockStats)
 
       renderHook(() =>
-        useDashboardStats({ startDate: '2025-01-01', endDate: '2025-01-31' })
+        useDashboardStats({ startDate: '2025-01-01', endDate: '2025-01-31' }),
+        { wrapper: createWrapper() }
       )
 
       await waitFor(() => {
@@ -282,7 +283,7 @@ describe('useExecutions', () => {
         executions: [mockExecution],
       })
 
-      const { result } = renderHook(() => useRecentExecutions())
+      const { result } = renderHook(() => useRecentExecutions(), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -299,7 +300,7 @@ describe('useExecutions', () => {
         executions: [],
       })
 
-      const { result } = renderHook(() => useRecentExecutions())
+      const { result } = renderHook(() => useRecentExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -312,7 +313,7 @@ describe('useExecutions', () => {
       const error = new Error('Failed to load recent executions')
       ;(executionAPI.getRecentExecutions as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useRecentExecutions())
+      const { result } = renderHook(() => useRecentExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -327,7 +328,7 @@ describe('useExecutions', () => {
         executions: [mockExecution],
       })
 
-      renderHook(() => useRecentExecutions(5))
+      renderHook(() => useRecentExecutions(5), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(executionAPI.getRecentExecutions).toHaveBeenCalledWith(5)
@@ -339,7 +340,7 @@ describe('useExecutions', () => {
         executions: [mockExecution],
       })
 
-      const { result } = renderHook(() => useRecentExecutions())
+      const { result } = renderHook(() => useRecentExecutions(), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)

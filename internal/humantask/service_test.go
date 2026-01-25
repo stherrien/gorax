@@ -67,6 +67,43 @@ func (m *MockRepository) CountPendingByAssignee(ctx context.Context, tenantID uu
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockRepository) CreateEscalation(ctx context.Context, escalation *TaskEscalation) error {
+	args := m.Called(ctx, escalation)
+	if args.Get(0) != nil {
+		return args.Error(0)
+	}
+	escalation.ID = uuid.New()
+	escalation.EscalatedAt = time.Now()
+	escalation.CreatedAt = time.Now()
+	return nil
+}
+
+func (m *MockRepository) GetEscalationsByTaskID(ctx context.Context, taskID uuid.UUID) ([]*TaskEscalation, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*TaskEscalation), args.Error(1)
+}
+
+func (m *MockRepository) GetActiveEscalation(ctx context.Context, taskID uuid.UUID) (*TaskEscalation, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*TaskEscalation), args.Error(1)
+}
+
+func (m *MockRepository) UpdateEscalation(ctx context.Context, escalation *TaskEscalation) error {
+	args := m.Called(ctx, escalation)
+	return args.Error(0)
+}
+
+func (m *MockRepository) CompleteEscalationsByTaskID(ctx context.Context, taskID uuid.UUID, completedBy *uuid.UUID) error {
+	args := m.Called(ctx, taskID, completedBy)
+	return args.Error(0)
+}
+
 // MockNotificationService is a mock implementation of NotificationService
 type MockNotificationService struct {
 	mock.Mock
@@ -84,6 +121,11 @@ func (m *MockNotificationService) NotifyTaskCompleted(ctx context.Context, task 
 
 func (m *MockNotificationService) NotifyTaskOverdue(ctx context.Context, task *HumanTask) error {
 	args := m.Called(ctx, task)
+	return args.Error(0)
+}
+
+func (m *MockNotificationService) NotifyTaskEscalated(ctx context.Context, task *HumanTask, escalation *TaskEscalation) error {
+	args := m.Called(ctx, task, escalation)
 	return args.Error(0)
 }
 
@@ -256,6 +298,7 @@ func TestService_ApproveTask(t *testing.T) {
 		task := createMockTaskWithAssignees([]string{userID.String()})
 		repo.On("GetByID", mock.Anything, task.ID).Return(task, nil)
 		repo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		repo.On("CompleteEscalationsByTaskID", mock.Anything, task.ID, mock.Anything).Return(nil)
 		// Note: notification is async in goroutine, don't assert
 		notif.On("NotifyTaskCompleted", mock.Anything, mock.Anything).Maybe().Return(nil)
 
@@ -276,6 +319,7 @@ func TestService_ApproveTask(t *testing.T) {
 		task := createMockTaskWithAssignees([]string{"admin", "manager"})
 		repo.On("GetByID", mock.Anything, task.ID).Return(task, nil)
 		repo.On("Update", mock.Anything, mock.Anything).Return(nil)
+		repo.On("CompleteEscalationsByTaskID", mock.Anything, task.ID, mock.Anything).Return(nil)
 		notif.On("NotifyTaskCompleted", mock.Anything, mock.Anything).Maybe().Return(nil)
 
 		service := NewService(repo, notif)
@@ -331,6 +375,7 @@ func TestService_RejectTask(t *testing.T) {
 
 	repo.On("GetByID", mock.Anything, task.ID).Return(task, nil)
 	repo.On("Update", mock.Anything, mock.Anything).Return(nil)
+	repo.On("CompleteEscalationsByTaskID", mock.Anything, task.ID, mock.Anything).Return(nil)
 	notif.On("NotifyTaskCompleted", mock.Anything, mock.Anything).Maybe().Return(nil)
 
 	service := NewService(repo, notif)
@@ -353,13 +398,14 @@ func TestService_SubmitTask(t *testing.T) {
 
 	repo.On("GetByID", mock.Anything, task.ID).Return(task, nil)
 	repo.On("Update", mock.Anything, mock.Anything).Return(nil)
+	repo.On("CompleteEscalationsByTaskID", mock.Anything, task.ID, mock.Anything).Return(nil)
 	notif.On("NotifyTaskCompleted", mock.Anything, mock.Anything).Maybe().Return(nil)
 
 	service := NewService(repo, notif)
 	ctx := context.Background()
 
 	request := SubmitTaskRequest{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"field1": "value1",
 			"field2": 42,
 		},

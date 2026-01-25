@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -13,14 +15,29 @@ import (
 	"github.com/gorax/gorax/internal/validation"
 )
 
+// ScheduleService defines the interface for schedule operations
+type ScheduleService interface {
+	Create(ctx context.Context, tenantID, workflowID, userID string, input schedule.CreateScheduleInput) (*schedule.Schedule, error)
+	GetByID(ctx context.Context, tenantID, id string) (*schedule.Schedule, error)
+	Update(ctx context.Context, tenantID, id string, input schedule.UpdateScheduleInput) (*schedule.Schedule, error)
+	Delete(ctx context.Context, tenantID, id string) error
+	List(ctx context.Context, tenantID, workflowID string, limit, offset int) ([]*schedule.Schedule, error)
+	ListAll(ctx context.Context, tenantID string, limit, offset int) ([]*schedule.ScheduleWithWorkflow, error)
+	ParseNextRunTime(expression, timezone string) (time.Time, error)
+	GetNextRunTimes(expression, timezone string, count int) ([]time.Time, error)
+	ListExecutionLogs(ctx context.Context, tenantID, scheduleID string, limit, offset int) ([]*schedule.ExecutionLog, error)
+	GetExecutionLog(ctx context.Context, tenantID, logID string) (*schedule.ExecutionLog, error)
+	CountExecutionLogs(ctx context.Context, tenantID, scheduleID string) (int, error)
+}
+
 // ScheduleHandler handles schedule-related HTTP requests
 type ScheduleHandler struct {
-	service *schedule.Service
+	service ScheduleService
 	logger  *slog.Logger
 }
 
 // NewScheduleHandler creates a new schedule handler
-func NewScheduleHandler(service *schedule.Service, logger *slog.Logger) *ScheduleHandler {
+func NewScheduleHandler(service ScheduleService, logger *slog.Logger) *ScheduleHandler {
 	return &ScheduleHandler{
 		service: service,
 		logger:  logger,

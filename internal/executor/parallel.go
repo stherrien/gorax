@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorax/gorax/internal/executor/actions"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -265,7 +266,7 @@ func (bec *branchExecutionCoordinator) handleContextCancelled(cancel context.Can
 	return bec.results, context.Canceled
 }
 
-// executeBranch executes a single branch
+// executeBranch executes a single branch with tracing
 func (pe *parallelExecutor) executeBranch(
 	ctx context.Context,
 	branchIndex int,
@@ -275,8 +276,20 @@ func (pe *parallelExecutor) executeBranch(
 	// Create branch-specific execution context
 	branchCtx := pe.createBranchContext(execCtx)
 
-	// Execute branch nodes
-	output, duration, err := pe.executeBranchNodes(ctx, nodes, branchCtx)
+	// Execute branch nodes with tracing
+	var output map[string]interface{}
+	var duration int64
+	var execErr error
+
+	_, err := tracing.TraceParallelBranch(ctx, branchIndex, func(tracedCtx context.Context) (interface{}, error) {
+		var innerErr error
+		output, duration, innerErr = pe.executeBranchNodes(tracedCtx, nodes, branchCtx)
+		return output, innerErr
+	})
+
+	if err != nil {
+		execErr = err
+	}
 
 	result := BranchResult{
 		BranchIndex: branchIndex,
@@ -284,8 +297,8 @@ func (pe *parallelExecutor) executeBranch(
 		DurationMs:  duration,
 	}
 
-	if err != nil {
-		errStr := err.Error()
+	if execErr != nil {
+		errStr := execErr.Error()
 		result.Error = &errStr
 	}
 

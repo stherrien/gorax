@@ -287,6 +287,93 @@ func (h *HumanTaskHandler) SubmitTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "task submitted successfully"})
 }
 
+// GetEscalationHistory godoc
+// @Summary Get escalation history for a task
+// @Description Get the escalation history for a human task
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID"
+// @Success 200 {object} humantask.EscalationHistory
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/tasks/{id}/escalations [get]
+func (h *HumanTaskHandler) GetEscalationHistory(c *gin.Context) {
+	tenantID, err := getTenantID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	taskID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task ID"})
+		return
+	}
+
+	history, err := h.service.GetEscalationHistory(c.Request.Context(), tenantID, taskID)
+	if err != nil {
+		if errors.Is(err, humantask.ErrTaskNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
+}
+
+// UpdateEscalationConfig godoc
+// @Summary Update escalation configuration for a task
+// @Description Update the escalation configuration for a pending human task
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID"
+// @Param request body humantask.UpdateEscalationRequest true "Escalation config"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/tasks/{id}/escalation [put]
+func (h *HumanTaskHandler) UpdateEscalationConfig(c *gin.Context) {
+	tenantID, err := getTenantID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	taskID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task ID"})
+		return
+	}
+
+	var req humantask.UpdateEscalationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate escalation config
+	if len(req.Config.Levels) == 0 && req.Config.Enabled {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one escalation level is required when escalation is enabled"})
+		return
+	}
+
+	err = h.service.UpdateEscalationConfig(c.Request.Context(), tenantID, taskID, req)
+	if err != nil {
+		statusCode := getErrorStatusCode(err)
+		c.JSON(statusCode, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "escalation configuration updated successfully"})
+}
+
 // Helper functions
 
 func getTenantID(c *gin.Context) (uuid.UUID, error) {

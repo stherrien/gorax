@@ -4,6 +4,7 @@ import { useThemeContext } from '../contexts/ThemeContext'
 const navigation = [
   { name: 'Dashboard', href: '/', adminOnly: false },
   { name: 'Workflows', href: '/workflows', adminOnly: false },
+  { name: 'Monitoring', href: '/monitoring', adminOnly: false },
   { name: 'Marketplace', href: '/marketplace', adminOnly: false },
   { name: 'AI Builder', href: '/ai/builder', adminOnly: false },
   { name: 'Webhooks', href: '/webhooks', adminOnly: false },
@@ -16,6 +17,8 @@ const navigation = [
 ]
 
 const adminNavigation = [
+  { name: 'Users', href: '/admin/users' },
+  { name: 'Tenants', href: '/admin/tenants' },
   { name: 'SSO Settings', href: '/admin/sso' },
   { name: 'Audit Logs', href: '/admin/audit-logs' },
 ]

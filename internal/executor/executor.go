@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gorax/gorax/internal/credential"
+	"github.com/gorax/gorax/internal/executor/javascript"
+	"github.com/gorax/gorax/internal/tracing"
 	"github.com/gorax/gorax/internal/workflow"
 )
 
@@ -66,6 +68,16 @@ type Executor struct {
 	credentialInjector *credential.Injector // Optional credential injector
 	credentialService  credential.Service   // Optional credential service for Slack actions
 	formulaEvaluator   FormulaEvaluator     // Optional cached formula evaluator
+	jsEngine           *javascript.Engine   // Sandboxed JavaScript execution engine
+	metrics            MetricsRecorder      // Optional metrics recorder
+}
+
+// MetricsRecorder defines the interface for recording execution metrics
+type MetricsRecorder interface {
+	RecordWorkflowExecution(tenantID, workflowID, triggerType, status string, durationSeconds float64)
+	RecordStepExecution(tenantID, workflowID, stepType, status string, durationSeconds float64)
+	IncActiveWorkflowExecutions(tenantID, workflowID, triggerType string)
+	DecActiveWorkflowExecutions(tenantID, workflowID, triggerType string)
 }
 
 // FormulaEvaluator interface for formula evaluation (allows both cached and uncached)
@@ -80,6 +92,17 @@ func New(repo *workflow.Repository, logger *slog.Logger) *Executor {
 	retryConfig := DefaultRetryConfig()
 	circuitConfig := DefaultCircuitBreakerConfig()
 
+	// Create the JavaScript engine
+	jsEngine, err := javascript.NewEngine(&javascript.EngineConfig{
+		Logger:               logger,
+		EnableConsoleCapture: true,
+	})
+	if err != nil {
+		logger.Warn("failed to create JavaScript engine, falling back to legacy action",
+			"error", err,
+		)
+	}
+
 	return &Executor{
 		repo:               &workflowRepoAdapter{repo: repo},
 		logger:             logger,
@@ -87,6 +110,7 @@ func New(repo *workflow.Repository, logger *slog.Logger) *Executor {
 		retryStrategy:      NewRetryStrategy(retryConfig, logger),
 		circuitBreakers:    NewCircuitBreakerRegistry(circuitConfig, logger),
 		defaultRetryConfig: DefaultNodeRetryConfig(),
+		jsEngine:           jsEngine,
 	}
 }
 
@@ -95,6 +119,17 @@ func NewWithBroadcaster(repo *workflow.Repository, logger *slog.Logger, broadcas
 	retryConfig := DefaultRetryConfig()
 	circuitConfig := DefaultCircuitBreakerConfig()
 
+	// Create the JavaScript engine
+	jsEngine, err := javascript.NewEngine(&javascript.EngineConfig{
+		Logger:               logger,
+		EnableConsoleCapture: true,
+	})
+	if err != nil {
+		logger.Warn("failed to create JavaScript engine, falling back to legacy action",
+			"error", err,
+		)
+	}
+
 	return &Executor{
 		repo:               &workflowRepoAdapter{repo: repo},
 		logger:             logger,
@@ -102,6 +137,7 @@ func NewWithBroadcaster(repo *workflow.Repository, logger *slog.Logger, broadcas
 		retryStrategy:      NewRetryStrategy(retryConfig, logger),
 		circuitBreakers:    NewCircuitBreakerRegistry(circuitConfig, logger),
 		defaultRetryConfig: DefaultNodeRetryConfig(),
+		jsEngine:           jsEngine,
 	}
 }
 
@@ -109,6 +145,17 @@ func NewWithBroadcaster(repo *workflow.Repository, logger *slog.Logger, broadcas
 func NewWithCredentials(repo *workflow.Repository, logger *slog.Logger, broadcaster Broadcaster, injector *credential.Injector, credService credential.Service) *Executor {
 	retryConfig := DefaultRetryConfig()
 	circuitConfig := DefaultCircuitBreakerConfig()
+
+	// Create the JavaScript engine
+	jsEngine, err := javascript.NewEngine(&javascript.EngineConfig{
+		Logger:               logger,
+		EnableConsoleCapture: true,
+	})
+	if err != nil {
+		logger.Warn("failed to create JavaScript engine, falling back to legacy action",
+			"error", err,
+		)
+	}
 
 	return &Executor{
 		repo:               &workflowRepoAdapter{repo: repo},
@@ -119,6 +166,7 @@ func NewWithCredentials(repo *workflow.Repository, logger *slog.Logger, broadcas
 		defaultRetryConfig: DefaultNodeRetryConfig(),
 		credentialInjector: injector,
 		credentialService:  credService,
+		jsEngine:           jsEngine,
 	}
 }
 
@@ -126,6 +174,17 @@ func NewWithCredentials(repo *workflow.Repository, logger *slog.Logger, broadcas
 func NewWithCachedEvaluator(repo WorkflowRepository, logger *slog.Logger, broadcaster Broadcaster, evaluator FormulaEvaluator) *Executor {
 	retryConfig := DefaultRetryConfig()
 	circuitConfig := DefaultCircuitBreakerConfig()
+
+	// Create the JavaScript engine
+	jsEngine, err := javascript.NewEngine(&javascript.EngineConfig{
+		Logger:               logger,
+		EnableConsoleCapture: true,
+	})
+	if err != nil {
+		logger.Warn("failed to create JavaScript engine, falling back to legacy action",
+			"error", err,
+		)
+	}
 
 	return &Executor{
 		repo:               repo,
@@ -135,7 +194,13 @@ func NewWithCachedEvaluator(repo WorkflowRepository, logger *slog.Logger, broadc
 		circuitBreakers:    NewCircuitBreakerRegistry(circuitConfig, logger),
 		defaultRetryConfig: DefaultNodeRetryConfig(),
 		formulaEvaluator:   evaluator,
+		jsEngine:           jsEngine,
 	}
+}
+
+// SetMetrics sets the metrics recorder for the executor
+func (e *Executor) SetMetrics(m MetricsRecorder) {
+	e.metrics = m
 }
 
 // ExecutionContext holds context for a workflow execution
@@ -187,30 +252,59 @@ func (ec *ExecutionContext) SetUserID(userID string) {
 
 // Execute runs a workflow execution
 func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) error {
+	// Wrap the entire execution with tracing
+	return tracing.TraceWorkflowExecution(ctx, execution.TenantID, execution.WorkflowID, execution.ID, func(tracedCtx context.Context) error {
+		return e.executeInternal(tracedCtx, execution)
+	})
+}
+
+// executeInternal performs the actual workflow execution logic
+func (e *Executor) executeInternal(ctx context.Context, execution *workflow.Execution) error {
+	// Track execution start time for metrics
+	startTime := time.Now()
+	triggerType := string(execution.TriggerType)
+
 	e.logger.Info("starting workflow execution",
 		"execution_id", execution.ID,
 		"workflow_id", execution.WorkflowID,
+		"trace_id", tracing.GetTraceID(ctx),
 	)
+
+	// Increment active executions gauge
+	if e.metrics != nil {
+		e.metrics.IncActiveWorkflowExecutions(execution.TenantID, execution.WorkflowID, triggerType)
+	}
+
+	// Record workflow start event
+	tracing.RecordWorkflowEvent(ctx, "workflow.started", map[string]interface{}{
+		"workflow_id":  execution.WorkflowID,
+		"execution_id": execution.ID,
+		"tenant_id":    execution.TenantID,
+	})
 
 	// Update status to running
 	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, string(workflow.ExecutionStatusRunning), nil, nil); err != nil {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "error", startTime)
 		return err
 	}
 
 	// Load workflow definition
 	wf, err := e.repo.GetByID(ctx, execution.TenantID, execution.WorkflowID)
 	if err != nil {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "failed", startTime)
 		return e.failExecution(ctx, execution)
 	}
 
 	// Parse workflow definition
 	var definition workflow.WorkflowDefinition
 	if err := json.Unmarshal(wf.Definition, &definition); err != nil {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "failed", startTime)
 		return e.failExecution(ctx, execution, fmt.Errorf("failed to parse workflow definition: %w", err))
 	}
 
 	// Validate workflow has nodes
 	if len(definition.Nodes) == 0 {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "failed", startTime)
 		return e.failExecution(ctx, execution, fmt.Errorf("workflow has no nodes to execute"))
 	}
 
@@ -259,6 +353,7 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 	nodeMap := buildNodeMap(definition.Nodes)
 	executionOrder, err := topologicalSort(definition.Nodes, definition.Edges)
 	if err != nil {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "failed", startTime)
 		return e.failExecution(ctx, execution, fmt.Errorf("failed to determine execution order: %w", err))
 	}
 
@@ -291,31 +386,44 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 			e.broadcaster.BroadcastStepStarted(execution.TenantID, execution.WorkflowID, execution.ID, node.ID, node.Type)
 		}
 
-		// Execute the node with step tracking
+		// Execute the node with step tracking and tracing
 		startTime := time.Now()
-		var output interface{}
-		var err error
-
-		// Handle control nodes specially (they need workflow definition)
-		if node.Type == string(workflow.NodeTypeControlLoop) {
-			output, err = e.executeLoopAction(ctx, node, execCtx, &definition)
-		} else if node.Type == string(workflow.NodeTypeControlParallel) {
-			output, err = e.executeParallelAction(ctx, node, execCtx, &definition)
-		} else if node.Type == string(workflow.NodeTypeControlFork) {
-			output, err = e.executeForkAction(ctx, node, execCtx)
-		} else if node.Type == string(workflow.NodeTypeControlJoin) {
-			output, err = e.executeJoinAction(ctx, node, execCtx, &definition)
-		} else {
-			output, err = e.executeNodeWithTracking(ctx, node, execCtx)
-		}
+		output, err := tracing.TraceStepExecution(
+			ctx,
+			execution.TenantID,
+			execution.WorkflowID,
+			execution.ID,
+			node.ID,
+			node.Type,
+			func(tracedCtx context.Context) (interface{}, error) {
+				// Handle control nodes specially (they need workflow definition)
+				switch node.Type {
+				case string(workflow.NodeTypeControlLoop):
+					return e.executeLoopAction(tracedCtx, node, execCtx, &definition)
+				case string(workflow.NodeTypeControlParallel):
+					return e.executeParallelAction(tracedCtx, node, execCtx, &definition)
+				case string(workflow.NodeTypeControlFork):
+					return e.executeForkAction(tracedCtx, node, execCtx)
+				case string(workflow.NodeTypeControlJoin):
+					return e.executeJoinAction(tracedCtx, node, execCtx, &definition)
+				default:
+					return e.executeNodeWithTracking(tracedCtx, node, execCtx)
+				}
+			},
+		)
 		durationMs := int(time.Since(startTime).Milliseconds())
 
 		if err != nil {
-			e.logger.Error("node execution failed", "node_id", node.ID, "error", err)
+			e.logger.Error("node execution failed",
+				"node_id", node.ID,
+				"error", err,
+				"trace_id", tracing.GetTraceID(ctx),
+			)
 			// Broadcast step failure
 			if e.broadcaster != nil {
 				e.broadcaster.BroadcastStepFailed(execution.TenantID, execution.WorkflowID, execution.ID, node.ID, err.Error())
 			}
+			e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "failed", startTime)
 			return e.failExecution(ctx, execution, fmt.Errorf("node %s failed: %w", node.ID, err))
 		}
 
@@ -338,15 +446,31 @@ func (e *Executor) Execute(ctx context.Context, execution *workflow.Execution) e
 	// Mark execution as completed
 	outputData, _ := json.Marshal(execCtx.StepOutputs)
 	if err := e.repo.UpdateExecutionStatus(ctx, execution.ID, string(workflow.ExecutionStatusCompleted), outputData, nil); err != nil {
+		e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "error", startTime)
 		return err
 	}
+
+	// Record execution metrics for success
+	e.recordExecutionMetrics(execution.TenantID, execution.WorkflowID, triggerType, "success", startTime)
+
+	// Record workflow completion event
+	tracing.RecordWorkflowEvent(ctx, "workflow.completed", map[string]interface{}{
+		"workflow_id":     execution.WorkflowID,
+		"execution_id":    execution.ID,
+		"tenant_id":       execution.TenantID,
+		"completed_steps": completedSteps,
+		"total_steps":     totalSteps,
+	})
 
 	// Broadcast execution completed
 	if e.broadcaster != nil {
 		e.broadcaster.BroadcastExecutionCompleted(execution.TenantID, execution.WorkflowID, execution.ID, outputData)
 	}
 
-	e.logger.Info("workflow execution completed", "execution_id", execution.ID)
+	e.logger.Info("workflow execution completed",
+		"execution_id", execution.ID,
+		"trace_id", tracing.GetTraceID(ctx),
+	)
 	return nil
 }
 
@@ -385,10 +509,17 @@ func (e *Executor) executeNodeWithTracking(ctx context.Context, node workflow.No
 		// Create retry strategy for this node
 		nodeRetryStrategy := NewRetryStrategy(retryConfig.RetryConfig, e.logger)
 
-		// Execute with retry
-		result, err := nodeRetryStrategy.ExecuteWithResult(ctx, func(ctx context.Context, attempt int) (interface{}, error) {
+		// Execute with retry and tracing for each attempt
+		result, err := nodeRetryStrategy.ExecuteWithResult(ctx, func(attemptCtx context.Context, attempt int) (interface{}, error) {
 			retryCount = attempt
-			return e.executeNode(ctx, node, execCtx)
+			// Trace each retry attempt
+			var attemptResult interface{}
+			attemptErr := tracing.TraceRetryAttempt(attemptCtx, node.ID, attempt, retryConfig.MaxRetries, func(tracedAttemptCtx context.Context) error {
+				var innerErr error
+				attemptResult, innerErr = e.executeNode(tracedAttemptCtx, node, execCtx)
+				return innerErr
+			})
+			return attemptResult, attemptErr
 		})
 		output = result
 		execErr = err
@@ -572,6 +703,16 @@ func (e *Executor) failExecution(ctx context.Context, execution *workflow.Execut
 		return err[0]
 	}
 	return fmt.Errorf("%s", errMsg)
+}
+
+// recordExecutionMetrics records workflow execution metrics
+func (e *Executor) recordExecutionMetrics(tenantID, workflowID, triggerType, status string, startTime time.Time) {
+	if e.metrics == nil {
+		return
+	}
+	duration := time.Since(startTime).Seconds()
+	e.metrics.RecordWorkflowExecution(tenantID, workflowID, triggerType, status, duration)
+	e.metrics.DecActiveWorkflowExecutions(tenantID, workflowID, triggerType)
 }
 
 // Helper functions

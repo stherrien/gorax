@@ -9,6 +9,7 @@ type Metrics struct {
 	// Workflow metrics
 	WorkflowExecutionsTotal   *prometheus.CounterVec
 	WorkflowExecutionDuration *prometheus.HistogramVec
+	WorkflowExecutionsActive  *prometheus.GaugeVec
 
 	// Step metrics
 	StepExecutionsTotal   *prometheus.CounterVec
@@ -53,6 +54,13 @@ func NewMetrics() *Metrics {
 				Name:    "gorax_workflow_execution_duration_seconds",
 				Help:    "Workflow execution duration in seconds by trigger type",
 				Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300},
+			},
+			[]string{"tenant_id", "workflow_id", "trigger_type"},
+		),
+		WorkflowExecutionsActive: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "gorax_workflow_executions_active",
+				Help: "Number of currently active workflow executions",
 			},
 			[]string{"tenant_id", "workflow_id", "trigger_type"},
 		),
@@ -172,6 +180,7 @@ func (m *Metrics) Register(registry *prometheus.Registry) error {
 	collectors := []prometheus.Collector{
 		m.WorkflowExecutionsTotal,
 		m.WorkflowExecutionDuration,
+		m.WorkflowExecutionsActive,
 		m.StepExecutionsTotal,
 		m.StepExecutionDuration,
 		m.QueueDepth,
@@ -202,6 +211,16 @@ func (m *Metrics) Register(registry *prometheus.Registry) error {
 func (m *Metrics) RecordWorkflowExecution(tenantID, workflowID, triggerType, status string, durationSeconds float64) {
 	m.WorkflowExecutionsTotal.WithLabelValues(tenantID, workflowID, triggerType, status).Inc()
 	m.WorkflowExecutionDuration.WithLabelValues(tenantID, workflowID, triggerType).Observe(durationSeconds)
+}
+
+// IncActiveWorkflowExecutions increments the active workflow executions gauge
+func (m *Metrics) IncActiveWorkflowExecutions(tenantID, workflowID, triggerType string) {
+	m.WorkflowExecutionsActive.WithLabelValues(tenantID, workflowID, triggerType).Inc()
+}
+
+// DecActiveWorkflowExecutions decrements the active workflow executions gauge
+func (m *Metrics) DecActiveWorkflowExecutions(tenantID, workflowID, triggerType string) {
+	m.WorkflowExecutionsActive.WithLabelValues(tenantID, workflowID, triggerType).Dec()
 }
 
 // RecordStepExecution records a step execution with type, status, and duration

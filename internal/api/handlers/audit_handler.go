@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -14,14 +15,21 @@ import (
 	"github.com/gorax/gorax/internal/audit"
 )
 
+// AuditService defines the interface for audit service operations
+type AuditService interface {
+	QueryAuditEvents(ctx context.Context, filter audit.QueryFilter) ([]audit.AuditEvent, int, error)
+	GetAuditEvent(ctx context.Context, tenantID, eventID string) (*audit.AuditEvent, error)
+	GetAuditStats(ctx context.Context, tenantID string, timeRange audit.TimeRange) (*audit.AuditStats, error)
+}
+
 // AuditHandler handles audit log HTTP requests
 type AuditHandler struct {
-	service *audit.Service
+	service AuditService
 	logger  *slog.Logger
 }
 
 // NewAuditHandler creates a new audit handler
-func NewAuditHandler(service *audit.Service, logger *slog.Logger) *AuditHandler {
+func NewAuditHandler(service AuditService, logger *slog.Logger) *AuditHandler {
 	return &AuditHandler{
 		service: service,
 		logger:  logger,

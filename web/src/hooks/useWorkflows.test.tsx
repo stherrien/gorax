@@ -35,7 +35,7 @@ function createWrapper() {
 
 describe('useWorkflows', () => {
   const mockWorkflow: Workflow = {
-    id: 'wf-123',
+    id: '12345678-1234-4234-8234-123456789abc',
     tenantId: 'tenant-1',
     name: 'Test Workflow',
     description: 'Test description',
@@ -141,7 +141,7 @@ describe('useWorkflows', () => {
     it('should load workflow by ID on mount', async () => {
       (workflowAPI.get as any).mockResolvedValueOnce(mockWorkflow)
 
-      const { result } = renderHook(() => useWorkflow('wf-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWorkflow('12345678-1234-4234-8234-123456789abc'), { wrapper: createWrapper() })
 
       expect(result.current.loading).toBe(true)
 
@@ -166,7 +166,9 @@ describe('useWorkflows', () => {
       error.name = 'NotFoundError'
       ;(workflowAPI.get as any).mockRejectedValueOnce(error)
 
-      const { result } = renderHook(() => useWorkflow('invalid-id'), { wrapper: createWrapper() })
+      // Use a valid UUID format but one that doesn't exist
+      const nonExistentId = '99999999-9999-4999-8999-999999999999'
+      const { result } = renderHook(() => useWorkflow(nonExistentId), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -179,7 +181,7 @@ describe('useWorkflows', () => {
     it('should refetch workflow', async () => {
       (workflowAPI.get as any).mockResolvedValue(mockWorkflow)
 
-      const { result } = renderHook(() => useWorkflow('wf-123'), { wrapper: createWrapper() })
+      const { result } = renderHook(() => useWorkflow('12345678-1234-4234-8234-123456789abc'), { wrapper: createWrapper() })
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
@@ -246,14 +248,14 @@ describe('useWorkflows', () => {
 
       expect(result.current.updating).toBe(false)
 
-      const updated = await result.current.updateWorkflow('wf-123', updates)
+      const updated = await result.current.updateWorkflow('12345678-1234-4234-8234-123456789abc', updates)
 
       await waitFor(() => {
         expect(result.current.updating).toBe(false)
       })
 
       expect(updated.name).toBe('Updated Workflow')
-      expect(workflowAPI.update).toHaveBeenCalledWith('wf-123', updates)
+      expect(workflowAPI.update).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc', updates)
     })
 
     it('should delete workflow', async () => {
@@ -263,19 +265,19 @@ describe('useWorkflows', () => {
 
       expect(result.current.deleting).toBe(false)
 
-      await result.current.deleteWorkflow('wf-123')
+      await result.current.deleteWorkflow('12345678-1234-4234-8234-123456789abc')
 
       await waitFor(() => {
         expect(result.current.deleting).toBe(false)
       })
 
-      expect(workflowAPI.delete).toHaveBeenCalledWith('wf-123')
+      expect(workflowAPI.delete).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc')
     })
 
     it('should execute workflow', async () => {
       const executionResponse = {
         executionId: 'exec-123',
-        workflowId: 'wf-123',
+        workflowId: '12345678-1234-4234-8234-123456789abc',
         status: 'queued',
         queuedAt: '2024-01-15T10:00:00Z',
       }
@@ -286,21 +288,21 @@ describe('useWorkflows', () => {
 
       expect(result.current.executing).toBe(false)
 
-      const response = await result.current.executeWorkflow('wf-123')
+      const response = await result.current.executeWorkflow('12345678-1234-4234-8234-123456789abc')
 
       await waitFor(() => {
         expect(result.current.executing).toBe(false)
       })
 
       expect(response.executionId).toBe('exec-123')
-      expect(workflowAPI.execute).toHaveBeenCalledWith('wf-123', undefined)
+      expect(workflowAPI.execute).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc', undefined)
     })
 
     it('should execute workflow with input data', async () => {
       const inputData = { userId: '123' }
       const executionResponse = {
         executionId: 'exec-123',
-        workflowId: 'wf-123',
+        workflowId: '12345678-1234-4234-8234-123456789abc',
         status: 'queued',
         queuedAt: '2024-01-15T10:00:00Z',
       }
@@ -309,9 +311,9 @@ describe('useWorkflows', () => {
 
       const { result } = renderHook(() => useWorkflowMutations(), { wrapper: createWrapper() })
 
-      await result.current.executeWorkflow('wf-123', inputData)
+      await result.current.executeWorkflow('12345678-1234-4234-8234-123456789abc', inputData)
 
-      expect(workflowAPI.execute).toHaveBeenCalledWith('wf-123', inputData)
+      expect(workflowAPI.execute).toHaveBeenCalledWith('12345678-1234-4234-8234-123456789abc', inputData)
     })
   })
 })

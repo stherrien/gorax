@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -71,11 +72,11 @@ func (h *RBACHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 
 	role, err := h.service.CreateRole(r.Context(), tenantID, userID, &req)
 	if err != nil {
-		if err == rbac.ErrRoleAlreadyExists {
+		if errors.Is(err, rbac.ErrRoleAlreadyExists) {
 			respondError(w, http.StatusConflict, "Role already exists")
 			return
 		}
-		if err == rbac.ErrInvalidRoleName {
+		if errors.Is(err, rbac.ErrInvalidRoleName) {
 			respondError(w, http.StatusBadRequest, "Invalid role name")
 			return
 		}
@@ -105,7 +106,7 @@ func (h *RBACHandler) GetRole(w http.ResponseWriter, r *http.Request) {
 
 	role, err := h.service.GetRole(r.Context(), roleID, tenantID)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
@@ -145,15 +146,15 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.UpdateRole(r.Context(), roleID, tenantID, userID, &req)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
-		if err == rbac.ErrSystemRoleCannotBeModified {
+		if errors.Is(err, rbac.ErrSystemRoleCannotBeModified) {
 			respondError(w, http.StatusForbidden, "System role cannot be modified")
 			return
 		}
-		if err == rbac.ErrInvalidRoleName {
+		if errors.Is(err, rbac.ErrInvalidRoleName) {
 			respondError(w, http.StatusBadRequest, "Invalid role name")
 			return
 		}
@@ -185,11 +186,11 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.DeleteRole(r.Context(), roleID, tenantID, userID)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
-		if err == rbac.ErrSystemRoleCannotBeDeleted {
+		if errors.Is(err, rbac.ErrSystemRoleCannotBeDeleted) {
 			respondError(w, http.StatusForbidden, "System role cannot be deleted")
 			return
 		}
@@ -207,7 +208,7 @@ func (h *RBACHandler) GetRolePermissions(w http.ResponseWriter, r *http.Request)
 
 	permissions, err := h.service.GetRolePermissions(r.Context(), roleID, tenantID)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
@@ -234,11 +235,11 @@ func (h *RBACHandler) UpdateRolePermissions(w http.ResponseWriter, r *http.Reque
 
 	err := h.service.UpdateRolePermissions(r.Context(), roleID, tenantID, userID, req.PermissionIDs)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
-		if err == rbac.ErrSystemRoleCannotBeModified {
+		if errors.Is(err, rbac.ErrSystemRoleCannotBeModified) {
 			respondError(w, http.StatusForbidden, "System role cannot be modified")
 			return
 		}
@@ -291,11 +292,11 @@ func (h *RBACHandler) AssignUserRoles(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.AssignRolesToUser(r.Context(), userID, tenantID, grantedBy, &req)
 	if err != nil {
-		if err == rbac.ErrRoleNotFound {
+		if errors.Is(err, rbac.ErrRoleNotFound) {
 			respondError(w, http.StatusNotFound, "Role not found")
 			return
 		}
-		if err == rbac.ErrNoRolesProvided {
+		if errors.Is(err, rbac.ErrNoRolesProvided) {
 			respondError(w, http.StatusBadRequest, "No roles provided")
 			return
 		}

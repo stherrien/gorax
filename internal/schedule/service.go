@@ -52,6 +52,11 @@ func (s *Service) Create(ctx context.Context, tenantID, workflowID, userID strin
 		}
 	}
 
+	// Validate overlap policy if provided
+	if input.OverlapPolicy != "" && !input.OverlapPolicy.IsValid() {
+		return nil, &ValidationError{Message: "invalid overlap policy: must be one of skip, queue, terminate"}
+	}
+
 	// Verify workflow exists
 	if s.workflowGetter != nil {
 		if _, err := s.workflowGetter.GetByID(ctx, tenantID, workflowID); err != nil {
@@ -80,7 +85,7 @@ func (s *Service) Create(ctx context.Context, tenantID, workflowID, userID strin
 		}
 	}
 
-	s.logger.Info("schedule created", "schedule_id", schedule.ID, "workflow_id", workflowID)
+	s.logger.Info("schedule created", "schedule_id", schedule.ID, "workflow_id", workflowID, "overlap_policy", schedule.OverlapPolicy)
 	return schedule, nil
 }
 
@@ -109,6 +114,11 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, input UpdateS
 		if _, err := time.LoadLocation(*input.Timezone); err != nil {
 			return nil, &ValidationError{Message: "invalid timezone: " + err.Error()}
 		}
+	}
+
+	// Validate overlap policy if provided
+	if input.OverlapPolicy != nil && !input.OverlapPolicy.IsValid() {
+		return nil, &ValidationError{Message: "invalid overlap policy: must be one of skip, queue, terminate"}
 	}
 
 	// Update schedule
@@ -280,4 +290,38 @@ func (s *Service) GetNextRunTimes(expression, timezone string, count int) ([]tim
 	}
 
 	return times, nil
+}
+
+// ListExecutionLogs retrieves execution logs for a schedule
+func (s *Service) ListExecutionLogs(ctx context.Context, tenantID, scheduleID string, limit, offset int) ([]*ExecutionLog, error) {
+	// Validate schedule exists and belongs to tenant
+	_, err := s.repo.GetByID(ctx, tenantID, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	params := ExecutionLogListParams{
+		ScheduleID: scheduleID,
+		Limit:      limit,
+		Offset:     offset,
+	}
+
+	return s.repo.ListExecutionLogs(ctx, tenantID, params)
+}
+
+// GetExecutionLog retrieves a specific execution log
+func (s *Service) GetExecutionLog(ctx context.Context, tenantID, logID string) (*ExecutionLog, error) {
+	return s.repo.GetExecutionLog(ctx, tenantID, logID)
+}
+
+// CountExecutionLogs returns the count of execution logs for a schedule
+func (s *Service) CountExecutionLogs(ctx context.Context, tenantID, scheduleID string) (int, error) {
+	return s.repo.CountExecutionLogs(ctx, tenantID, scheduleID)
 }

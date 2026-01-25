@@ -14,15 +14,27 @@ import (
 	"github.com/gorax/gorax/internal/workflow"
 )
 
+// WebhookWorkflowService defines the interface for workflow operations used by webhook handler
+type WebhookWorkflowService interface {
+	Execute(ctx context.Context, tenantID, workflowID, triggerType string, triggerData []byte) (*workflow.Execution, error)
+}
+
+// WebhookService defines the interface for webhook operations
+type WebhookService interface {
+	GetByWorkflowAndWebhookID(ctx context.Context, workflowID, webhookID string) (*webhook.Webhook, error)
+	VerifySignature(payload []byte, signature string, secret string) bool
+	LogEvent(ctx context.Context, event *webhook.WebhookEvent) error
+}
+
 // WebhookHandler handles incoming webhook requests
 type WebhookHandler struct {
-	workflowService *workflow.Service
-	webhookService  *webhook.Service
+	workflowService WebhookWorkflowService
+	webhookService  WebhookService
 	logger          *slog.Logger
 }
 
 // NewWebhookHandler creates a new webhook handler
-func NewWebhookHandler(workflowService *workflow.Service, webhookService *webhook.Service, logger *slog.Logger) *WebhookHandler {
+func NewWebhookHandler(workflowService WebhookWorkflowService, webhookService WebhookService, logger *slog.Logger) *WebhookHandler {
 	return &WebhookHandler{
 		workflowService: workflowService,
 		webhookService:  webhookService,

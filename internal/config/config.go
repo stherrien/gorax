@@ -31,6 +31,26 @@ type Config struct {
 	OAuth          OAuthConfig
 	Audit          AuditConfig
 	Log            LogConfig
+	Tenant         TenantConfig
+}
+
+// TenantConfig holds multi-tenant configuration
+type TenantConfig struct {
+	// Mode determines how tenant resolution works
+	// "single" - Single tenant mode, uses default tenant for all requests
+	// "multi" - Multi-tenant mode, requires tenant resolution from request
+	Mode string
+	// DefaultTenantID is used in single-tenant mode
+	// If empty and mode is "single", a default tenant will be created
+	DefaultTenantID string
+	// ResolutionStrategy determines how tenant is identified in multi-tenant mode
+	// "header" - Extract tenant from X-Tenant-ID header
+	// "subdomain" - Extract tenant from request subdomain
+	// "path" - Extract tenant from URL path prefix
+	// "user" - Use tenant from authenticated user's Kratos traits
+	ResolutionStrategy string
+	// AllowCrossTenantAccess allows admin users to access other tenants
+	AllowCrossTenantAccess bool
 }
 
 // AIBuilderConfig holds AI Workflow Builder configuration
@@ -160,6 +180,8 @@ type RetentionConfig struct {
 	RunInterval string
 	// EnableAuditLog enables audit logging of cleanup operations
 	EnableAuditLog bool
+	// ArchiveBeforeDelete enables archiving executions before deletion (default: true)
+	ArchiveBeforeDelete bool
 }
 
 // ObservabilityConfig holds observability configuration
@@ -371,6 +393,7 @@ func Load() (*Config, error) {
 			BatchSize:            getEnvAsInt("RETENTION_BATCH_SIZE", 1000),
 			RunInterval:          getEnv("RETENTION_RUN_INTERVAL", "24h"),
 			EnableAuditLog:       getEnvAsBool("RETENTION_ENABLE_AUDIT_LOG", true),
+			ArchiveBeforeDelete:  getEnvAsBool("RETENTION_ARCHIVE_BEFORE_DELETE", true),
 		},
 		Observability: ObservabilityConfig{
 			MetricsEnabled:     getEnvAsBool("METRICS_ENABLED", true),
@@ -420,9 +443,33 @@ func Load() (*Config, error) {
 		OAuth:        loadOAuthConfig(),
 		Audit:        loadAuditConfig(),
 		Log:          loadLogConfig(),
+		Tenant:       loadTenantConfig(),
 	}
 
 	return cfg, nil
+}
+
+func loadTenantConfig() TenantConfig {
+	return TenantConfig{
+		// Default to multi-tenant mode for enterprise deployments
+		Mode: getEnv("TENANT_MODE", "multi"),
+		// Default tenant ID for single-tenant mode (empty means auto-create)
+		DefaultTenantID: getEnv("TENANT_DEFAULT_ID", ""),
+		// Default resolution strategy is user-based (from Kratos traits)
+		ResolutionStrategy: getEnv("TENANT_RESOLUTION_STRATEGY", "user"),
+		// Allow admins to switch tenants by default
+		AllowCrossTenantAccess: getEnvAsBool("TENANT_ALLOW_CROSS_ACCESS", true),
+	}
+}
+
+// IsSingleTenantMode returns true if running in single-tenant mode
+func (c *TenantConfig) IsSingleTenantMode() bool {
+	return c.Mode == "single"
+}
+
+// IsMultiTenantMode returns true if running in multi-tenant mode
+func (c *TenantConfig) IsMultiTenantMode() bool {
+	return c.Mode == "multi"
 }
 
 func getEnv(key, defaultValue string) string {

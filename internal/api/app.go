@@ -16,6 +16,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -92,6 +94,7 @@ type App struct {
 
 	// Metrics
 	metrics          *metrics.Metrics
+	metricsRegistry  *prometheus.Registry
 	dbStatsCollector *metrics.DBStatsCollector
 	metricsStopCtx   context.Context
 	metricsStopFunc  context.CancelFunc
@@ -125,6 +128,7 @@ type App struct {
 	webhookFilterHandler     *handlers.WebhookFilterHandler
 	websocketHandler         *handlers.WebSocketHandler
 	tenantAdminHandler       *handlers.TenantAdminHandler
+	tenantHandler            *handlers.TenantHandler
 	scheduleHandler          *handlers.ScheduleHandler
 	executionHandler         *handlers.ExecutionHandler
 	usageHandler             *handlers.UsageHandler
@@ -171,8 +175,12 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	db.SetConnMaxIdleTime(cfg.Database.ConnMaxIdleTime)
 	app.db = db
 
-	// Initialize metrics
+	// Initialize metrics and Prometheus registry
 	app.metrics = metrics.NewMetrics()
+	app.metricsRegistry = prometheus.NewRegistry()
+	if err := app.metrics.Register(app.metricsRegistry); err != nil {
+		return nil, fmt.Errorf("failed to register metrics: %w", err)
+	}
 	logger.Info("Metrics initialized")
 
 	// Initialize and start DB stats collector
@@ -230,9 +238,10 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	app.collabService = collaboration.NewService()
 	app.collabHub = collaboration.NewHub(app.collabService, app.wsHub, logger)
 
-	// Initialize executor with WebSocket broadcaster
+	// Initialize executor with WebSocket broadcaster and metrics
 	broadcaster := websocket.NewHubBroadcaster(app.wsHub)
 	workflowExecutor := executor.NewWithBroadcaster(workflowRepo, logger, broadcaster)
+	workflowExecutor.SetMetrics(app.metrics)
 
 	// Create workflow getter adapter for schedule service
 	workflowGetter := &workflowServiceAdapter{workflowService: app.workflowService}
@@ -259,6 +268,7 @@ func NewApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 
 	app.websocketHandler = handlers.NewWebSocketHandler(app.wsHub, logger)
 	app.tenantAdminHandler = handlers.NewTenantAdminHandler(app.tenantService, logger)
+	app.tenantHandler = handlers.NewTenantHandler(app.tenantService, logger)
 	app.scheduleHandler = handlers.NewScheduleHandler(app.scheduleService, logger)
 	app.executionHandler = handlers.NewExecutionHandler(app.workflowService, logger)
 	app.metricsHandler = handlers.NewMetricsHandler(workflowRepo)
@@ -558,6 +568,11 @@ func (a *App) setupRouter() {
 	r.Get("/health", a.healthHandler.Health)
 	r.Get("/ready", a.healthHandler.Ready)
 
+	// Prometheus metrics endpoint (no auth required for scraping)
+	if a.config.Observability.MetricsEnabled {
+		r.Handle("/metrics", promhttp.HandlerFor(a.metricsRegistry, promhttp.HandlerOpts{}))
+	}
+
 	// Swagger API documentation (no auth required)
 	r.Get("/api/docs/*", httpSwagger.Handler(
 		httpSwagger.URL("/docs/api/swagger.json"),
@@ -578,6 +593,10 @@ func (a *App) setupRouter() {
 		r.Route("/admin", func(r chi.Router) {
 			// Require admin role for all admin routes
 			r.Use(apiMiddleware.RequireAdmin())
+
+			// Tenant switching for admins
+			r.Post("/switch-tenant", a.tenantAdminHandler.SwitchTenant)
+
 			r.Route("/tenants", func(r chi.Router) {
 				r.Get("/", a.tenantAdminHandler.ListTenants)
 				r.Post("/", a.tenantAdminHandler.CreateTenant)
@@ -586,6 +605,9 @@ func (a *App) setupRouter() {
 				r.Delete("/{tenantID}", a.tenantAdminHandler.DeleteTenant)
 				r.Put("/{tenantID}/quotas", a.tenantAdminHandler.UpdateTenantQuotas)
 				r.Get("/{tenantID}/usage", a.tenantAdminHandler.GetTenantUsage)
+				r.Put("/{tenantID}/status", a.tenantAdminHandler.SetTenantStatus)
+				r.Post("/{tenantID}/activate", a.tenantAdminHandler.ActivateTenant)
+				r.Post("/{tenantID}/suspend", a.tenantAdminHandler.SuspendTenant)
 			})
 
 			// SSO provider management routes (admin only)
@@ -609,8 +631,19 @@ func (a *App) setupRouter() {
 
 		// Tenant context middleware (for non-admin routes)
 		r.Group(func(r chi.Router) {
-			r.Use(apiMiddleware.TenantContext(a.tenantService))
+			// Configure tenant middleware with single/multi tenant mode support
+			tenantMiddlewareCfg := apiMiddleware.TenantMiddlewareConfig{
+				TenantConfig: a.config.Tenant,
+			}
+			r.Use(apiMiddleware.TenantContextWithConfig(a.tenantService, tenantMiddlewareCfg))
 			r.Use(a.quotaChecker.CheckQuotas())
+
+			// Current tenant info routes (available to all authenticated users)
+			r.Route("/tenant", func(r chi.Router) {
+				r.Get("/info", a.tenantHandler.GetCurrentTenant)
+				r.Get("/settings", a.tenantHandler.GetTenantSettings)
+				r.Get("/quotas", a.tenantHandler.GetTenantQuotas)
+			})
 
 			// Workflow routes
 			r.Route("/workflows", func(r chi.Router) {
@@ -678,6 +711,10 @@ func (a *App) setupRouter() {
 				r.Delete("/{scheduleID}", a.scheduleHandler.Delete)
 				r.Post("/parse-cron", a.scheduleHandler.ParseCron)
 				r.Post("/preview", a.scheduleHandler.PreviewSchedule)
+
+				// Execution history routes
+				r.Get("/{scheduleID}/executions", a.scheduleHandler.ListExecutionHistory)
+				r.Get("/{scheduleID}/executions/{logID}", a.scheduleHandler.GetExecutionLog)
 			})
 
 			// Webhook management routes

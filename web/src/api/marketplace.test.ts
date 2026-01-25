@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { marketplaceAPI } from './marketplace'
 import * as client from './client'
 
+import { createQueryWrapper } from "../test/test-utils"
 vi.mock('./client', () => ({
   apiClient: {
     get: vi.fn(),
@@ -120,7 +121,10 @@ describe('MarketplaceAPI', () => {
 
       const result = await marketplaceAPI.getReviews('template-1')
 
-      expect(client.apiClient.get).toHaveBeenCalledWith('/api/v1/marketplace/templates/template-1/reviews', undefined)
+      // Default sortBy is 'recent', so params always includes sort_by
+      expect(client.apiClient.get).toHaveBeenCalledWith('/api/v1/marketplace/templates/template-1/reviews', {
+        params: { sort_by: 'recent' },
+      })
       expect(result).toEqual(mockReviews)
     })
 
@@ -129,10 +133,11 @@ describe('MarketplaceAPI', () => {
 
       vi.spyOn(client.apiClient, 'get').mockResolvedValue(mockReviews)
 
-      const result = await marketplaceAPI.getReviews('template-1', 10, 20)
+      // Function signature: getReviews(templateId, sortBy, limit, offset)
+      const result = await marketplaceAPI.getReviews('template-1', 'recent', 10, 20)
 
       expect(client.apiClient.get).toHaveBeenCalledWith('/api/v1/marketplace/templates/template-1/reviews', {
-        params: { limit: 10, offset: 20 },
+        params: { sort_by: 'recent', limit: 10, offset: 20 },
       })
       expect(result).toEqual(mockReviews)
     })

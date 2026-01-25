@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -238,7 +239,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, input *Upd
 
 	// Build dynamic update query
 	updates := []string{}
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 
 	if input.Name != nil && *input.Name != "" {
@@ -383,7 +384,7 @@ func (r *Repository) List(ctx context.Context, tenantID string, filter Credentia
 	}
 
 	query := `SELECT * FROM credentials WHERE tenant_id = $1`
-	args := []interface{}{tenantID}
+	args := []any{tenantID}
 	argIndex := 2
 
 	// Apply type filter
@@ -577,12 +578,503 @@ func (r *Repository) GetAccessLogs(ctx context.Context, credentialID string, lim
 
 // joinUpdates joins SQL SET clauses with commas
 func joinUpdates(updates []string) string {
-	result := ""
+	if len(updates) == 0 {
+		return ""
+	}
+	if len(updates) == 1 {
+		return updates[0]
+	}
+
+	// Use strings.Join for efficiency
+	var builder strings.Builder
 	for i, update := range updates {
 		if i > 0 {
-			result += ", "
+			builder.WriteString(", ")
 		}
-		result += update
+		builder.WriteString(update)
 	}
-	return result
+	return builder.String()
+}
+
+// ListWithPagination retrieves credentials with proper database-level pagination
+func (r *Repository) ListWithPagination(ctx context.Context, tenantID string, filter CredentialListFilter, limit, offset int) ([]*Credential, int, error) {
+	if tenantID == "" {
+		return nil, 0, ErrInvalidTenantID
+	}
+
+	// Set default limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	// Build base query and count query
+	baseWhere := "WHERE tenant_id = $1"
+	args := []any{tenantID}
+	argIndex := 2
+
+	// Apply type filter
+	if filter.Type != "" {
+		baseWhere += fmt.Sprintf(" AND type = $%d", argIndex)
+		args = append(args, filter.Type)
+		argIndex++
+	}
+
+	// Apply status filter
+	if filter.Status != "" {
+		baseWhere += fmt.Sprintf(" AND status = $%d", argIndex)
+		args = append(args, filter.Status)
+		argIndex++
+	}
+
+	// Apply search filter (searches in name and description)
+	if filter.Search != "" {
+		baseWhere += fmt.Sprintf(" AND (name ILIKE $%d OR description ILIKE $%d)", argIndex, argIndex)
+		searchPattern := "%" + filter.Search + "%"
+		args = append(args, searchPattern)
+		argIndex++
+	}
+
+	// Get total count
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM credentials %s", baseWhere)
+	var total int
+	err = tx.GetContext(ctx, &total, countQuery, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count credentials: %w", err)
+	}
+
+	// Get paginated results
+	query := fmt.Sprintf(`SELECT * FROM credentials %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
+		baseWhere, argIndex, argIndex+1)
+	args = append(args, limit, offset)
+
+	var credentials []*Credential
+	err = tx.SelectContext(ctx, &credentials, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list credentials: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if credentials == nil {
+		credentials = []*Credential{}
+	}
+
+	return credentials, total, nil
+}
+
+// CredentialVersion represents a historical version of a credential
+type CredentialVersion struct {
+	ID             string     `json:"id" db:"id"`
+	CredentialID   string     `json:"credential_id" db:"credential_id"`
+	TenantID       string     `json:"tenant_id" db:"tenant_id"`
+	Version        int        `json:"version" db:"version"`
+	EncryptedDEK   []byte     `json:"-" db:"encrypted_dek"`
+	Ciphertext     []byte     `json:"-" db:"ciphertext"`
+	Nonce          []byte     `json:"-" db:"nonce"`
+	AuthTag        []byte     `json:"-" db:"auth_tag"`
+	KMSKeyID       string     `json:"-" db:"kms_key_id"`
+	IsActive       bool       `json:"is_active" db:"is_active"`
+	CreatedBy      string     `json:"created_by" db:"created_by"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	DeactivatedAt  *time.Time `json:"deactivated_at,omitempty" db:"deactivated_at"`
+	DeactivatedBy  *string    `json:"deactivated_by,omitempty" db:"deactivated_by"`
+	RotationReason *string    `json:"rotation_reason,omitempty" db:"rotation_reason"`
+}
+
+// CreateVersion creates a new credential version during rotation
+func (r *Repository) CreateVersion(ctx context.Context, tenantID string, cred *Credential, createdBy string, reason string) (*CredentialVersion, error) {
+	if tenantID == "" {
+		return nil, ErrInvalidTenantID
+	}
+
+	if cred == nil {
+		return nil, ErrEmptyCredentialData
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	// Get current max version for this credential
+	var maxVersion int
+	err = tx.GetContext(ctx, &maxVersion, `
+		SELECT COALESCE(MAX(version), 0) FROM credential_versions
+		WHERE credential_id = $1 AND tenant_id = $2
+	`, cred.ID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get max version: %w", err)
+	}
+
+	newVersion := maxVersion + 1
+	now := time.Now()
+
+	// Deactivate all existing versions for this credential
+	_, err = tx.ExecContext(ctx, `
+		UPDATE credential_versions
+		SET is_active = false, deactivated_at = $1, deactivated_by = $2
+		WHERE credential_id = $3 AND tenant_id = $4 AND is_active = true
+	`, now, createdBy, cred.ID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deactivate old versions: %w", err)
+	}
+
+	// Create new version
+	version := &CredentialVersion{
+		ID:           uuid.NewString(),
+		CredentialID: cred.ID,
+		TenantID:     tenantID,
+		Version:      newVersion,
+		EncryptedDEK: cred.EncryptedDEK,
+		Ciphertext:   cred.Ciphertext,
+		Nonce:        cred.Nonce,
+		AuthTag:      cred.AuthTag,
+		KMSKeyID:     cred.KMSKeyID,
+		IsActive:     true,
+		CreatedBy:    createdBy,
+		CreatedAt:    now,
+	}
+
+	if reason != "" {
+		version.RotationReason = &reason
+	}
+
+	query := `
+		INSERT INTO credential_versions (
+			id, credential_id, tenant_id, version,
+			encrypted_dek, ciphertext, nonce, auth_tag, kms_key_id,
+			is_active, created_by, created_at, rotation_reason
+		) VALUES (
+			$1, $2, $3, $4,
+			$5, $6, $7, $8, $9,
+			$10, $11, $12, $13
+		) RETURNING *
+	`
+
+	err = tx.QueryRowxContext(
+		ctx, query,
+		version.ID, version.CredentialID, version.TenantID, version.Version,
+		version.EncryptedDEK, version.Ciphertext, version.Nonce, version.AuthTag, version.KMSKeyID,
+		version.IsActive, version.CreatedBy, version.CreatedAt, version.RotationReason,
+	).StructScan(version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create version: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return version, nil
+}
+
+// GetVersions retrieves all versions of a credential
+func (r *Repository) GetVersions(ctx context.Context, tenantID, credentialID string) ([]*CredentialVersion, error) {
+	if tenantID == "" {
+		return nil, ErrInvalidTenantID
+	}
+
+	if credentialID == "" {
+		return nil, ErrInvalidCredentialID
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	query := `
+		SELECT id, credential_id, tenant_id, version, is_active,
+		       created_by, created_at, deactivated_at, deactivated_by, rotation_reason
+		FROM credential_versions
+		WHERE credential_id = $1 AND tenant_id = $2
+		ORDER BY version DESC
+	`
+
+	var versions []*CredentialVersion
+	err = tx.SelectContext(ctx, &versions, query, credentialID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get versions: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if versions == nil {
+		versions = []*CredentialVersion{}
+	}
+
+	return versions, nil
+}
+
+// GetActiveVersion retrieves the current active version of a credential
+func (r *Repository) GetActiveVersion(ctx context.Context, tenantID, credentialID string) (*CredentialVersion, error) {
+	if tenantID == "" {
+		return nil, ErrInvalidTenantID
+	}
+
+	if credentialID == "" {
+		return nil, ErrInvalidCredentialID
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	query := `
+		SELECT * FROM credential_versions
+		WHERE credential_id = $1 AND tenant_id = $2 AND is_active = true
+		ORDER BY version DESC
+		LIMIT 1
+	`
+
+	var version CredentialVersion
+	err = tx.GetContext(ctx, &version, query, credentialID, tenantID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get active version: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &version, nil
+}
+
+// GetExpiredCredentials retrieves credentials that have expired or will expire within the given duration
+func (r *Repository) GetExpiredCredentials(ctx context.Context, tenantID string, withinDuration time.Duration) ([]*Credential, error) {
+	if tenantID == "" {
+		return nil, ErrInvalidTenantID
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	expirationThreshold := time.Now().Add(withinDuration)
+
+	query := `
+		SELECT * FROM credentials
+		WHERE tenant_id = $1
+		AND expires_at IS NOT NULL
+		AND expires_at <= $2
+		AND status = 'active'
+		ORDER BY expires_at ASC
+	`
+
+	var credentials []*Credential
+	err = tx.SelectContext(ctx, &credentials, query, tenantID, expirationThreshold)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get expired credentials: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if credentials == nil {
+		credentials = []*Credential{}
+	}
+
+	return credentials, nil
+}
+
+// ValidateAndGet retrieves a credential by name after validation (implements RepositoryInterface for Injector)
+func (r *Repository) ValidateAndGet(ctx context.Context, tenantID, name string) (*Credential, error) {
+	cred, err := r.GetByName(ctx, tenantID, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate credential is active and not expired
+	if cred.Status != StatusActive {
+		return nil, fmt.Errorf("credential '%s' is not active (status: %s)", name, cred.Status)
+	}
+
+	if cred.IsExpired() {
+		return nil, fmt.Errorf("credential '%s' has expired", name)
+	}
+
+	return cred, nil
+}
+
+// UpdateAccessTime updates the last_used_at timestamp (alias for UpdateLastUsedAt to satisfy RepositoryInterface)
+func (r *Repository) UpdateAccessTime(ctx context.Context, tenantID, credentialID string) error {
+	return r.UpdateLastUsedAt(ctx, tenantID, credentialID)
+}
+
+// RotateCredential performs a credential rotation with proper version tracking
+func (r *Repository) RotateCredential(ctx context.Context, tenantID, credentialID, userID string, newCred *Credential, reason string) (*Credential, error) {
+	if tenantID == "" {
+		return nil, ErrInvalidTenantID
+	}
+
+	if credentialID == "" {
+		return nil, ErrInvalidCredentialID
+	}
+
+	if newCred == nil {
+		return nil, ErrEmptyCredentialData
+	}
+
+	// Start transaction for RLS context
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// Set tenant context for RLS within transaction using set_config
+	_, err = tx.ExecContext(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	// Get existing credential to verify it exists
+	var existing Credential
+	err = tx.GetContext(ctx, &existing, `SELECT * FROM credentials WHERE id = $1 AND tenant_id = $2`, credentialID, tenantID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get credential: %w", err)
+	}
+
+	// Archive current version before updating
+	var maxVersion int
+	err = tx.GetContext(ctx, &maxVersion, `
+		SELECT COALESCE(MAX(version), 0) FROM credential_versions
+		WHERE credential_id = $1 AND tenant_id = $2
+	`, credentialID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get max version: %w", err)
+	}
+
+	now := time.Now()
+	newVersion := maxVersion + 1
+
+	// Deactivate all existing versions
+	_, err = tx.ExecContext(ctx, `
+		UPDATE credential_versions
+		SET is_active = false, deactivated_at = $1, deactivated_by = $2
+		WHERE credential_id = $3 AND tenant_id = $4 AND is_active = true
+	`, now, userID, credentialID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deactivate old versions: %w", err)
+	}
+
+	// Create new version entry
+	versionID := uuid.NewString()
+	var reasonPtr *string
+	if reason != "" {
+		reasonPtr = &reason
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO credential_versions (
+			id, credential_id, tenant_id, version,
+			encrypted_dek, ciphertext, nonce, auth_tag, kms_key_id,
+			is_active, created_by, created_at, rotation_reason
+		) VALUES (
+			$1, $2, $3, $4,
+			$5, $6, $7, $8, $9,
+			$10, $11, $12, $13
+		)
+	`, versionID, credentialID, tenantID, newVersion,
+		newCred.EncryptedDEK, newCred.Ciphertext, newCred.Nonce, newCred.AuthTag, newCred.KMSKeyID,
+		true, userID, now, reasonPtr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create version: %w", err)
+	}
+
+	// Update the main credential record with new encrypted values
+	query := `
+		UPDATE credentials
+		SET encrypted_dek = $1, ciphertext = $2, nonce = $3, auth_tag = $4,
+		    kms_key_id = $5, updated_at = $6
+		WHERE id = $7 AND tenant_id = $8
+		RETURNING *
+	`
+
+	var updated Credential
+	err = tx.QueryRowxContext(ctx, query,
+		newCred.EncryptedDEK, newCred.Ciphertext, newCred.Nonce, newCred.AuthTag,
+		newCred.KMSKeyID, now,
+		credentialID, tenantID,
+	).StructScan(&updated)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update credential: %w", err)
+	}
+
+	// Record rotation in credential_rotations table
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO credential_rotations (
+			credential_id, previous_key_id, new_key_id, rotated_by, rotated_at, reason
+		) VALUES ($1, $2, $3, $4, $5, $6)
+	`, credentialID, existing.KMSKeyID, newCred.KMSKeyID, userID, now, reason)
+	if err != nil {
+		return nil, fmt.Errorf("failed to record rotation: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &updated, nil
 }
