@@ -33,7 +33,7 @@
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0",
     "react-is": "^19.2.3",
-    "react-router-dom": "^6.30.3",
+    "react-router-dom": "^7.18.3",
     "recharts": "^3.6.0",
     "zustand": "^4.5.4"
   },
@@ -48,21 +48,21 @@
     "@typescript-eslint/eslint-plugin": "^7.15.0",
     "@typescript-eslint/parser": "^7.15.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "autoprefixer": "^10.4.19",
     "esbuild": "^0.27.2",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "happy-dom": "^20.0.11",
+    "happy-dom": "^20.14.0",
     "msw": "^2.12.7",
     "openapi-typescript": "^7.10.1",
-    "postcss": "^8.4.39",
+    "postcss": "^8.5.28",
     "swagger2openapi": "^7.0.8",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.2.2",
-    "vite": "^7.3.0",
-    "vitest": "^4.0.16"
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
   }
 }
